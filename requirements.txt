@@ -1,0 +1,5 @@
+annotated-types==0.8.0
+Django==6.1.2
+djangorestframework==3.18.3
+pydantic==2.14.0
+pydantic_core==2.50.0
