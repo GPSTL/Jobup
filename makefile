@@ -17,7 +17,7 @@ run: all run_only
 run_debug: debug run_only
 
 migrate:
-	python manage.py makemigrations
+	python manage.py makemigrations jobup
 	python manage.py migrate
 
 init:
