@@ -1,4 +1,4 @@
-FRONT_SRC = jobup/front/App.tsx
+FRONT_SRC = front/App.tsx
 FRONT_DST = jobup/static/dist/app.js
 
 .PHONY: init migrate all debug run_only run run_debug
