@@ -4,7 +4,7 @@ A "setup" application built with Django (Python) on the backend and React with T
 
 ## Prerequisites
 
-- **Python** 3.10+
+- **Python** 3.14+
 - **npm** 10.+
 
 ## Setup
