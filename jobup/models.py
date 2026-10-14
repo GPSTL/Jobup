@@ -1,32 +1,76 @@
+from __future__ import annotations
+
+from typing import Any, ClassVar
+
+from django.contrib.auth.models import (
+    AbstractBaseUser,
+    BaseUserManager,
+    PermissionsMixin,
+)
 from django.db import models
 
 
-class User(models.Model):
-    name = models.CharField(max_length=32)
-    age = models.PositiveSmallIntegerField()
-    has_job = models.BooleanField()
+class Role(models.TextChoices):
+    STUDENT = "student"
+    RECRUITER = "recruiter"
+    SCHOOL = "school"
+    ADMIN = "admin"
 
-    def to_dict(self):
+
+class UserManager(BaseUserManager["User"]):
+    def create_user(self, email: str, password: str, **fields: Any) -> User:
+        if not email.strip():
+            raise ValueError("Email is required")
+        user = self.model(email=self.normalize_email(email), **fields)
+        user.set_password(password)
+        user.save()
+        return user
+
+    def create_superuser(self, email: str, password: str, **fields: Any) -> User:
+        return self.create_user(
+            email, password, role=Role.ADMIN, is_staff=True, is_superuser=True, **fields
+        )
+
+
+class User(AbstractBaseUser, PermissionsMixin):  # pyright: ignore[reportIncompatibleVariableOverride]
+    email = models.EmailField(unique=True)
+    name = models.CharField(max_length=32)
+    role = models.CharField(max_length=16, choices=Role.choices)
+    is_staff = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS: ClassVar = ["name"]
+
+    objects = UserManager()
+
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.pk,
+            "email": self.email,
             "name": self.name,
+            "role": self.role,
+        }
+
+
+class Student(models.Model):
+    user_id: int
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="student")
+    age = models.PositiveSmallIntegerField()
+    has_job = models.BooleanField(default=False)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.pk,
+            "name": self.user.name,
+            "email": self.user.email,
             "age": self.age,
             "has_job": self.has_job,
         }
 
 
-# Utilities #
+def getStudent(_id: int) -> Student | None:
+    return Student.objects.filter(user_id=_id).select_related("user").first()
 
-
-def createUser(_name: str, _age: int, _has_job: bool) -> User | None:
-    _name = _name.strip()
-    if 0 < len(_name) <= 32 and 18 <= _age < 200:
-        return User.objects.create(name=_name, age=_age, has_job=_has_job)
-    return None
-
-
-def getUser(_id: int) -> User | None:
-    try:
-        return User.objects.get(id=_id)
-    except User.DoesNotExist:
-        return None
+def canViewStudent(user: User, id: int) -> bool:
+    return user.role == Role.ADMIN or id == user.pk
