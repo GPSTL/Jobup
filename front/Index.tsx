@@ -1,11 +1,8 @@
 import React, { useState } from "react";
 
 export default () => {
-	const [counter, setCounter] = useState<number>(0);
 
 	return (
-		<p onClick={() => setCounter(counter + 1)}>
-			Hello world ! <br /> Client n°{counter}
-		</p>
+		<h1 className="text-3xl font-bold text-blue-600"> JobUp </h1>
 	);
 };
