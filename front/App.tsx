@@ -1,8 +1,7 @@
-import React from "react"; // Do not remove !
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import ReactDOM from "react-dom/client";
 
-import Index from "./Index";
+import Index from "./pages/Index";
 
 function App() {
 	return (
