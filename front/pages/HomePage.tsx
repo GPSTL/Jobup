@@ -5,9 +5,13 @@ export default function HomePage() {
 
 	return (
 		<>
-			<h1 className="text-3xl font-bold text-blue-600"> JobUp </h1>
-			<Button children="click" onClick={() => alert("Ameli")} size="lg" />
-			<Button children="click" to="/signup" size="md" />
+			<h1 className="text-3xl font-bold text-primary text-center"> JobUp </h1>
+			<div className="flex justify-center gap-3 mt-3.5">
+				<Button children="Inscription" to="/signup" size="lg" />
+				<Button children="Connexion" to="/login" size="lg" />
+				<Button children="Click ME" onClick={() => alert("clicked")} />
+			</div>
+
 		</>
 	);
 };
