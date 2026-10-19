@@ -1,9 +1,5 @@
 @import "tailwindcss" source(none);
 
-/* Page styles (plain CSS, see front/styles/) */
-@import "./styles/global.css";
-@import "./styles/auth.css";
-
 @source "./**/*.{ts,tsx}";
 @source "../jobup/static/index.html";
 
