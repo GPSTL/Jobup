@@ -24,7 +24,7 @@ export default function HomePage() {
 						<NavbarLink to="/companies">Explorer les entreprises</NavbarLink>
 						<NavbarLink to="/pricing">Tarifs</NavbarLink>
 					</div>
-					<NavbarLink to="/inscription" className="ml-auto">Inscription</NavbarLink>
+					<NavbarLink to="/signup" className="ml-auto">Inscription</NavbarLink>
 					<Button to="/login">Connexion</Button>
 				</Navbar>
 			</header>
@@ -39,7 +39,7 @@ export default function HomePage() {
 				{/* Stacked on phones, side by side from tablets. */}
 				<div className="flex flex-col gap-4 md:flex-row md:gap-12 lg:gap-32">
 					{roles.map(({ label, role }) => (
-						<Button key={role} to={`/inscription?role=${role}`} size="lg" className="w-50">
+						<Button key={role} to={`/signup?role=${role}`} size="lg" className="w-50">
 							{label}
 						</Button>
 					))}
