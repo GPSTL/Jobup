@@ -7,15 +7,13 @@ from django.contrib.auth.models import PermissionsMixin
 from django.core.validators import RegexValidator
 from django.db import models
 
-siret_validator = RegexValidator(r"^\d{14}$", "A SIRET must be exactly 14 digits")
-
 # ----- ENUMS ----- #
 
 
 class Role(models.IntegerChoices):
     ADMIN = 127, "Administrator"
     STUDENT = 1, "Student"
-    Manager = 2, "School Manager"
+    MANAGER = 2, "School Manager"
     RECRUITER = 3, "Recruiter"
 
 
@@ -25,24 +23,45 @@ class StudentSubscription(models.IntegerChoices):
 
 
 class JobCategory(models.IntegerChoices):
-    COMPUTER_SCIENCE = 1, "Computer Science"
-    BUSISNESS = 2, "Bisiness"
-    ENGINEERING = 3, "Engineering"
-    DESIGN = 4, "Design"
-    MARKETING = 5, "Marketing"
-    FINANCE = 6, "Finance"
-    HEALTH = 7, "Health"
-    OTHER = 8, "Other"
+    COMPUTER_SCIENCE = 1, "Computer Science & IT"
+    DATA_AI = 2, "Data Science & AI"
+    CYBERSECURITY = 3, "Cybersecurity"
+    BUSINESS = 4, "Business & Strategy"
+    MANAGEMENT = 5, "Management & Administration"
+    PROJECT_MANAGEMENT = 6, "Project & Product Management"
+    ENGINEERING = 7, "Engineering"
+    BIOTECH_SCIENCE = 8, "Biotechnology & Applied Sciences"
+    ENERGY_ENVIRONMENT = 9, "Energy & Environment"
+    MARKETING = 10, "Marketing & Growth"
+    SALES_BD = 11, "Sales & Business Development"
+    COMMUNICATION_PR = 12, "Communication & Public Relations"
+    FINANCE = 13, "Finance & Accounting"
+    BANKING_INSURANCE = 14, "Banking & Insurance"
+    LEGAL_COMPLIANCE = 15, "Legal & Compliance"
+    CONSULTING = 16, "Consulting & Strategy"
+    DESIGN = 17, "UX/UI & Graphic Design"
+    MEDIA_JOURNALISM = 18, "Media, Journalism & Content Creation"
+    ARTS_ENTERTAINMENT = 19, "Arts, Culture & Entertainment"
+    HUMAN_RESOURCES = 20, "Human Resources & Recruiting"
+    EDUCATION_TRAINING = 21, "Education & Training"
+    SOCIAL_NONPROFIT = 22, "Social Services & Non-Profit"
+    HEALTH = 23, "Healthcare & Medical"
+    PHARMACEUTICALS = 24, "Pharmaceuticals & Research"
+    SPORTS_WELLNESS = 25, "Sports & Wellness"
+    SUPPLY_CHAIN_LOGISTICS = 26, "Logistics & Supply Chain"
+    REAL_ESTATE_ARCHITECTURE = 27, "Real Estate & Architecture"
+    HOSPITALITY_TOURISM = 28, "Hospitality, Catering & Tourism"
+    TRADES_CRAFTS = 29, "Trades & Construction"
+
+    OTHER = 99, "Other"
 
 
 class StudyDegree(models.IntegerChoices):
-    HIGH_SCHOOL = 0, "BAC"
     LICENCE1 = 1, "BAC+1"
     LICENCE2 = 2, "BAC+2"
     LICENCE3 = 3, "BAC+3"
     MASTER1 = 4, "BAC+4"
     MASTER2 = 5, "BAC+5"
-    DOCTORAT = 8, "BAC+8"
 
 
 # ----- GROUPS ----- #
@@ -50,6 +69,9 @@ class StudyDegree(models.IntegerChoices):
 
 class School(models.Model):
     name = models.CharField(max_length=128, unique=True)
+
+
+siret_validator = RegexValidator(r"^\d{14}$", "A SIRET must be exactly 14 digits")
 
 
 class Company(models.Model):
@@ -71,7 +93,6 @@ class UserManager(BaseUserManager["User"]):
 
     def create_superuser(self, email: str, password: str, **fields: Any) -> User:
         fields.setdefault("role", Role.ADMIN)
-        fields["is_staff"] = True
         fields["is_superuser"] = True
         return self.create_user(email, password, **fields)
 
@@ -81,7 +102,6 @@ class User(AbstractBaseUser, PermissionsMixin):  # pyright: ignore[reportIncompa
     name = models.CharField(max_length=32)
     first_name = models.CharField(max_length=32)
     role = models.SmallIntegerField(choices=Role.choices)
-    is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     date_joined = models.DateTimeField(auto_now_add=True)
 
@@ -110,12 +130,13 @@ class Student(models.Model):
     category = models.SmallIntegerField(choices=JobCategory.choices)
     experience_level = models.PositiveSmallIntegerField(default=0)  # months
     skills = models.CharField(max_length=256, blank=True)  # Comma separated skills
-    region = models.CharField(max_length=64, default="France")
+    region = models.CharField(max_length=64, default="Île-de-France")
     study_degree = models.SmallIntegerField(choices=StudyDegree.choices)
     rhythm = models.CharField(
         max_length=64, blank=True
     )  # years\d{1} (weeks(\d{1}){2-48} | days(\d{1}){2-7})
-    available = models.BooleanField(default=True)
+    available_from = models.DateField(null=True, auto_now_add=True)
+    available_to = models.DateField(null=True)
     school = models.ForeignKey(
         School, models.SET_NULL, null=True, blank=True, related_name="students"
     )
@@ -163,15 +184,6 @@ class Contract(models.Model):
 
 
 # Utilities #
-
-
-""" # Obselete code
-def createUser(_name: str, _age: int, _has_job: bool) -> User | None:
-    _name = _name.strip()
-    if 0 < len(_name) <= 32 and 18 <= _age < 200:
-        return User.objects.create(name=_name, age=_age, has_job=_has_job)
-    return None
-"""
 
 
 def getUser(_id: int) -> User | None:
