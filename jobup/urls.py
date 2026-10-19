@@ -7,6 +7,6 @@ from jobup import api
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/user/<int:id>", api.user),
-    re_path(r"^[^.]*$", serve, kwargs={"path": "index.html"}),
     path("favicon.ico", serve, kwargs={"path": "favicon.ico"}),
+    re_path(r"^.*$", serve, kwargs={"path": "index.html"}),
 ]
