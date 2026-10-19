@@ -4,13 +4,13 @@
 @source "../jobup/static/index.html";
 
 @theme {
-  /* Couleurs de la maquette */
-  --color-primary: #007fff; /* bleu JobUp (azur) : boutons, « Up » du logo */
-  --color-on-primary: #ffffff; /* texte sur fond bleu */
-  --color-surface: #ffffff; /* fond des pages */
-  --color-ink: #000000; /* texte principal */
+  /* Mockup colors */
+  --color-primary: #007fff; /* JobUp blue (azure): buttons, "Up" in the logo */
+  --color-on-primary: #ffffff; /* text on a blue background */
+  --color-surface: #ffffff; /* page background */
+  --color-ink: #000000; /* main text */
 
-  /* Polices de la maquette */
-  --font-sans: "League Spartan", ui-sans-serif, system-ui, sans-serif; /* texte courant, navigation, boutons */
-  --font-display: "Cormorant Garamond", ui-serif, Georgia, serif; /* grands titres */
+  /* Mockup fonts */
+  --font-sans: "League Spartan", ui-sans-serif, system-ui, sans-serif; /* body text, navigation, buttons */
+  --font-display: "Cormorant Garamond", ui-serif, Georgia, serif; /* large headings */
 }

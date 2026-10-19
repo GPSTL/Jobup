@@ -1,16 +1,18 @@
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route} from "react-router-dom";
 import ReactDOM from "react-dom/client";
 
-import Index from "./pages/Index";
+import HomePage from "./pages/HomePage";
+import ComingSoonPage from "./pages/ComingSoonPage";
+import NotFoundPage from "./pages/NotFoundPage";
 
 function App() {
 	return (
 		<BrowserRouter>
-			<nav>
-				<Link to="/">Index</Link>
-			</nav>
 			<Routes>
-				<Route path="/" element={<Index />} />
+				<Route path="/" element={<HomePage />} />
+				<Route path="/signup" element={<ComingSoonPage />} />
+				<Route path="/login" element={<ComingSoonPage />} />
+				<Route path="*" element={<NotFoundPage />} />
 			</Routes>
 		</BrowserRouter>
 	);

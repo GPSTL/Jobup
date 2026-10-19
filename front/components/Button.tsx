@@ -3,22 +3,22 @@ import { Link } from "react-router-dom";
 
 type ButtonProps = {
 	children: ReactNode;
-	/** Adresse interne : le bouton devient un lien (ex. "/inscription"). */
+	/** Internal path: the button becomes a link (e.g. "/signup"). */
 	to?: string;
 	onClick?: () => void;
-	/** "submit" pour envoyer un formulaire. Sans effet sur un lien. */
+	/** "submit" to submit a form. No effect on a link. */
 	type?: "button" | "submit";
-	/** "md" : barre de navigation, "lg" : boutons de la page d'accueil. */
+	/** "md": navigation bar, "lg": home page buttons. */
 	size?: "md" | "lg";
-	/** Classes en plus */
+	/** Extra classes */
 	className?: string;
 };
 
 const base = [
 	"inline-flex items-center justify-center rounded-full cursor-pointer",
 	"bg-primary text-on-primary font-medium",
-	// Focus au clavier : contour bleu séparé du bouton par une bande blanche,
-	// pour rester visible sur fond blanc comme sur la photo de l'accueil.
+	// Keyboard focus: blue outline separated from the button by a white band,
+	// so it stays visible on a white background as well as on the home page photo.
 	"focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
 	"focus-visible:ring-2 focus-visible:ring-surface",
 ].join(" ");
