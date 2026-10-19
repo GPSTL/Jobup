@@ -2,3 +2,15 @@
 
 @source "./**/*.{ts,tsx}";
 @source "../jobup/static/index.html";
+
+@theme {
+  /* Couleurs de la maquette */
+  --color-primary: #007fff; /* bleu JobUp (azur) : boutons, « Up » du logo */
+  --color-on-primary: #ffffff; /* texte sur fond bleu */
+  --color-surface: #ffffff; /* fond des pages */
+  --color-ink: #000000; /* texte principal */
+
+  /* Polices de la maquette */
+  --font-sans: "League Spartan", ui-sans-serif, system-ui, sans-serif; /* texte courant, navigation, boutons */
+  --font-display: "Cormorant Garamond", ui-serif, Georgia, serif; /* grands titres */
+}
