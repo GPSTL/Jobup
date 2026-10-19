@@ -54,19 +54,19 @@ export default function Connexion() {
 	};
 
 	return (
-		<main className="flex min-h-screen flex-col items-center bg-[#F0F0F0] px-4 pt-[76px] pb-16 max-[600px]:pt-10">
+		<main className="flex min-h-screen flex-col items-center bg-[#F0F0F0] px-4 pt-10 pb-16 sm:pt-19">
 			<Link to="/">
-				<Logo className="text-[64px] max-[600px]:text-5xl" />
+				<Logo className="text-5xl sm:text-[64px]" />
 			</Link>
-			<div className="mt-[34px] flex w-full max-w-[545px] flex-col items-center rounded-[25px] bg-surface px-4 pt-8 pb-[37px] shadow-[0_4px_12px_rgba(0,0,0,0.1)]">
-				<h1 className="text-[36px] leading-[33px] font-semibold">Connexion</h1>
-				<p className="mt-[27px] text-base leading-[18px]">
+			<div className="mt-8.5 flex w-full max-w-[545px] flex-col items-center rounded-[25px] bg-surface px-4 pt-8 pb-[37px] shadow-[0_4px_12px_rgba(0,0,0,0.1)]">
+				<h1 className="text-4xl leading-[33px] font-semibold">Connexion</h1>
+				<p className="mt-[27px] text-base leading-4.5">
 					Pas encore membre?{" "}
 					<Link to="/signup" className="font-medium text-primary hover:underline">
 						Créez un compte
 					</Link>
 				</p>
-				<form className="flex w-full max-w-[292px] flex-col" onSubmit={onSubmit} noValidate aria-busy={submitting}>
+				<form className="flex w-full max-w-73 flex-col [&_label]:text-sm [&_label]:leading-4.5" onSubmit={onSubmit} noValidate aria-busy={submitting}>
 					<Field id="email" label="Adresse mail" error={errors.email} className="mt-7">
 						<input
 							type="email"
@@ -92,16 +92,16 @@ export default function Connexion() {
 						/>
 					</Field>
 					{formError && (
-						<p role="alert" className="mt-4 text-center text-sm leading-[18px] text-[#D92D20]">
+						<p role="alert" className="mt-4 text-center text-sm leading-4.5 text-[#D92D20]">
 							{formError}
 						</p>
 					)}
-					<a href="#" className="mt-[23px] self-center text-base leading-[18px] text-primary hover:underline">
+					<a href="#" className="mt-[23px] self-center text-base leading-4.5 text-primary hover:underline">
 						Mot de passe oublié ?
 					</a>
 					<Button
 						type="submit"
-						className={`mt-2 w-[205px] self-center py-[10px]! leading-[18px] ${submitting ? "cursor-wait opacity-70" : ""}`}
+						className={`mt-2 w-[205px] self-center py-2.5! leading-4.5 ${submitting ? "cursor-wait opacity-70" : ""}`}
 					>
 						{submitting ? "Connexion…" : "Connexion"}
 					</Button>
