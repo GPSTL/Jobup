@@ -19,6 +19,7 @@ export const MESSAGES = {
 	invalidCredentials: "Adresse mail ou mot de passe incorrect.",
 	emailTaken: "Un compte existe déjà avec cette adresse mail.",
 	serverError: "Une erreur est survenue, veuillez réessayer plus tard.",
+	networkError: "Impossible de joindre le serveur. Vérifiez votre connexion internet et réessayez.",
 };
 
 const NAME_RE = /^[A-Za-zÀ-ÖØ-öø-ÿ]+(?:[ '’-][A-Za-zÀ-ÖØ-öø-ÿ]+)*$/;
