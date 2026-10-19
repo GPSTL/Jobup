@@ -1,0 +1,52 @@
+/* Shared styles (values from Figma, 1512x982 frames). Fonts are loaded in index.html */
+
+.ju-page {
+	position: fixed;
+	inset: 0;
+	overflow: auto;
+	font-family: "League Spartan", system-ui, sans-serif;
+	color: #000;
+	box-sizing: border-box;
+}
+
+.ju-page *, .ju-page *::before, .ju-page *::after {
+	box-sizing: border-box;
+}
+
+.ju-page a {
+	text-decoration: none;
+	color: inherit;
+}
+
+.ju-logo {
+	font-weight: 600;
+	line-height: 1;
+	white-space: nowrap;
+}
+
+.ju-logo span {
+	color: var(--color-primary, #007FFF);
+	font-weight: 800;
+}
+
+.ju-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border: none;
+	border-radius: 999px;
+	background: var(--color-primary, #007FFF);
+	color: #fff;
+	font-family: inherit;
+	font-weight: 500;
+	cursor: pointer;
+	transition: background 0.15s, transform 0.15s;
+}
+
+.ju-btn:hover {
+	background: #006ad6;
+}
+
+.ju-btn:active {
+	transform: scale(0.98);
+}
