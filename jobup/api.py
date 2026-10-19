@@ -48,4 +48,5 @@ def student(request: Request, id: int) -> Response:
     target = getStudent(id)
     if target is None:
         return Response({"error": "Student not found"}, status=404)
+    print(type(target.cv))
     return Response(target.to_dict())

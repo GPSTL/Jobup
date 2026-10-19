@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from typing import Any, ClassVar
 
 from django.contrib.auth.models import (
@@ -7,6 +8,7 @@ from django.contrib.auth.models import (
     BaseUserManager,
     PermissionsMixin,
 )
+from django.core.files.base import ContentFile
 from django.db import models
 
 
@@ -58,6 +60,7 @@ class Student(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="student")
     age = models.PositiveSmallIntegerField()
     has_job = models.BooleanField(default=False)
+    cv = models.FileField(upload_to="CVs", null=True, blank=True)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -74,3 +77,6 @@ def getStudent(_id: int) -> Student | None:
 
 def canViewStudent(user: User, id: int) -> bool:
     return user.role == Role.ADMIN or id == user.pk
+
+def uploadCV(studend: Student, content: bytes):
+    studend.cv.save(uuid.uuid4().hex, ContentFile(content))
