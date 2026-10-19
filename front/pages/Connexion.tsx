@@ -1,28 +1,56 @@
-import React, { useState } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 
 import Logo from "../components/Logo";
 import Field from "../components/Field";
 import Button from "../components/Button";
-import { validateEmail, validatePassword } from "../utils/validation";
+import { login } from "../services/auth";
+import { MESSAGES, validateEmail, validatePassword } from "../utils/validation";
 
-export default () => {
+const FORM_ERRORS = {
+	invalidCredentials: MESSAGES.invalidCredentials,
+	server: MESSAGES.serverError,
+	network: MESSAGES.networkError,
+};
+
+export default function Connexion() {
 	const [email, setEmail] = useState<string>("");
 	const [password, setPassword] = useState<string>("");
 	const [errors, setErrors] = useState({ email: "", password: "" });
+	// Error returned by the API, shown under the fields
+	const [formError, setFormError] = useState<string>("");
+	const [submitting, setSubmitting] = useState<boolean>(false);
+	// Updated immediately, unlike the state, so fast double clicks are blocked too
+	const submittingRef = useRef<boolean>(false);
 
-	// Not connected to the backend yet
-	const onSubmit = (e: React.FormEvent) => {
+	const onSubmit = async (e: FormEvent) => {
 		e.preventDefault();
+		// Avoids sending the form twice while waiting for the answer
+		if (submittingRef.current) return;
 
 		const next = { email: validateEmail(email), password: validatePassword(password) };
 		setErrors(next);
+		setFormError("");
 
 		const firstInvalid = (Object.keys(next) as (keyof typeof next)[]).find((key) => next[key]);
 		if (firstInvalid) {
 			document.getElementById(firstInvalid)?.focus();
 			return;
 		}
+
+		submittingRef.current = true;
+		setSubmitting(true);
+		const result = await login(email.trim(), password);
+		submittingRef.current = false;
+		setSubmitting(false);
+
+		if (!result.ok) {
+			// The fields are kept so the user can fix them
+			setFormError(FORM_ERRORS[result.reason]);
+			return;
+		}
+
+		// TODO: redirect to the student space once its route is confirmed (JOB-006)
 	};
 
 	return (
@@ -38,7 +66,7 @@ export default () => {
 						Créez un compte
 					</Link>
 				</p>
-				<form className="flex w-full max-w-[292px] flex-col" onSubmit={onSubmit} noValidate>
+				<form className="flex w-full max-w-[292px] flex-col" onSubmit={onSubmit} noValidate aria-busy={submitting}>
 					<Field id="email" label="Adresse mail" error={errors.email} className="mt-7">
 						<input
 							type="email"
@@ -46,6 +74,7 @@ export default () => {
 							value={email}
 							onChange={(e) => {
 								setEmail(e.target.value);
+								setFormError("");
 								if (errors.email) setErrors({ ...errors, email: validateEmail(e.target.value) });
 							}}
 						/>
@@ -57,18 +86,27 @@ export default () => {
 							value={password}
 							onChange={(e) => {
 								setPassword(e.target.value);
+								setFormError("");
 								if (errors.password) setErrors({ ...errors, password: validatePassword(e.target.value) });
 							}}
 						/>
 					</Field>
+					{formError && (
+						<p role="alert" className="mt-4 text-center text-sm leading-[18px] text-[#D92D20]">
+							{formError}
+						</p>
+					)}
 					<a href="#" className="mt-[23px] self-center text-base leading-[18px] text-primary hover:underline">
 						Mot de passe oublié ?
 					</a>
-					<Button type="submit" className="mt-2 w-[205px] self-center py-[10px]! leading-[18px]">
-						Connexion
+					<Button
+						type="submit"
+						className={`mt-2 w-[205px] self-center py-[10px]! leading-[18px] ${submitting ? "cursor-wait opacity-70" : ""}`}
+					>
+						{submitting ? "Connexion…" : "Connexion"}
 					</Button>
 				</form>
 			</div>
 		</main>
 	);
-};
+}
