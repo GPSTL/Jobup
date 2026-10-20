@@ -2,22 +2,22 @@
 // Each validator returns the error message, or "" when the value is valid.
 
 export const MESSAGES = {
-	prenomRequired: "Veuillez saisir votre prénom.",
+	prenomRequired: "Ce champ est obligatoire.",
 	prenomInvalid: "Le prénom ne doit contenir que des lettres.",
-	nomRequired: "Veuillez saisir votre nom.",
+	nomRequired: "Ce champ est obligatoire.",
 	nomInvalid: "Le nom ne doit contenir que des lettres.",
-	emailRequired: "Veuillez saisir votre adresse mail.",
-	emailInvalid: "Adresse mail invalide (ex. : nom@exemple.fr).",
-	telephoneRequired: "Veuillez saisir votre numéro de téléphone.",
+	emailRequired: "Ce champ est obligatoire.",
+	emailInvalid: "Adresse e-mail invalide (ex. : nom@exemple.fr).",
+	telephoneRequired: "Ce champ est obligatoire.",
 	telephoneInvalid: "Numéro invalide : 10 chiffres commençant par 0 (ex. : 06 12 34 56 78).",
-	passwordRequired: "Veuillez saisir votre mot de passe.",
-	passwordWeak: "Le mot de passe doit contenir au moins 8 caractères, dont une majuscule, une minuscule et un chiffre.",
-	etablissementRequired: "Veuillez sélectionner votre établissement d’études.",
-	domaineRequired: "Veuillez sélectionner le domaine recherché.",
+	passwordRequired: "Ce champ est obligatoire.",
+	passwordWeak: "8 caractères minimum, dont une majuscule et un chiffre.",
+	etablissementRequired: "Ce champ est obligatoire.",
+	domaineRequired: "Ce champ est obligatoire.",
 
 	// Returned by the backend, to display once the forms are connected
-	invalidCredentials: "Adresse mail ou mot de passe incorrect.",
-	emailTaken: "Un compte existe déjà avec cette adresse mail.",
+	invalidCredentials: "Adresse e-mail ou mot de passe incorrect.",
+	emailTaken: "Cette adresse e-mail est déjà utilisée.",
 	serverError: "Une erreur est survenue, veuillez réessayer plus tard.",
 	networkError: "Impossible de joindre le serveur. Vérifiez votre connexion internet et réessayez.",
 };
@@ -54,7 +54,7 @@ export const validateTelephone = (value: string) => {
 // Sign-up: enforces the password rules
 export const validateNewPassword = (value: string) => {
 	if (!value) return MESSAGES.passwordRequired;
-	if (value.length < 8 || !/[A-Z]/.test(value) || !/[a-z]/.test(value) || !/\d/.test(value)) return MESSAGES.passwordWeak;
+	if (value.length < 8 || !/[A-Z]/.test(value) || !/\d/.test(value)) return MESSAGES.passwordWeak;
 	return "";
 };
 
