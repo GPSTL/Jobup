@@ -13,7 +13,10 @@ function App() {
 			<Routes>
 				<Route path="/" element={<HomePage />} />
         <Route path="/signup" element={<Inscription />} />
-        <Route path="/login" element={<Connexion />} />
+				<Route path="/login" element={<Connexion />} />
+				<Route path="/offers" element={<ComingSoonPage />} />
+				<Route path="/companies" element={<ComingSoonPage />} />
+				<Route path="/pricing" element={<ComingSoonPage />} />
 				<Route path="*" element={<NotFoundPage />} />
 			</Routes>
 		</BrowserRouter>

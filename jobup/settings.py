@@ -21,6 +21,15 @@ SECRET_KEY = os.getenv("SECRET_KEY", DEFAULT_SECRET_KEY)
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"] if DEBUG else ["*"]
 
 
+AUTH_USER_MODEL = "jobup.User"
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication"
+    ],
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+}
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -104,6 +113,8 @@ USE_I18N = True
 
 USE_TZ = True
 
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/

@@ -25,7 +25,7 @@ const base = [
 
 const sizes = {
 	md: "px-4 py-1 text-base",
-	lg: "px-6 py-2 text-lg",
+	lg: "px-8 py-4 text-xl",
 };
 
 export default function Button({
