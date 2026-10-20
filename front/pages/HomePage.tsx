@@ -39,7 +39,12 @@ export default function HomePage() {
 				{/* Stacked on phones, side by side from tablets. */}
 				<div className="flex flex-col gap-4 md:flex-row md:gap-12 lg:gap-32">
 					{roles.map(({ label, role }) => (
-						<Button key={role} to={`/signup?role=${role}`} size="lg" className="w-50">
+						<Button
+							key={role}
+							to={`/signup?role=${role}`}
+							size="lg"
+							className="w-50 hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/25 motion-safe:hover:-translate-y-1 motion-safe:transition motion-safe:duration-200"
+						>
 							{label}
 						</Button>
 					))}

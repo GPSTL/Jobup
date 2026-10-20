@@ -36,7 +36,9 @@ type NavbarLinkProps = {
 };
 
 const linkBase = [
-	"whitespace-nowrap rounded-sm hover:text-primary",
+	"inline-flex items-center whitespace-nowrap rounded-full px-3 py-2 -mx-3 -my-2",
+	"hover:bg-surface/60 focus-visible:bg-surface/60",
+	"motion-safe:transition-colors motion-safe:duration-200",
 	"focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary",
 ].join(" ");
 
