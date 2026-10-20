@@ -5,14 +5,15 @@ import HomePage from "./pages/HomePage";
 import Inscription from "./pages/Inscription";
 import ComingSoonPage from "./pages/ComingSoonPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import Connexion from "./pages/Connexion";
 
 function App() {
 	return (
 		<BrowserRouter>
 			<Routes>
 				<Route path="/" element={<HomePage />} />
-				<Route path="/signup" element={<Inscription />} />
-				<Route path="/login" element={<ComingSoonPage />} />
+        <Route path="/signup" element={<Inscription />} />
+        <Route path="/login" element={<Connexion />} />
 				<Route path="*" element={<NotFoundPage />} />
 			</Routes>
 		</BrowserRouter>
