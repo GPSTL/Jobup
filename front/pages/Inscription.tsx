@@ -59,6 +59,13 @@ const VALIDATORS: Record<Key, (value: string) => string> = {
 const SELECT_CLASSES =
 	"cursor-pointer appearance-none pr-9 bg-[url(/static/img/chevron.svg)] bg-no-repeat bg-[length:24px_24px] bg-[position:right_5px_center]";
 
+// Types de compte de la maquette : seule l'inscription étudiant fait partie de JOB-005
+const ROLES = [
+	{ label: "Étudiant", active: true },
+	{ label: "Entreprise", active: false },
+	{ label: "École", active: false },
+];
+
 export default function Inscription() {
 	const [form, setForm] = useState(EMPTY_FORM);
 	const [errors, setErrors] = useState(EMPTY_FORM);
@@ -91,13 +98,35 @@ export default function Inscription() {
 
 	return (
 		<main className="flex min-h-screen flex-col items-center bg-[#F0F0F0] px-4 pt-10 pb-16 sm:pt-19">
-			<Link to="/">
-				<Logo className="text-5xl sm:text-[64px]" />
-			</Link>
-			<div className="mt-8.5 flex w-full max-w-[545px] flex-col items-center rounded-[25px] bg-surface px-4 pt-8 pb-10.5 shadow-[0_4px_12px_rgba(0,0,0,0.1)]">
+			<Logo className="h-12 sm:h-16" />
+			<div className="mt-8.5 flex w-full max-w-[545px] flex-col items-center rounded-[25px] bg-surface px-4 pt-8 pb-10 shadow-[0_4px_12px_rgba(0,0,0,0.1)]">
 				<h1 className="text-4xl leading-[33px] font-semibold">Inscription</h1>
+				<div
+					role="radiogroup"
+					aria-label="Type de compte"
+					className="mt-[17px] grid h-[42px] w-full max-w-[317px] grid-cols-3 gap-1 rounded-[11.5px] border border-[#E5E7EB] bg-[#F9FAFB] p-[3px]"
+				>
+					{ROLES.map(({ label, active }) => (
+						<button
+							key={label}
+							type="button"
+							role="radio"
+							aria-checked={active}
+							// Entreprise et École : visibles comme sur la maquette, mais pas encore disponibles
+							aria-disabled={!active}
+							title={active ? undefined : "Bientôt disponible"}
+							className={
+								active
+									? "rounded-[9px] bg-primary text-[15px] font-semibold text-on-primary"
+									: "cursor-not-allowed rounded-[9px] text-[15px] font-medium text-[#6B7280]"
+							}
+						>
+							{label}
+						</button>
+					))}
+				</div>
 				<form className="flex w-full max-w-73 flex-col [&_label]:text-sm [&_label]:leading-4.5" onSubmit={onSubmit} noValidate>
-					<Field id="prenom" label="Prénom" error={errors.prenom} className="mt-10">
+					<Field id="prenom" label="Prénom" error={errors.prenom} className="mt-[45px]">
 						<input autoComplete="given-name" value={form.prenom} onChange={update("prenom")} />
 					</Field>
 					<Field id="nom" label="Nom" error={errors.nom} className="mt-[29px]">
@@ -112,7 +141,7 @@ export default function Inscription() {
 					<Field id="password" label="Mot de passe" error={errors.password} className="mt-[29px]">
 						<input type="password" autoComplete="new-password" value={form.password} onChange={update("password")} />
 					</Field>
-					<Field id="etablissement" label="Etablissement d’études" error={errors.etablissement} className="mt-[29px]">
+					<Field id="etablissement" label="Établissement d’études" error={errors.etablissement} className="mt-[29px]">
 						<select className={SELECT_CLASSES} value={form.etablissement} onChange={update("etablissement")}>
 							<option value="" disabled></option>
 							{ETABLISSEMENTS.map((e) => (
@@ -128,16 +157,13 @@ export default function Inscription() {
 							))}
 						</select>
 					</Field>
-					<Button type="submit" className="mt-13 w-[205px] self-center py-2.5! leading-4.5">
+					<Button type="submit" className="mt-11.5 w-[205px] self-center py-2.5! leading-3.75">
 						S’inscrire
 					</Button>
 				</form>
-				<p className="mt-5 text-base leading-4.5">
-					Déjà membre?{" "}
-					<Link to="/login" className="font-medium text-primary hover:underline">
-						Connectez-vous
-					</Link>
-				</p>
+				<Link to="/login" className="mt-4 text-sm leading-4.5 font-medium text-primary hover:underline">
+					Déjà inscrit&nbsp;? Se connecter
+				</Link>
 			</div>
 		</main>
 	);

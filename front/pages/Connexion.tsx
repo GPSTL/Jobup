@@ -47,25 +47,30 @@ export default function Connexion() {
 		if (!result.ok) {
 			// The fields are kept so the user can fix them
 			setFormError(FORM_ERRORS[result.reason]);
+			// Le message des identifiants incorrects est lié au champ mot de passe : le focus le fait lire
+			if (result.reason === "invalidCredentials") document.getElementById("password")?.focus();
 			return;
 		}
 
 		// TODO: redirect to the student space once its route is confirmed (JOB-006)
 	};
 
+	// Identifiants incorrects : les deux champs en rouge, message sous le mot de passe (maquette)
+	const credentialsError = formError === MESSAGES.invalidCredentials;
+
 	return (
 		<main className="flex min-h-screen flex-col items-center bg-[#F0F0F0] px-4 pt-10 pb-16 sm:pt-19">
 			<Logo className="h-12 sm:h-16" />
-			<div className="mt-8.5 flex w-full max-w-[545px] flex-col items-center rounded-[25px] bg-surface px-4 pt-8 pb-[37px] shadow-[0_4px_12px_rgba(0,0,0,0.1)]">
+			<div className="mt-8.5 flex w-full max-w-[545px] flex-col items-center rounded-[25px] bg-surface px-4 pt-8 pb-10 shadow-[0_4px_12px_rgba(0,0,0,0.1)]">
 				<h1 className="text-4xl leading-[33px] font-semibold">Connexion</h1>
 				<p className="mt-[27px] text-base leading-4.5">
-					Pas encore membre?{" "}
+					Pas encore membre&nbsp;?{" "}
 					<Link to="/signup" className="font-medium text-primary hover:underline">
 						Créez un compte
 					</Link>
 				</p>
 				<form className="flex w-full max-w-73 flex-col [&_label]:text-sm [&_label]:leading-4.5" onSubmit={onSubmit} noValidate aria-busy={submitting}>
-					<Field id="email" label="Adresse mail" error={errors.email} className="mt-7">
+					<Field id="email" label="Adresse mail" error={errors.email} invalid={credentialsError} className="mt-7">
 						<input
 							type="email"
 							autoComplete="email"
@@ -77,7 +82,7 @@ export default function Connexion() {
 							}}
 						/>
 					</Field>
-					<Field id="password" label="Mot de passe" error={errors.password} className="mt-[29px]">
+					<Field id="password" label="Mot de passe" error={errors.password || (credentialsError ? formError : "")} className="mt-[29px]">
 						<input
 							type="password"
 							autoComplete="current-password"
@@ -89,8 +94,8 @@ export default function Connexion() {
 							}}
 						/>
 					</Field>
-					{formError && (
-						<p role="alert" className="mt-4 text-center text-sm leading-4.5 text-[#D92D20]">
+					{formError && !credentialsError && (
+						<p role="alert" className="mt-[5px] text-xs leading-3 font-medium text-[#DC2626]">
 							{formError}
 						</p>
 					)}
@@ -99,7 +104,7 @@ export default function Connexion() {
 					</a>
 					<Button
 						type="submit"
-						className={`mt-2 w-[205px] self-center py-2.5! leading-4.5 ${submitting ? "cursor-wait opacity-70" : ""}`}
+						className={`mt-2 w-[205px] self-center py-2.5! leading-3.75 ${submitting ? "cursor-wait opacity-70" : ""}`}
 					>
 						{submitting ? "Connexion…" : "Connexion"}
 					</Button>
