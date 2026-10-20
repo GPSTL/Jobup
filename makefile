@@ -3,7 +3,7 @@ FRONT_DST = jobup/static/dist/app.js
 CSS_SRC = front/app.css
 CSS_DST = jobup/static/dist/app.css
 
-.PHONY: init migrate all debug run_only run run_debug dev watch_js watch_css
+.PHONY: init migrate all debug run_only run run_debug dev watch_js watch_css test
 
 all:
 	npx esbuild $(FRONT_SRC) --bundle --outfile=$(FRONT_DST) --minify --loader:.tsx=tsx
@@ -33,7 +33,14 @@ migrate:
 	python manage.py makemigrations jobup
 	python manage.py migrate
 
-init:
+reset_db:
+	rm -f db.sqlite3
+	rm -rf jobup/migrations
+
+init: reset_db
 	pip install -r requirements.txt
 	npm install
 	$(MAKE) migrate
+
+test:
+	pytest -v
