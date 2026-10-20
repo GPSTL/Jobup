@@ -55,9 +55,7 @@ export default function Connexion() {
 
 	return (
 		<main className="flex min-h-screen flex-col items-center bg-[#F0F0F0] px-4 pt-10 pb-16 sm:pt-19">
-			<Link to="/">
-				<Logo className="text-5xl sm:text-[64px]" />
-			</Link>
+			<Logo className="h-12 sm:h-16" />
 			<div className="mt-8.5 flex w-full max-w-[545px] flex-col items-center rounded-[25px] bg-surface px-4 pt-8 pb-[37px] shadow-[0_4px_12px_rgba(0,0,0,0.1)]">
 				<h1 className="text-4xl leading-[33px] font-semibold">Connexion</h1>
 				<p className="mt-[27px] text-base leading-4.5">
