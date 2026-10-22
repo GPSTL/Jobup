@@ -56,4 +56,4 @@ def student(request: Request, id: int) -> Response:
     target = getStudent(id)
     if target is None:
         return Response({"error": "Student not found"}, status=404)
-    return Response({"description": target.description, "category": target.category, "experience": target.experience_level})
+    return Response(target.to_dict())
