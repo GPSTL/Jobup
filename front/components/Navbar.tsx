@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 
 import Logo from "./Logo";
 
@@ -12,7 +12,7 @@ type NavbarProps = {
 
 const variants = {
 	glass: "bg-surface/40 backdrop-blur-md border border-surface/50",
-	solid: "bg-surface",
+	solid: "bg-surface shadow-[0_4px_12px_rgba(0,0,0,0.1)]",
 };
 
 // Shared by every navigation bar: logo on the left, content given by the page.
@@ -37,16 +37,21 @@ type NavbarLinkProps = {
 
 const linkBase = [
 	"inline-flex items-center whitespace-nowrap rounded-full px-3 py-2 -mx-3 -my-2",
-	"hover:bg-surface/60 focus-visible:bg-surface/60",
 	"motion-safe:transition-colors motion-safe:duration-200",
 	"focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary",
 ].join(" ");
 
-/** Text link of a navigation bar. */
+const linkStates = {
+	idle: "hover:bg-surface/60 focus-visible:bg-surface/60",
+	// Current page: blue pill, as in the mockup
+	active: "bg-primary text-on-primary",
+};
+
+/** Text link of a navigation bar. Highlighted when it leads to the current page. */
 export function NavbarLink({ children, to, className = "" }: NavbarLinkProps) {
 	return (
-		<Link to={to} className={`${linkBase} ${className}`}>
+		<NavLink to={to} className={({ isActive }) => `${linkBase} ${linkStates[isActive ? "active" : "idle"]} ${className}`}>
 			{children}
-		</Link>
+		</NavLink>
 	);
 }
