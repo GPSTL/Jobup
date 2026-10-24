@@ -13,4 +13,5 @@
   /* Mockup fonts */
   --font-sans: "League Spartan", ui-sans-serif, system-ui, sans-serif; /* body text, navigation, buttons */
   --font-display: "Cormorant Garamond", ui-serif, Georgia, serif; /* large headings */
+  --font-inter: "Inter", ui-sans-serif, system-ui, sans-serif; /* "Explorer les entreprises" page */
 }
