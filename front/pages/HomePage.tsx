@@ -41,7 +41,7 @@ export default function HomePage() {
 					{roles.map(({ label, role }) => (
 						<Button
 							key={role}
-							to={role === "student" ? "/students" : `/signup?role=${role}`}
+							to={role === "student" ? "/students" : role === "school" ? "/schools" : `/signup?role=${role}`}
 							size="lg"
 							className="w-50 hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/25 motion-safe:hover:-translate-y-1 motion-safe:transition motion-safe:duration-200"
 						>
