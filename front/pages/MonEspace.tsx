@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import Button from "../components/Button";
+import CvSection from "../components/CvSection";
 import PhotoSection from "../components/PhotoSection";
 import StudentNavbar from "../components/StudentNavbar";
 import TextSection from "../components/TextSection";
@@ -104,7 +105,8 @@ export default function MonEspace() {
 						</>
 					)}
 
-					{/* TODO JOB-019: "Mon CV" block (current CV and import window) */}
+					{/* JOB-019: loads its own data, so it does not wait for the profile */}
+					<CvSection />
 				</div>
 			</main>
 		</div>
