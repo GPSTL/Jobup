@@ -1,12 +1,9 @@
 import Button from "../components/Button";
 import Navbar, { NavbarLink } from "../components/Navbar";
 
-// One button per profile. `role` uses the values expected by the back end.
-const roles = [
-	{ label: "Étudiants", role: "student" },
-	{ label: "Écoles", role: "school" },
-	{ label: "Entreprises", role: "recruiter" },
-];
+import { ROLES } from "../utils/roles";
+
+const homeRoles = [...ROLES].sort((a, b) => a.homeOrder - b.homeOrder);
 
 export default function HomePage() {
 
@@ -38,14 +35,14 @@ export default function HomePage() {
 
 				{/* Stacked on phones, side by side from tablets. */}
 				<div className="flex flex-col gap-4 md:flex-row md:gap-12 lg:gap-32">
-					{roles.map(({ label, role }) => (
+					{homeRoles.map(({ homeLabel, value, homePath }) => (
 						<Button
-							key={role}
-							to={role === "student" ? "/students" : role === "school" ? "/schools" : `/signup?role=${role}`}
+							key={value}
+							to={homePath}
 							size="lg"
 							className="w-50 hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/25 motion-safe:hover:-translate-y-1 motion-safe:transition motion-safe:duration-200"
 						>
-							{label}
+							{homeLabel}
 						</Button>
 					))}
 				</div>

@@ -12,8 +12,6 @@ export const MESSAGES = {
 	telephoneInvalid: "Numéro invalide : 10 chiffres commençant par 0 (ex. : 06 12 34 56 78).",
 	passwordRequired: "Ce champ est obligatoire.",
 	passwordWeak: "8 caractères minimum, dont une majuscule et un chiffre.",
-	etablissementRequired: "Ce champ est obligatoire.",
-	domaineRequired: "Ce champ est obligatoire.",
 
 	// Returned by the backend, to display once the forms are connected
 	invalidCredentials: "Adresse e-mail ou mot de passe incorrect.",
@@ -61,6 +59,3 @@ export const validateNewPassword = (value: string) => {
 // Login: only checks that a password was typed
 export const validatePassword = (value: string) => (value ? "" : MESSAGES.passwordRequired);
 
-export const validateEtablissement = (value: string) => (value ? "" : MESSAGES.etablissementRequired);
-
-export const validateDomaine = (value: string) => (value ? "" : MESSAGES.domaineRequired);

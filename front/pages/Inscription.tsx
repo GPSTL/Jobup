@@ -4,6 +4,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import Logo from "../components/Logo";
 import Field from "../components/Field";
 import Button from "../components/Button";
+import { ROLES, getRole, type Role } from "../utils/roles";
 import {
 	validateEmail,
 	validateNewPassword,
@@ -21,17 +22,6 @@ const EMPTY_FORM = {
 };
 
 type Key = keyof typeof EMPTY_FORM;
-
-const ROLES = [
-	{ label: "Étudiant", value: "student" },
-	{ label: "Entreprise", value: "recruiter" },
-	{ label: "École", value: "school" },
-] as const;
-
-type Role = (typeof ROLES)[number]["value"];
-
-const getRole = (value: string | null): Role =>
-	ROLES.find((role) => role.value === value)?.value ?? "student";
 
 // Données à envoyer à l'API d'inscription (JOB-003)
 export const toSignupPayload = (form: typeof EMPTY_FORM, role: Role = "student") => ({
