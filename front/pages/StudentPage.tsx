@@ -51,7 +51,7 @@ export default function StudentPage() {
 						</p>
 						<div className="mt-5 flex flex-wrap gap-3">
 							<Link to="/signup?role=student" className={`rounded-2xl bg-primary px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-600 ${focus}`}>Créer mon compte étudiant</Link>
-							<Link to="/offers" className={`rounded-2xl border border-[#cfd4de] bg-white px-6 py-3 font-semibold transition-colors hover:bg-slate-50 ${focus}`}>Voir les offres</Link>
+							<Link to="/offers" className={`rounded-2xl border border-[#cfd4de] bg-white px-6 py-3 font-semibold transition-colors hover:bg-slate-50 ${focus}`}>Voir toutes les offres</Link>
 						</div>
 						<Link to="/login" className={`mt-4 inline-block text-primary hover:underline ${focus}`}>Déjà inscrit ? Se connecter</Link>
 					</div>
