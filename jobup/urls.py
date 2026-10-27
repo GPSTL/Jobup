@@ -3,9 +3,12 @@ from django.contrib.staticfiles.views import serve
 from django.urls import path, re_path
 
 from jobup import api
+from jobup.signup import csrf, signup
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("api/csrf", csrf),
+    path("api/signup", signup),
     path("api/login", api.api_login),
     path("api/logout", api.api_logout),
     path("api/me", api.me),

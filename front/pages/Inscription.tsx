@@ -1,63 +1,15 @@
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
-
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import Logo from "../components/Logo";
 import Field from "../components/Field";
 import Button from "../components/Button";
-import {
-	validateDomaine,
-	validateEmail,
-	validateEtablissement,
-	validateNewPassword,
-	validateNom,
-	validatePrenom,
-	validateTelephone,
-} from "../utils/validation";
+import { signup } from "../services/auth";
+import { signupSchema, toSignupPayload, type SignupForm } from "../utils/signup";
+import { MESSAGES } from "../utils/validation";
 
-// Placeholder options until they come from the backend
-const ETABLISSEMENTS = ["Sorbonne Université", "Université Paris Cité", "Université Paris-Saclay", "Autre"];
-const DOMAINES = ["Informatique", "Commerce / Marketing", "Finance / Comptabilité", "Ressources humaines", "Communication", "Ingénierie", "Autre"];
-
-const EMPTY_FORM = {
-	prenom: "",
-	nom: "",
-	email: "",
-	telephone: "",
-	password: "",
-	etablissement: "",
-	domaine: "",
-};
-
-type Key = keyof typeof EMPTY_FORM;
-
-// Formulaire réservé aux étudiants : le rôle est toujours envoyé avec les données (même valeur que Role.STUDENT côté backend)
-const ROLE = "student";
-
-// Données à envoyer à l'API d'inscription (JOB-003)
-export const toSignupPayload = (form: typeof EMPTY_FORM) => ({
-	prenom: form.prenom.trim(),
-	nom: form.nom.trim(),
-	email: form.email.trim(),
-	telephone: form.telephone.replace(/[\s.-]/g, ""),
-	password: form.password,
-	etablissement: form.etablissement,
-	domaine: form.domaine,
-	role: ROLE,
-});
-
-const VALIDATORS: Record<Key, (value: string) => string> = {
-	prenom: validatePrenom,
-	nom: validateNom,
-	email: validateEmail,
-	telephone: validateTelephone,
-	password: validateNewPassword,
-	etablissement: validateEtablissement,
-	domaine: validateDomaine,
-};
-
-// Flèche native masquée, remplacée par le chevron de la maquette
-const SELECT_CLASSES =
-	"cursor-pointer appearance-none pr-9 bg-[url(/static/img/chevron.svg)] bg-no-repeat bg-[length:24px_24px] bg-[position:right_5px_center]";
+export { toSignupPayload } from "../utils/signup";
 
 // Types de compte de la maquette : seule l'inscription étudiant fait partie de JOB-005
 const ROLES = [
@@ -67,34 +19,36 @@ const ROLES = [
 ];
 
 export default function Inscription() {
-	const [form, setForm] = useState(EMPTY_FORM);
-	const [errors, setErrors] = useState(EMPTY_FORM);
-
-	// Once a field shows an error, it is re-checked on each change so the message disappears when fixed
-	const update = (key: Key) => (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-		const value = e.target.value;
-		setForm({ ...form, [key]: value });
-		if (errors[key]) setErrors({ ...errors, [key]: VALIDATORS[key](value) });
-	};
-
-	// Not connected to the backend yet
-	const onSubmit = (e: FormEvent) => {
-		e.preventDefault();
-
-		const next = { ...EMPTY_FORM };
-		(Object.keys(VALIDATORS) as Key[]).forEach((key) => (next[key] = VALIDATORS[key](form[key])));
-		setErrors(next);
-
-		const firstInvalid = (Object.keys(next) as Key[]).find((key) => next[key]);
-		if (firstInvalid) {
-			document.getElementById(firstInvalid)?.focus();
-			return;
+	const { register, handleSubmit, setError, formState: { errors, isSubmitting } } = useForm<SignupForm>({
+		resolver: zodResolver(signupSchema),
+		defaultValues: { prenom: "", nom: "", email: "", password: "" },
+	});
+	const [created, setCreated] = useState(false);
+	const pending = useRef(false);
+	const onSubmit = handleSubmit(async (form) => {
+		if (pending.current) return;
+		pending.current = true;
+		try {
+			const result = await signup(toSignupPayload(form));
+			if (result.ok) {
+				setCreated(true);
+			} else if (result.reason === "validation") {
+				const fields = ["prenom", "nom", "email", "password"] as const;
+				let focused = false;
+				for (const field of fields) {
+					if (result.errors[field]) {
+						setError(field, { type: "server", message: result.errors[field] }, { shouldFocus: !focused });
+						focused = true;
+					}
+				}
+				if (!focused) setError("root", { message: MESSAGES.serverError });
+			} else {
+				setError("root", { message: result.reason === "network" ? MESSAGES.networkError : MESSAGES.serverError });
+			}
+		} finally {
+			pending.current = false;
 		}
-
-		const payload = toSignupPayload(form);
-		// TODO : envoyer payload à l'API d'inscription quand JOB-003 existera
-		void payload;
-	};
+	});
 
 	return (
 		<main className="flex min-h-screen flex-col items-center bg-[#F0F0F0] px-4 pt-10 pb-16 sm:pt-19">
@@ -125,42 +79,26 @@ export default function Inscription() {
 						</button>
 					))}
 				</div>
-				<form className="flex w-full max-w-73 flex-col [&_label]:text-sm [&_label]:leading-4.5" onSubmit={onSubmit} noValidate>
-					<Field id="prenom" label="Prénom" error={errors.prenom} className="mt-[45px]">
-						<input autoComplete="given-name" value={form.prenom} onChange={update("prenom")} />
+				{created ? (
+					<p role="status" className="mt-8 text-center">Votre compte a été créé. Vous pouvez maintenant vous connecter.</p>
+				) : <form aria-busy={isSubmitting} className="flex w-full max-w-73 flex-col [&_label]:text-sm [&_label]:leading-4.5" onSubmit={onSubmit} noValidate>
+					<Field id="prenom" label="Prénom" error={errors.prenom?.message} className="mt-[45px]">
+						<input autoComplete="given-name" {...register("prenom")} />
 					</Field>
-					<Field id="nom" label="Nom" error={errors.nom} className="mt-[29px]">
-						<input autoComplete="family-name" value={form.nom} onChange={update("nom")} />
+					<Field id="nom" label="Nom" error={errors.nom?.message} className="mt-[29px]">
+						<input autoComplete="family-name" {...register("nom")} />
 					</Field>
-					<Field id="email" label="Adresse mail" error={errors.email} className="mt-[29px]">
-						<input type="email" autoComplete="email" value={form.email} onChange={update("email")} />
+					<Field id="email" label="Adresse mail" error={errors.email?.message} className="mt-[29px]">
+						<input type="email" autoComplete="email" {...register("email")} />
 					</Field>
-					<Field id="telephone" label="Numéro de téléphone" error={errors.telephone} className="mt-[29px]">
-						<input type="tel" autoComplete="tel" value={form.telephone} onChange={update("telephone")} />
+					<Field id="password" label="Mot de passe" error={errors.password?.message} className="mt-[29px]">
+						<input type="password" autoComplete="new-password" {...register("password")} />
 					</Field>
-					<Field id="password" label="Mot de passe" error={errors.password} className="mt-[29px]">
-						<input type="password" autoComplete="new-password" value={form.password} onChange={update("password")} />
-					</Field>
-					<Field id="etablissement" label="Établissement d’études" error={errors.etablissement} className="mt-[29px]">
-						<select className={SELECT_CLASSES} value={form.etablissement} onChange={update("etablissement")}>
-							<option value="" disabled></option>
-							{ETABLISSEMENTS.map((e) => (
-								<option key={e}>{e}</option>
-							))}
-						</select>
-					</Field>
-					<Field id="domaine" label="Domaine recherché" error={errors.domaine} className="mt-[29px]">
-						<select className={SELECT_CLASSES} value={form.domaine} onChange={update("domaine")}>
-							<option value="" disabled></option>
-							{DOMAINES.map((d) => (
-								<option key={d}>{d}</option>
-							))}
-						</select>
-					</Field>
-					<Button type="submit" className="mt-11.5 w-[205px] self-center py-2.5! leading-3.75">
-						S’inscrire
+					{errors.root && <p role="alert" className="mt-4 text-sm text-red-600">{errors.root.message}</p>}
+					<Button type="submit" disabled={isSubmitting} className="mt-11.5 w-[205px] self-center py-2.5! leading-3.75">
+						{isSubmitting ? "Inscription…" : "S’inscrire"}
 					</Button>
-				</form>
+				</form>}
 				<Link to="/login" className="mt-4 text-sm leading-4.5 font-medium text-primary hover:underline">
 					Déjà inscrit&nbsp;? Se connecter
 				</Link>
