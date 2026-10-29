@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 import Button from "./Button";
 import CvImportDialog from "./CvImportDialog";
 import SectionCard from "./SectionCard";
-import { getCv, uploadCv, type Cv } from "../services/cv";
-import { MESSAGES, REQUEST_ERRORS } from "../utils/validation";
+import { getCv, uploadCv, type Cv, type CvError } from "../services/cv";
+import { REQUEST_ERRORS } from "../utils/validation";
 
 // "12 mars 2026"
 const formatDate = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
@@ -14,7 +14,8 @@ export default function CvSection() {
 	// null when the student has not imported a CV yet
 	const [cv, setCv] = useState<Cv | null>(null);
 	const [loading, setLoading] = useState(true);
-	const [loadError, setLoadError] = useState("");
+	// The reason rather than the message, to offer "Se connecter" when the session has expired
+	const [loadError, setLoadError] = useState<CvError | null>(null);
 	// Incremented by "Réessayer" to load the CV again
 	const [attempt, setAttempt] = useState(0);
 	// Import window open
@@ -28,7 +29,7 @@ export default function CvSection() {
 			if (ignore) return;
 			setLoading(false);
 			if (result.ok) setCv(result.cv);
-			else setLoadError(result.reason === "invalid" ? MESSAGES.serverError : REQUEST_ERRORS[result.reason]);
+			else setLoadError(result.reason === "invalid" ? "server" : result.reason);
 		});
 		return () => {
 			ignore = true;
@@ -36,7 +37,7 @@ export default function CvSection() {
 	}, [attempt]);
 
 	const retry = () => {
-		setLoadError("");
+		setLoadError(null);
 		setLoading(true);
 		setAttempt(attempt + 1);
 	};
@@ -71,10 +72,17 @@ export default function CvSection() {
 				{loading && <p className="text-[#6c7386]">Chargement de votre CV…</p>}
 				{loadError && (
 					<div role="alert" className="flex flex-wrap items-center gap-3">
-						<p>{loadError}</p>
-						<Button variant="outline" onClick={retry}>
-							Réessayer
-						</Button>
+						<p>{REQUEST_ERRORS[loadError]}</p>
+						{/* Same choice as the profile of "Mon espace": trying again is useless without a session */}
+						{loadError === "unauthenticated" ? (
+							<Button variant="outline" to="/login">
+								Se connecter
+							</Button>
+						) : (
+							<Button variant="outline" onClick={retry}>
+								Réessayer
+							</Button>
+						)}
 					</div>
 				)}
 				{ready && cv && (
