@@ -7,6 +7,7 @@ import ComingSoonPage from "./pages/ComingSoonPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import Connexion from "./pages/Connexion";
 import StudentPage from "./pages/StudentPage";
+import RequireStudent from "./components/RequireStudent";
 
 function App() {
 	return (
@@ -16,6 +17,7 @@ function App() {
 				<Route path="/students" element={<StudentPage />} />
 				<Route path="/signup" element={<Inscription />} />
 				<Route path="/login" element={<Connexion />} />
+				<Route path="/student" element={<RequireStudent>{() => <ComingSoonPage />}</RequireStudent>} />
 				<Route path="/offers" element={<ComingSoonPage />} />
 				<Route path="/companies" element={<ComingSoonPage />} />
 				<Route path="/pricing" element={<ComingSoonPage />} />
