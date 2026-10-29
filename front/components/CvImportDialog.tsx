@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState, type DragEvent } from "react";
 
 import Button from "./Button";
 import UploadIcon from "./UploadIcon";
-import { validateCv } from "../utils/validation";
+import { MESSAGES, validateCv } from "../utils/validation";
 
 type CvImportDialogProps = {
 	open: boolean;
@@ -64,7 +64,12 @@ export default function CvImportDialog({ open, replacing, onClose, onImport }: C
 
 		uploadingRef.current = true;
 		setUploading(true);
-		const message = await onImport(file);
+		let message: string;
+		try {
+			message = await onImport(file);
+		} catch {
+			message = MESSAGES.serverError;
+		}
 		uploadingRef.current = false;
 		setUploading(false);
 
