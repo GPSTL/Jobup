@@ -25,6 +25,8 @@ export const MESSAGES = {
 	// Mon espace
 	photoFormat: "La photo doit être au format JPG ou PNG.",
 	photoTooBig: "La photo ne doit pas dépasser 2 Mo.",
+	cvFormat: "Le CV doit être au format PDF, DOCX ou DOC.",
+	cvTooBig: "Le CV ne doit pas dépasser 5 Mo.",
 };
 
 // Message of a failed API call, by reason (see the services)
@@ -36,6 +38,7 @@ export const REQUEST_ERRORS = {
 
 // TODO JOB-008: confirm the maximum size of the photo (2 Mo, like the company logo of REC-25)
 const PHOTO_MAX_SIZE = 2 * 1024 * 1024;
+const CV_MAX_SIZE = 5 * 1024 * 1024;
 
 const NAME_RE = /^[A-Za-zÀ-ÖØ-öø-ÿ]+(?:[ '’-][A-Za-zÀ-ÖØ-öø-ÿ]+)*$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -86,5 +89,13 @@ export const validateMaxLength = (value: string, max: number) =>
 export const validatePhoto = (file: File) => {
 	if (file.type !== "image/jpeg" && file.type !== "image/png") return MESSAGES.photoFormat;
 	if (file.size > PHOTO_MAX_SIZE) return MESSAGES.photoTooBig;
+	return "";
+};
+
+// The extension is checked rather than the type: browsers do not always know the type of a .doc file
+export const validateCv = (file: File) => {
+	const extension = file.name.split(".").pop()?.toLowerCase();
+	if (extension !== "pdf" && extension !== "docx" && extension !== "doc") return MESSAGES.cvFormat;
+	if (file.size > CV_MAX_SIZE) return MESSAGES.cvTooBig;
 	return "";
 };
