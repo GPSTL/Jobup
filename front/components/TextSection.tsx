@@ -100,6 +100,9 @@ export default function TextSection({ title, value, emptyText, hint, placeholder
 	const fieldProps = {
 		value: draft,
 		onChange,
+		// Frozen while saving: the form closes once saved, so text typed meanwhile would be lost.
+		// readOnly rather than disabled, which would take the focus away from the field.
+		readOnly: saving,
 		placeholder,
 		autoFocus: true,
 		"aria-label": title,
