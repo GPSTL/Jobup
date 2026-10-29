@@ -83,7 +83,8 @@ export default function CvImportDialog({ open, replacing, onClose, onImport }: C
 
 	const onDragOver = (e: DragEvent) => {
 		e.preventDefault();
-		setDragging(true);
+		// No highlight while sending: a file dropped now would be ignored
+		if (!uploadingRef.current) setDragging(true);
 	};
 
 	const onDragLeave = (e: DragEvent<HTMLDivElement>) => {
@@ -120,12 +121,13 @@ export default function CvImportDialog({ open, replacing, onClose, onImport }: C
 				onDragOver={onDragOver}
 				onDragLeave={onDragLeave}
 				onDrop={onDrop}
-				className={`mt-5 flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed p-6 text-center motion-safe:transition-colors ${dragging ? "border-primary bg-[#dae8ff]/50" : "border-[#cfd4de]"}`}
+				className={`mt-5 flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed p-6 text-center motion-safe:transition-colors ${dragging ? "border-primary bg-[#dae8ff]/50" : "border-[#cfd4de]"} ${uploading ? "opacity-60" : ""}`}
 			>
 				<UploadIcon className="size-8 text-primary" />
 				<p className="font-medium">Glissez-déposez votre CV ici</p>
 				<p className="text-sm text-[#6c7386]">ou</p>
-				<Button variant="secondary" onClick={() => inputRef.current?.click()}>
+				{/* Disabled while sending, like "Annuler": the click would be ignored, so it should look so */}
+				<Button variant="secondary" onClick={() => inputRef.current?.click()} disabled={uploading}>
 					Choisir un fichier
 				</Button>
 				<p className="text-sm text-[#6c7386]">PDF, DOCX ou DOC, 5 Mo maximum</p>
@@ -154,7 +156,7 @@ export default function CvImportDialog({ open, replacing, onClose, onImport }: C
 			)}
 
 			<div className="mt-6 flex justify-end gap-2">
-				<Button variant="outline" onClick={close}>
+				<Button variant="outline" onClick={close} disabled={uploading}>
 					Annuler
 				</Button>
 				<Button onClick={confirm} disabled={!file} className={uploading ? "cursor-wait opacity-70" : ""}>
