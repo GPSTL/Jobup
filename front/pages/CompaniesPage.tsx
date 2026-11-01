@@ -1,11 +1,20 @@
-import type { FormEvent } from "react";
+import ArrowUpRightIcon from "../components/ArrowUpRightIcon";
+import BookmarkIcon from "../components/BookmarkIcon";
+import ChevronDownIcon from "../components/ChevronDownIcon";
+import MapPinIcon from "../components/MapPinIcon";
+import SearchIcon from "../components/SearchIcon";
+import SortIcon from "../components/SortIcon";
+import UsersIcon from "../components/UsersIcon";
+import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 
+
+import Pagination from "../components/Pagination";
 import Button from "../components/Button";
 import LoginBanner from "../components/LoginBanner";
 import Navbar, { NavbarLink } from "../components/Navbar";
 
-// Sample companies from the mockup, until they come from the backend.
+// TODO: replace these provisional sample companies with backend results.
 // `emblem`: letters shown in the colored square instead of a logo.
 const COMPANIES = [
 	{
@@ -64,39 +73,43 @@ const COMPANIES = [
 	},
 ];
 
-// Placeholder options until they come from the backend
+// TODO: replace these provisional filter options with backend reference data.
 const REGIONS = ["Île-de-France", "Auvergne-Rhône-Alpes", "Hauts-de-France", "Nouvelle-Aquitaine", "Occitanie", "Provence-Alpes-Côte d’Azur"];
 const SECTEURS = ["Santé", "Économie circulaire", "Finance", "Mobilité", "Assurance santé", "Intelligence artificielle"];
+// TODO: replace provisional company-size options with backend reference data.
 const TAILLES = ["Moins de 50 salariés", "50 à 250 salariés", "250 à 1 000 salariés", "Plus de 1 000 salariés"];
+// TODO: connect these provisional sort options to backend sorting.
 const TRIS = ["Pertinence", "Nom", "Nombre de salariés"];
 
-// Static until the companies come from the backend
-const PAGES = ["1", "2", "3", "4", "5", "...", "10"];
 
-// Darker blue used by this page in the mockup
-const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2864a6]";
+const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
+const field = "flex min-w-0 items-center gap-2.5 rounded-[14px] border border-[#d1d5db] bg-white py-3.5 pr-3.5 pl-[18px] focus-within:border-primary";
+const input = "min-w-0 flex-1 bg-transparent text-[17px] text-[#111827] outline-none placeholder:text-[#9ca3af]";
+const select = "w-full cursor-pointer appearance-none rounded-[14px] border border-[#d1d5db] bg-white py-3.5 pr-11 pl-[18px] text-[17px] outline-none focus:border-primary";
+const searchButton = `cursor-pointer rounded-[14px] bg-primary px-[22px] py-3.5 text-[16px] font-semibold text-on-primary hover:bg-primary/90 ${focus}`;
+const card = "flex flex-col gap-2.5 rounded-[20px] bg-white px-4 pt-4 pb-[18px] shadow-[0_4px_12px_rgba(0,0,0,0.1)]";
 
-// As wide as the chosen option rather than the longest one, so the chevron stays next to the text
+
 const fit = "field-sizing-content";
-
-const filter = [
-	`${fit} cursor-pointer appearance-none rounded-[6px] border border-[#d1d5db] bg-white py-[9px] pr-[35px] pl-3`,
-	"text-[12px] text-[#202936]",
-	focus,
-].join(" ");
-
-const pageItem = "flex size-6 items-center justify-center rounded-[5px] text-[16px] leading-[19px]";
+const filter = `${select} ${fit}`;
 
 export default function CompaniesPage() {
+	// Local pagination works on sample data.
+	// TODO: use backend pagination and its total result count when the API is connected.
+	const [page, setPage] = useState(1);
+	const pageSize = 6;
+	const totalPages = Math.ceil(COMPANIES.length / pageSize);
+	const startIndex = (page - 1) * pageSize;
+	const visibleResults = COMPANIES.slice(startIndex, startIndex + pageSize);
 	// Not connected to the backend yet
 	const onSearch = (e: FormEvent) => {
 		e.preventDefault();
-		// TODO: search the companies once the API exists
+		// TODO: apply the keyword field to company results when the search API is connected.
 	};
 
 	return (
-		<div className="min-h-dvh bg-[#f0f0f0] px-4 pt-4 pb-16 leading-[normal] md:px-6 md:pt-[50px]">
-			<header className="mx-auto max-w-[1236px]">
+		<div className="min-h-dvh bg-[#f0f0f0] px-4 pt-4 pb-16 md:px-6 md:pt-6">
+			<header>
 				<Navbar>
 					{/* Hidden on small screens: the full bar does not fit on a phone. */}
 					<div className="hidden gap-12 lg:flex">
@@ -109,67 +122,45 @@ export default function CompaniesPage() {
 				</Navbar>
 			</header>
 
-			<main className="mx-auto mt-[25px] flex max-w-[1236px] flex-col gap-6 bg-white px-5 pt-[30px] pb-[26px] font-inter text-[#202936] md:px-10">
+			<main className="mx-auto mt-10 flex max-w-[1236px] flex-col gap-[22px] leading-[normal] text-[#111827]">
 				<div className="flex flex-col gap-2">
-					<h1 className="text-[28px] font-semibold">Découvrez votre prochaine entreprise.</h1>
-					<p className="text-[13px] text-[#697382]">Explorez les entreprises, leurs activités et les équipes qui les font grandir.</p>
+					<h1 className="text-[40px] font-bold">Découvrez votre prochaine entreprise.</h1>
+					<p className="text-[17px] text-[#6b7280]">Explorez les entreprises, leurs activités et les équipes qui les font grandir.</p>
 				</div>
 
-				<form role="search" onSubmit={onSearch} className="border-b border-[#e3e7ec]">
-					<div className="flex flex-col gap-3 rounded-lg border border-[#e3e7ec] p-1.5 focus-within:border-[#2864a6] md:h-14 md:flex-row md:items-center md:gap-4">
-						<label className="flex min-w-0 flex-1 items-center gap-4 max-md:h-11">
-							<img src="/static/img/companies/search.svg" alt="" width={20} height={20} />
-							<span className="sr-only">Rechercher une entreprise ou un secteur d’activité</span>
-							<input
-								placeholder="Rechercher une entreprise, un secteur d’activité…"
-								className="min-w-0 flex-1 bg-transparent text-[14px] outline-none placeholder:text-[#697382]"
-							/>
-						</label>
-						<span aria-hidden="true" className="hidden h-6 w-px bg-[#e3e7ec] md:block" />
-						{/* Pin and chevron drawn over the select, which keeps the clicks */}
-						<label className="relative flex items-center max-md:self-start">
-							<span className="sr-only">Zone de recherche</span>
-							<img src="/static/img/companies/map_pin.svg" alt="" width={17} height={17} className="pointer-events-none absolute left-0" />
-							<select
-								defaultValue=""
-								className={`${fit} cursor-pointer appearance-none bg-transparent py-1 pr-[22px] pl-[25px] text-[13px] ${focus}`}
-							>
-								<option value="">Toute la France</option>
-								{REGIONS.map((r) => (
-									<option key={r}>{r}</option>
-								))}
-							</select>
-							<img
-								src="/static/img/companies/location_chevron.svg"
-								alt=""
-								width={14}
-								height={14}
-								className="pointer-events-none absolute right-0"
-							/>
-						</label>
-						<button
-							type="submit"
-							className={`h-11 cursor-pointer rounded-[6px] bg-[#2864a6] px-[22px] text-[14px] font-semibold text-white hover:bg-[#2864a6]/90 ${focus}`}
-						>
-							Rechercher
-						</button>
-					</div>
+				<form role="search" onSubmit={onSearch} className="flex flex-col gap-3 md:flex-row md:items-start">
+					<label className={`${field} md:flex-1`}>
+						<SearchIcon width={20} height={20} className="text-gray-500" />
+						<span className="sr-only">Rechercher une entreprise ou un secteur d’activité</span>
+						<input placeholder="Rechercher une entreprise, un secteur d’activité…" className={input} />
+					</label>
+					<label className="relative md:w-[260px]">
+						{/* TODO: apply the selected region to search results; this select is currently visual only. */}
+						<span className="sr-only">Zone de recherche</span>
+						<select defaultValue="" className={select}>
+							<option value="">Toute la France</option>
+							{REGIONS.map((r) => <option key={r}>{r}</option>)}
+						</select>
+						<ChevronDownIcon width={20} height={20} className="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-gray-500" />
+					</label>
+					<button type="submit" className={searchButton}>Rechercher</button>
 				</form>
 
 				<LoginBanner>Crée ton compte pour suivre des entreprises et leur écrire directement.</LoginBanner>
 
 				<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
 					<nav aria-label="Collections" className="flex gap-1">
-						<Link to="/companies" aria-current="page" className={`rounded-[6px] bg-[#edf3fa] px-5 py-2 text-[12px] font-semibold text-[#2864a6] ${focus}`}>
+						<Link to="/companies" aria-current="page" className={`rounded-[6px] bg-primary/10 px-5 py-2 text-[12px] font-semibold text-primary ${focus}`}>
 							Toutes les entreprises
 						</Link>
 						{/* Favorites need an account */}
-						<Link to="/login" className={`rounded-[10px] px-5 py-2 text-[12px] text-[#697382] hover:bg-[#f1f3f6] ${focus}`}>
+						<Link to="/login" className={`rounded-[10px] px-5 py-2 text-[12px] text-[#6b7280] hover:bg-[#f1f3f6] ${focus}`}>
 							Mes favoris
 						</Link>
 					</nav>
 					<div className="flex flex-wrap gap-2">
 						<label className="relative">
+							{/* TODO: filter companies by the selected sector. */}
 							<span className="sr-only">Secteur d’activité</span>
 							<select defaultValue="" className={filter}>
 								<option value="">Secteur d’activité</option>
@@ -177,15 +168,10 @@ export default function CompaniesPage() {
 									<option key={s}>{s}</option>
 								))}
 							</select>
-							<img
-								src="/static/img/companies/filter_chevron.svg"
-								alt=""
-								width={13}
-								height={13}
-								className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2"
-							/>
+							<ChevronDownIcon width={13} height={13} className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-gray-500" />
 						</label>
 						<label className="relative">
+							{/* TODO: filter companies by the selected employee range. */}
 							<span className="sr-only">Taille de l’entreprise</span>
 							<select defaultValue="" className={filter}>
 								<option value="">Taille de l’entreprise</option>
@@ -193,30 +179,25 @@ export default function CompaniesPage() {
 									<option key={t}>{t}</option>
 								))}
 							</select>
-							<img
-								src="/static/img/companies/filter_chevron.svg"
-								alt=""
-								width={13}
-								height={13}
-								className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2"
-							/>
+							<ChevronDownIcon width={13} height={13} className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-gray-500" />
 						</label>
 						<label className="relative flex items-center pl-2">
+							{/* TODO: sort company results by the selected criterion. */}
 							<span className="sr-only">Trier par</span>
-							<select className={`${fit} cursor-pointer appearance-none bg-transparent py-[9px] pr-[22px] text-[12px] text-[#697382] ${focus}`}>
+							<select className={`${fit} cursor-pointer appearance-none bg-transparent py-[9px] pr-[22px] text-[12px] text-[#6b7280] ${focus}`}>
 								{TRIS.map((t) => (
 									<option key={t}>{t}</option>
 								))}
 							</select>
-							<img src="/static/img/companies/sort.svg" alt="" width={16} height={16} className="pointer-events-none absolute right-0" />
+							<SortIcon width={16} height={16} className="pointer-events-none absolute right-0 text-gray-500" />
 						</label>
 					</div>
 				</div>
 
 				{/* Saving or opening a company needs an account: these links lead to the login page */}
-				<ul className="grid gap-[18px] md:grid-cols-2 lg:grid-cols-3">
-					{COMPANIES.map(({ name, emblem, colors, city, description, sector, employees }) => (
-						<li key={name} className="flex flex-col gap-4 rounded-xl border border-[#d1d5db] p-5">
+				<ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+					{visibleResults.map(({ name, emblem, colors, city, description, sector, employees }) => (
+						<li key={name} className={card}>
 							<div className="flex items-center gap-3">
 								<span
 									aria-hidden="true"
@@ -225,61 +206,35 @@ export default function CompaniesPage() {
 									{emblem}
 								</span>
 								<div className="flex min-w-0 flex-1 flex-col gap-[5px]">
-									<h2 className="text-[17px] font-semibold">{name}</h2>
-									<p className="flex items-center gap-1 text-[12px] text-[#697382]">
-										<img src="/static/img/companies/city_pin.svg" alt="" width={12} height={12} />
+									<h2 className="text-[19px] font-semibold">{name}</h2>
+									<p className="flex items-center gap-1 text-[12px] text-[#6b7280]">
+										<MapPinIcon width={12} height={12} className="text-gray-500" />
 										{city}
 									</p>
 								</div>
 								{/* Grey bookmark, blue on hover */}
 								<Link to="/login" aria-label={`Ajouter ${name} à mes favoris`} className={`group shrink-0 rounded-sm ${focus}`}>
-									<img src="/static/img/companies/bookmark.svg" alt="" width={18} height={18} className="group-hover:hidden" />
-									<img src="/static/img/companies/bookmark_saved.svg" alt="" width={18} height={18} className="hidden group-hover:block" />
+									<BookmarkIcon width={18} height={18} className="text-gray-400 group-hover:text-primary group-focus-visible:text-primary" />
 								</Link>
 							</div>
-							<p className="min-h-10 text-[13px] leading-5 text-[#697382]">{description}</p>
-							<span className="self-start rounded-[5px] bg-[#f1f3f6] px-2 py-[5px] text-[11px] font-medium text-[#697382]">{sector}</span>
+							<p className="min-h-10 text-[15px] leading-5 text-[#6b7280]">{description}</p>
+							<span className="self-start rounded-[5px] bg-[#f1f3f6] px-2 py-[5px] text-[11px] font-medium text-[#6b7280]">{sector}</span>
 							<div className="flex items-center justify-between border-t border-[#d1d5db] pt-4">
-								<p className="flex items-center gap-[5px] text-[11px] text-[#697382]">
-									<img src="/static/img/companies/users.svg" alt="" width={14} height={14} />
+								<p className="flex items-center gap-[5px] text-[11px] text-[#6b7280]">
+									<UsersIcon width={14} height={14} className="text-gray-500" />
 									{employees} salariés
 								</p>
-								<Link to="/login" className={`flex items-center gap-[5px] rounded-sm text-[12px] font-semibold text-[#2864a6] hover:underline ${focus}`}>
+								<Link to="/login" className={`flex items-center gap-[5px] rounded-sm text-[12px] font-semibold text-primary hover:underline ${focus}`}>
 									Voir la fiche<span className="sr-only"> de {name}</span>
-									<img src="/static/img/companies/arrow_up_right.svg" alt="" width={14} height={14} />
+									<ArrowUpRightIcon width={14} height={14} className="" />
 								</Link>
 							</div>
 						</li>
 					))}
 				</ul>
 
-				<div className="flex flex-col items-center gap-3 pt-0.5 sm:flex-row sm:justify-between">
-					<p className="text-[12px] text-[#697382]">1–6 sur 60 entreprises</p>
-					<nav aria-label="Pagination" className="flex items-center gap-2.5 font-sans">
-						<button type="button" aria-label="Page précédente" className={`cursor-pointer rounded-sm ${focus}`}>
-							<img src="/static/img/companies/page_arrow.svg" alt="" width={30} height={30} />
-						</button>
-						{PAGES.map((page) =>
-							page === "..." ? (
-								<span key={page} className={pageItem}>
-									...
-								</span>
-							) : (
-								<button
-									key={page}
-									type="button"
-									aria-current={page === "1" ? "page" : undefined}
-									className={`${pageItem} cursor-pointer ${page === "1" ? "bg-[#2864a6] text-white" : "text-ink"} ${focus}`}
-								>
-									{page}
-								</button>
-							),
-						)}
-						{/* Same arrow as "previous", mirrored */}
-						<button type="button" aria-label="Page suivante" className={`cursor-pointer rounded-sm ${focus}`}>
-							<img src="/static/img/companies/page_arrow.svg" alt="" width={30} height={30} className="-scale-x-100" />
-						</button>
-					</nav>
+				<div className="flex flex-col items-center gap-3 pt-0.5">
+					<Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
 				</div>
 			</main>
 		</div>

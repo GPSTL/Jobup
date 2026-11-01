@@ -1,11 +1,17 @@
+import ChevronDownIcon from "../components/ChevronDownIcon";
+import HeartIcon from "../components/HeartIcon";
+import MapPinIcon from "../components/MapPinIcon";
+import SearchIcon from "../components/SearchIcon";
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 
+
+import Pagination from "../components/Pagination";
 import Button from "../components/Button";
 import LoginBanner from "../components/LoginBanner";
 import Navbar, { NavbarLink } from "../components/Navbar";
 
-// Sample offers from the mockup, until they come from the backend
+// TODO: replace these provisional sample offers with backend results.
 const OFFERS = [
 	{ title: "Développeur Java en alternance", company: "Atelier Studio", city: "Paris", duration: "12 mois" },
 	{ title: "Data analyst junior", company: "Horizon Tech", city: "Nantes", duration: "24 mois" },
@@ -15,41 +21,37 @@ const OFFERS = [
 	{ title: "Chargé de recrutement", company: "Maison Verte", city: "Bordeaux", duration: "12 mois" },
 ];
 
-// Placeholder options until they come from the backend
+// TODO: replace these provisional filter options with backend reference data.
 const SECTEURS = ["Informatique", "Data / IA", "Marketing / Communication", "Design", "Ressources humaines", "Autre"];
 
-// Static until the offers come from the backend
-const PAGES = ["1", "2", "3", "…", "42"];
 
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
-
-const field = [
-	"flex items-center gap-2.5 rounded-[14px] border border-[#d1d5db] bg-white py-3.5 pr-3.5 pl-[18px]",
-	"focus-within:border-primary",
-].join(" ");
-
+const field = "flex min-w-0 items-center gap-2.5 rounded-[14px] border border-[#d1d5db] bg-white py-3.5 pr-3.5 pl-[18px] focus-within:border-primary";
 const input = "min-w-0 flex-1 bg-transparent text-[17px] text-[#111827] outline-none placeholder:text-[#9ca3af]";
+const select = "w-full cursor-pointer appearance-none rounded-[14px] border border-[#d1d5db] bg-white py-3.5 pr-11 pl-[18px] text-[17px] outline-none focus:border-primary";
+const searchButton = `cursor-pointer rounded-[14px] bg-primary px-[22px] py-3.5 text-[16px] font-semibold text-on-primary hover:bg-primary/90 ${focus}`;
+const card = "flex flex-col gap-2.5 rounded-[20px] bg-white px-4 pt-4 pb-[18px] shadow-[0_4px_12px_rgba(0,0,0,0.1)]";
 
-// Same look as `field`, with room on the right for the chevron
-const select = [
-	"w-full cursor-pointer appearance-none rounded-[14px] border border-[#d1d5db] bg-white py-3.5 pr-11 pl-[18px]",
-	"text-[17px] outline-none focus:border-primary",
-].join(" ");
-
-const pageItem = "flex size-[34px] items-center justify-center rounded-lg text-[15px] font-semibold";
 
 export default function OffersPage() {
+	// Local pagination works on sample data.
+	// TODO: use backend pagination and its total result count when the API is connected.
+	const [page, setPage] = useState(1);
+	const pageSize = 6;
+	const totalPages = Math.ceil(OFFERS.length / pageSize);
+	const startIndex = (page - 1) * pageSize;
+	const visibleResults = OFFERS.slice(startIndex, startIndex + pageSize);
 	const [secteur, setSecteur] = useState<string>("");
 
 	// Not connected to the backend yet
 	const onSearch = (e: FormEvent) => {
 		e.preventDefault();
-		// TODO: search the offers once the API exists
+		// TODO: apply the keyword and city/postcode fields to results when the search API is connected.
 	};
 
 	return (
-		<div className="min-h-dvh bg-[#f0f0f0] px-4 pt-4 pb-16 leading-[normal] text-[#111827] md:px-6 md:pt-[50px]">
-			<header className="mx-auto max-w-[1236px]">
+		<div className="min-h-dvh bg-[#f0f0f0] px-4 pt-4 pb-16 text-[#111827] md:px-6 md:pt-6">
+			<header>
 				<Navbar>
 					{/* Hidden on small screens: the full bar does not fit on a phone. */}
 					<div className="hidden gap-12 lg:flex">
@@ -62,25 +64,27 @@ export default function OffersPage() {
 				</Navbar>
 			</header>
 
-			<main className="mx-auto mt-10 flex max-w-[1236px] flex-col gap-[22px]">
+			<main className="mx-auto mt-10 flex max-w-[1236px] flex-col gap-[22px] leading-[normal]">
 				<div className="flex flex-col gap-1.5">
 					<h1 className="text-[40px] font-bold">Trouver une alternance</h1>
-					<p className="text-[17px] text-[#6b7280]">248 offres d’alternance publiées par des entreprises partenaires.</p>
+					{/* Provisional count derived from sample data; replace with the API total. */}
+					<p className="text-[17px] text-[#6b7280]">{OFFERS.length} offres d’alternance publiées par des entreprises partenaires.</p>
 				</div>
 
 				<form role="search" onSubmit={onSearch} className="flex flex-col gap-3 md:flex-row md:items-start">
 					<label className={`${field} md:flex-1`}>
-						<img src="/static/img/offers/search.svg" alt="" width={20} height={20} />
+						<SearchIcon width={20} height={20} className="text-gray-500" />
 						<span className="sr-only">Poste, compétence ou entreprise</span>
 						<input placeholder="Poste, compétence ou entreprise" className={input} />
 					</label>
 					<label className={`${field} md:w-[260px]`}>
 						<span className="sr-only">Ville ou code postal</span>
 						<input placeholder="Ville ou code postal" className={input} />
-						<img src="/static/img/offers/pin.svg" alt="" width={20} height={20} />
+						<MapPinIcon width={20} height={20} className="text-gray-500" />
 					</label>
 					{/* The select fills the whole field so a click on the chevron opens it too */}
 					<label className="relative md:w-[220px]">
+						{/* TODO: apply the selected sector to results; currently only the selected value changes. */}
 						<span className="sr-only">Secteur</span>
 						<select
 							value={secteur}
@@ -94,17 +98,11 @@ export default function OffersPage() {
 								</option>
 							))}
 						</select>
-						<img
-							src="/static/img/offers/chevron_down.svg"
-							alt=""
-							width={20}
-							height={20}
-							className="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2"
-						/>
+						<ChevronDownIcon width={20} height={20} className="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-gray-500" />
 					</label>
 					<button
 						type="submit"
-						className={`cursor-pointer rounded-[14px] bg-primary px-[22px] py-3.5 text-[16px] font-semibold text-on-primary hover:bg-primary/90 ${focus}`}
+						className={searchButton}
 					>
 						Rechercher
 					</button>
@@ -114,20 +112,20 @@ export default function OffersPage() {
 
 				{/* Saving or opening an offer needs an account: these links lead to the login page */}
 				<ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-					{OFFERS.map(({ title, company, city, duration }) => (
-						<li key={title} className="flex flex-col gap-2.5 rounded-[20px] bg-white px-4 pt-4 pb-[18px] shadow-[0_4px_12px_rgba(0,0,0,0.1)]">
-							<img src="/static/img/offers/offer_image.jpg" alt="" className="h-[150px] w-full rounded-[14px] object-cover" />
+					{visibleResults.map(({ title, company, city, duration }) => (
+						<li key={title} className={card}>
+							<img src="/static/img/offers/offer_image.webp" alt="" loading="lazy" className="h-[150px] w-full rounded-[14px] object-cover" />
 							<div className="flex items-center gap-2">
 								<h2 className="flex-1 text-[19px] font-semibold">{title}</h2>
-								<Link to="/login" aria-label={`Sauvegarder l’offre ${title}`} className={`shrink-0 rounded-sm ${focus}`}>
-									<img src="/static/img/offers/heart.svg" alt="" width={20} height={20} />
+								<Link to="/login" aria-label={`Sauvegarder l’offre ${title}`} className={`group shrink-0 rounded-sm ${focus}`}>
+									<HeartIcon width={20} height={20} className="text-gray-400 group-hover:text-primary group-focus-visible:text-primary" />
 								</Link>
 							</div>
 							<p className="text-[15px] text-[#6b7280]">
 								{company} • {city}
 							</p>
 							<div className="flex gap-2">
-								<span className="rounded-full bg-[#dbeafe] px-2.5 py-[5px] text-[13px] font-semibold text-[#1d4ed8]">Alternance</span>
+								<span className="rounded-full bg-primary/10 px-2.5 py-[5px] text-[13px] font-semibold text-primary">Alternance</span>
 								<span className="rounded-full bg-[#f3f4f6] px-2.5 py-[5px] text-[13px] font-semibold text-[#6b7280]">{duration}</span>
 							</div>
 							<Link
@@ -140,30 +138,7 @@ export default function OffersPage() {
 					))}
 				</ul>
 
-				<nav aria-label="Pagination" className="flex justify-center gap-2">
-					<button type="button" aria-label="Page précédente" className={`${pageItem} cursor-pointer bg-white ${focus}`}>
-						‹
-					</button>
-					{PAGES.map((page) =>
-						page === "…" ? (
-							<span key={page} className={`${pageItem} bg-white`}>
-								…
-							</span>
-						) : (
-							<button
-								key={page}
-								type="button"
-								aria-current={page === "1" ? "page" : undefined}
-								className={`${pageItem} cursor-pointer ${page === "1" ? "bg-primary text-on-primary" : "bg-white"} ${focus}`}
-							>
-								{page}
-							</button>
-						),
-					)}
-					<button type="button" aria-label="Page suivante" className={`${pageItem} cursor-pointer bg-white ${focus}`}>
-						›
-					</button>
-				</nav>
+				<Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
 			</main>
 		</div>
 	);
