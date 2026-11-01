@@ -1,18 +1,18 @@
-import ArrowUpRightIcon from "../components/ArrowUpRightIcon";
-import BookmarkIcon from "../components/BookmarkIcon";
-import ChevronDownIcon from "../components/ChevronDownIcon";
-import MapPinIcon from "../components/MapPinIcon";
-import SearchIcon from "../components/SearchIcon";
-import SortIcon from "../components/SortIcon";
-import UsersIcon from "../components/UsersIcon";
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 
-
-import Pagination from "../components/Pagination";
+import ArrowUpRightIcon from "../components/ArrowUpRightIcon";
+import BookmarkIcon from "../components/BookmarkIcon";
 import Button from "../components/Button";
+import ChevronDownIcon from "../components/ChevronDownIcon";
 import LoginBanner from "../components/LoginBanner";
+import MapPinIcon from "../components/MapPinIcon";
 import Navbar, { NavbarLink } from "../components/Navbar";
+import Pagination from "../components/Pagination";
+import SearchIcon from "../components/SearchIcon";
+import SortIcon from "../components/SortIcon";
+import UsersIcon from "../components/UsersIcon";
+import { card, field, focus, input, searchButton, select } from "../utils/searchPageStyles";
 
 // TODO: replace these provisional sample companies with backend results.
 // `emblem`: letters shown in the colored square instead of a logo.
@@ -80,15 +80,6 @@ const SECTEURS = ["Santé", "Économie circulaire", "Finance", "Mobilité", "Ass
 const TAILLES = ["Moins de 50 salariés", "50 à 250 salariés", "250 à 1 000 salariés", "Plus de 1 000 salariés"];
 // TODO: connect these provisional sort options to backend sorting.
 const TRIS = ["Pertinence", "Nom", "Nombre de salariés"];
-
-
-const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
-const field = "flex min-w-0 items-center gap-2.5 rounded-[14px] border border-[#d1d5db] bg-white py-3.5 pr-3.5 pl-[18px] focus-within:border-primary";
-const input = "min-w-0 flex-1 bg-transparent text-[17px] text-[#111827] outline-none placeholder:text-[#9ca3af]";
-const select = "w-full cursor-pointer appearance-none rounded-[14px] border border-[#d1d5db] bg-white py-3.5 pr-11 pl-[18px] text-[17px] outline-none focus:border-primary";
-const searchButton = `cursor-pointer rounded-[14px] bg-primary px-[22px] py-3.5 text-[16px] font-semibold text-on-primary hover:bg-primary/90 ${focus}`;
-const card = "flex flex-col gap-2.5 rounded-[20px] bg-white px-4 pt-4 pb-[18px] shadow-[0_4px_12px_rgba(0,0,0,0.1)]";
-
 
 const fit = "field-sizing-content";
 const filter = `${select} ${fit}`;

@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import LockIcon from "./LockIcon";
+
 type LoginBannerProps = {
 	/** What the visitor gets by logging in */
 	children: ReactNode;
@@ -14,7 +16,7 @@ export default function LoginBanner({ children }: LoginBannerProps) {
 		>
 			<div className="flex items-center gap-4">
 				<span className="flex size-10 shrink-0 items-center justify-center rounded-[20px] bg-surface/20">
-					<img src="/static/img/lock.svg" alt="" width={20} height={20} />
+					<LockIcon width={20} height={20} />
 				</span>
 				<p className="text-[17px] font-medium">{children}</p>
 			</div>
