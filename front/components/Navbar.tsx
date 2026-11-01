@@ -12,7 +12,7 @@ type NavbarProps = {
 
 const variants = {
 	glass: "bg-surface/40 backdrop-blur-md border border-surface/50",
-	solid: "bg-surface shadow-[0_4px_12px_rgba(0,0,0,0.1)]",
+	solid: "bg-surface border border-transparent shadow-[0_4px_12px_rgba(0,0,0,0.1)]",
 };
 
 // Shared by every navigation bar: logo on the left, content given by the page.
