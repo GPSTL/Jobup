@@ -7,6 +7,7 @@ import ComingSoonPage from "./pages/ComingSoonPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import Connexion from "./pages/Connexion";
 import StudentPage from "./pages/StudentPage";
+import MonEspace from "./pages/MonEspace";
 import OffersPage from "./pages/OffersPage";
 import CompaniesPage from "./pages/CompaniesPage";
 
@@ -21,6 +22,11 @@ function App() {
 				<Route path="/offers" element={<OffersPage />} />
 				<Route path="/companies" element={<CompaniesPage />} />
 				<Route path="/pricing" element={<ComingSoonPage />} />
+				{/* TODO: remove the route /MonEspace when login and sub apis are ready */}
+				<Route path="/MonEspace" element={<MonEspace />} />
+				<Route path="/filters" element={<ComingSoonPage />} />
+				<Route path="/messages" element={<ComingSoonPage />} />
+				<Route path="/applications" element={<ComingSoonPage />} />
 				<Route path="*" element={<NotFoundPage />} />
 			</Routes>
 		</BrowserRouter>
