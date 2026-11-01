@@ -12,6 +12,8 @@ type ButtonProps = {
 	size?: "md" | "lg";
 	/** "primary": main action. "secondary": light blue, e.g. "Modifier". "outline": white with a border, e.g. "Annuler". */
 	variant?: "primary" | "secondary" | "outline";
+	/** No effect on a link. */
+	disabled?: boolean;
 	/** Gives access to the <button>, e.g. to focus it. No effect on a link. */
 	ref?: Ref<HTMLButtonElement>;
 	/** Extra classes */
@@ -20,6 +22,7 @@ type ButtonProps = {
 
 const base = [
 	"inline-flex items-center justify-center rounded-full cursor-pointer font-medium",
+	"disabled:cursor-not-allowed disabled:opacity-60",
 	// Keyboard focus: blue outline separated from the button by a white band,
 	// so it stays visible on a white background as well as on the home page photo.
 	"focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
@@ -46,6 +49,7 @@ export default function Button({
 	type = "button",
 	size = "md",
 	variant = "primary",
+	disabled = false,
 	ref,
 	className = "",
 }: ButtonProps) {
@@ -60,7 +64,7 @@ export default function Button({
 	}
 
 	return (
-		<button ref={ref} type={type} onClick={onClick} className={classes}>
+		<button ref={ref} type={type} onClick={onClick} disabled={disabled} className={classes}>
 			{children}
 		</button>
 	);
