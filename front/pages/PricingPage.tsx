@@ -68,7 +68,6 @@ export default function PricingPage() {
 							aria-labelledby={`plan-${role}`}
 							className={`flex flex-col rounded-[26px] border-2 bg-white p-7 shadow-[0_4px_12px_rgba(0,0,0,0.08)] md:min-h-[470px] md:p-8 ${popular ? "border-primary" : "border-transparent"}`}
 						>
-							{popular && <span className="mb-3 self-start rounded-full bg-[#dae8ff] px-3 py-1 text-xs font-semibold text-[#1950ff]">Le plus choisi</span>}
 							<h2 id={`plan-${role}`} className="text-2xl leading-tight font-semibold">{title}</h2>
 							<p className="mt-3 text-[36px] leading-tight font-bold tracking-tight text-primary">{price} €<span className="text-[30px]">/mois</span></p>
 							<ul className="mt-4 mb-10 space-y-2.5">

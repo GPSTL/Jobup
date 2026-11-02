@@ -12,7 +12,7 @@ export default function Logo({ className = "h-7" }: LogoProps) {
 			aria-label="JobUp, accueil"
 			className="shrink-0 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
 		>
-			<img src="/static/img/JobUp_logo.svg" alt="" className={className} />
+			<img src="/static/img/jobup-logo.svg" alt="" className={className} />
 		</Link>
 	);
 }
