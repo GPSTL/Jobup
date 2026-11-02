@@ -8,6 +8,8 @@ import NotFoundPage from "./pages/NotFoundPage";
 import Connexion from "./pages/Connexion";
 import StudentPage from "./pages/StudentPage";
 import SchoolPage from "./pages/SchoolPage";
+import OffersPage from "./pages/OffersPage";
+import CompaniesPage from "./pages/CompaniesPage";
 
 function App() {
 	return (
@@ -18,8 +20,8 @@ function App() {
 				<Route path="/schools" element={<SchoolPage />} />
 				<Route path="/signup" element={<Inscription />} />
 				<Route path="/login" element={<Connexion />} />
-				<Route path="/offers" element={<ComingSoonPage />} />
-				<Route path="/companies" element={<ComingSoonPage />} />
+				<Route path="/offers" element={<OffersPage />} />
+				<Route path="/companies" element={<CompaniesPage />} />
 				<Route path="/pricing" element={<ComingSoonPage />} />
 				<Route path="*" element={<NotFoundPage />} />
 			</Routes>
