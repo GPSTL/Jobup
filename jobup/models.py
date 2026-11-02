@@ -145,16 +145,11 @@ class Student(models.Model):
     )
     resume = models.FileField(upload_to="CVs", blank=True)
     description = models.CharField(max_length=512, blank=True)
-    category = models.SmallIntegerField(
-        choices=JobCategory.choices, default=JobCategory.OTHER
-    )
+    category = models.SmallIntegerField(choices=JobCategory.choices, null=True, blank=True)
     experience_level = models.PositiveSmallIntegerField(default=0)  # months
     skills = models.CharField(max_length=256, blank=True)  # Comma separated skills
     region = models.CharField(max_length=64, default="Île-de-France")
-    age = models.PositiveSmallIntegerField(default=0)
-    study_degree = models.SmallIntegerField(
-        choices=StudyDegree.choices, default=StudyDegree.LICENCE1
-    )
+    study_degree = models.SmallIntegerField(choices=StudyDegree.choices, null=True, blank=True)
     rhythm = models.CharField(
         max_length=64, blank=True
     )  # years\d{1} (weeks(\d{1}){2-48} | days(\d{1}){2-7})

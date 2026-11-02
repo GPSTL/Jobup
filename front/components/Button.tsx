@@ -6,6 +6,7 @@ type ButtonProps = {
 	/** Internal path: the button becomes a link (e.g. "/signup"). */
 	to?: string;
 	onClick?: () => void;
+	disabled?: boolean;
 	/** "submit" to submit a form. No effect on a link. */
 	type?: "button" | "submit";
 	/** "md": navigation bar, "lg": home page buttons. */
@@ -32,6 +33,7 @@ export default function Button({
 	children,
 	to,
 	onClick,
+	disabled = false,
 	type = "button",
 	size = "md",
 	className = "",
@@ -47,7 +49,7 @@ export default function Button({
 	}
 
 	return (
-		<button type={type} onClick={onClick} className={classes}>
+		<button disabled={disabled} type={type} onClick={onClick} className={classes}>
 			{children}
 		</button>
 	);
