@@ -22,3 +22,9 @@ export const toSignupPayload = (form: SignupForm) => ({
 	password: form.password,
 	role: "student" as const,
 });
+
+// Preserve JOB-028's non-student fields while their signup APIs are unavailable.
+export const organizationSignupSchema = signupSchema.extend({
+	telephone: z.string().regex(/^(?:0|\+33)[1-9]\d{8}$/, "Numéro invalide : 10 chiffres commençant par 0."),
+});
+export type OrganizationSignupForm = z.infer<typeof organizationSignupSchema>;

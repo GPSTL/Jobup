@@ -8,6 +8,8 @@ import NotFoundPage from "./pages/NotFoundPage";
 import Connexion from "./pages/Connexion";
 import StudentPage from "./pages/StudentPage";
 import MonEspace from "./pages/MonEspace";
+import RequireStudent from "./components/RequireStudent";
+import SchoolPage from "./pages/SchoolPage";
 import OffersPage from "./pages/OffersPage";
 import CompaniesPage from "./pages/CompaniesPage";
 
@@ -17,8 +19,10 @@ function App() {
 			<Routes>
 				<Route path="/" element={<HomePage />} />
 				<Route path="/students" element={<StudentPage />} />
+				<Route path="/schools" element={<SchoolPage />} />
 				<Route path="/signup" element={<Inscription />} />
 				<Route path="/login" element={<Connexion />} />
+				<Route path="/student" element={<RequireStudent>{() => <ComingSoonPage />}</RequireStudent>} />
 				<Route path="/offers" element={<OffersPage />} />
 				<Route path="/companies" element={<CompaniesPage />} />
 				<Route path="/pricing" element={<ComingSoonPage />} />

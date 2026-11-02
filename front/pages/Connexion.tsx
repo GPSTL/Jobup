@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, type LoginForm } from "../utils/login";
@@ -17,6 +17,7 @@ const FORM_ERRORS = {
 };
 
 export default function Connexion() {
+	const navigate = useNavigate();
 	const { register, handleSubmit, setFocus, formState: { errors, isSubmitting } } = useForm<LoginForm>({
 		resolver: zodResolver(loginSchema),
 		defaultValues: { email: "", password: "" },
@@ -34,7 +35,7 @@ export default function Connexion() {
 				if (result.reason === "invalidCredentials") setFocus("password");
 				return;
 			}
-			// TODO: redirect to the student space once its route is confirmed (JOB-006).
+			navigate("/student", { replace: true });
 		} finally {
 			submittingRef.current = false;
 		}
