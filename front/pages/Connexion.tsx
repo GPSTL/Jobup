@@ -9,6 +9,7 @@ import Field from "../components/Field";
 import Button from "../components/Button";
 import { login } from "../services/auth";
 import { MESSAGES } from "../utils/validation";
+import { useSession } from "../components/SessionProvider";
 
 const FORM_ERRORS = {
 	invalidCredentials: MESSAGES.invalidCredentials,
@@ -17,6 +18,7 @@ const FORM_ERRORS = {
 };
 
 export default function Connexion() {
+	const { refresh } = useSession();
 	const navigate = useNavigate();
 	const { register, handleSubmit, setFocus, formState: { errors, isSubmitting } } = useForm<LoginForm>({
 		resolver: zodResolver(loginSchema),
@@ -35,6 +37,7 @@ export default function Connexion() {
 				if (result.reason === "invalidCredentials") setFocus("password");
 				return;
 			}
+			await refresh();
 			navigate("/student", { replace: true });
 		} finally {
 			submittingRef.current = false;
@@ -75,9 +78,9 @@ export default function Connexion() {
 							{formError}
 						</p>
 					)}
-					<a href="#" className="mt-[23px] self-center text-base leading-4.5 text-primary hover:underline">
+					<Link to="/forgot-password" className="mt-[23px] self-center text-base leading-4.5 text-primary hover:underline">
 						Mot de passe oublié ?
-					</a>
+					</Link>
 					<Button
 						type="submit"
 						disabled={isSubmitting}

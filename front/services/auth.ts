@@ -1,5 +1,6 @@
 // Calls to the authentication API (JOB-004).
 // The backend opens a Django session (cookie) on success.
+import { DEMO_EMAIL, DEMO_PASSWORD, endDemoSession, getDemoUser, startDemoSession } from "./demoAuth";
 
 // Aligné sur User.to_dict() côté Django : le rôle est un entier (Role)
 export type User = {
@@ -17,6 +18,12 @@ export type LoginResult =
 	| { ok: false; reason: "invalidCredentials" | "server" | "network" };
 
 export async function login(email: string, password: string): Promise<LoginResult> {
+	if (email.trim().toLowerCase() === DEMO_EMAIL) {
+		if (password !== DEMO_PASSWORD) return { ok: false, reason: "invalidCredentials" };
+		if (!startDemoSession()) return { ok: false, reason: "server" };
+		return { ok: true, user: getDemoUser()! };
+	}
+	endDemoSession();
 	let response: Response;
 	try {
 		response = await fetch("/api/login", {
@@ -45,9 +52,31 @@ export type SessionResult =
 	| { ok: true; user: User }
 	| { ok: false; reason: "noSession" | "server" | "network" };
 
+export async function logout(): Promise<boolean> {
+	if (getDemoUser()) {
+		endDemoSession();
+		return true;
+	}
+	try {
+		const csrf = await fetch("/api/csrf", { credentials: "same-origin" });
+		if (!csrf.ok) return false;
+		const { csrfToken } = await csrf.json();
+		const response = await fetch("/api/logout", {
+			method: "POST",
+			credentials: "same-origin",
+			headers: { "X-CSRFToken": csrfToken },
+		});
+		return response.ok;
+	} catch {
+		return false;
+	}
+}
+
 // Vérifie la session Django en cours : sert à protéger les pages connectées
 // et à détecter une session expirée
 export async function getSession(): Promise<SessionResult> {
+	const demoUser = getDemoUser();
+	if (demoUser) return { ok: true, user: demoUser };
 	let response: Response;
 	try {
 		response = await fetch("/api/me", { credentials: "same-origin" });

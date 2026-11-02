@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import LockIcon from "./LockIcon";
+import { useSession } from "./SessionProvider";
 
 type LoginBannerProps = {
 	/** What the visitor gets by logging in */
@@ -9,6 +10,8 @@ type LoginBannerProps = {
 
 // Informational reminder; login and signup actions are in the navigation bar.
 export default function LoginBanner({ children }: LoginBannerProps) {
+	const { user, loading } = useSession();
+	if (user || loading) return null;
 	return (
 		<section
 			aria-label="Connexion"

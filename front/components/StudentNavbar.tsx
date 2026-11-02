@@ -1,15 +1,16 @@
 import { useId, useRef, useState, type KeyboardEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import MenuIcon from "./MenuIcon";
 import Navbar, { NavbarLink } from "./Navbar";
+import { useSession } from "./SessionProvider";
 
 // Pages of the logged-in student, in the order of the mockup
 const links = [
-	{ label: "Mon espace", to: "/MonEspace" },
+	{ label: "Mon espace", to: "/student" },
 	{ label: "Filtrer", to: "/filters" },
 	{ label: "Entreprises", to: "/companies" },
-	{ label: "Offres", to: "/offers" },
+	{ label: "Offres", to: "/student/offers" },
 	{ label: "Messages", to: "/messages" },
 	{ label: "Candidatures", to: "/applications" },
 ];
@@ -17,7 +18,11 @@ const links = [
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary";
 
 // Shared by every page of the logged-in student. NavbarLink highlights the link of the current page.
-export default function StudentNavbar() {
+export default function StudentNavbar({ variant = "solid" }: { variant?: "glass" | "solid" }) {
+	const navigate = useNavigate();
+	const { user, signOut } = useSession();
+	const [logoutError, setLogoutError] = useState(false);
+	const [signingOut, setSigningOut] = useState(false);
 	// Menu of the small screens, where the links do not fit in the bar
 	const [open, setOpen] = useState(false);
 	const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -32,12 +37,12 @@ export default function StudentNavbar() {
 	};
 
 	return (
-		<Navbar>
-			<div className="relative ml-auto flex items-center gap-12" onKeyDown={onKeyDown}>
+		<Navbar variant={variant}>
+			<div className="relative ml-auto flex items-center gap-4 lg:gap-12" onKeyDown={onKeyDown}>
 				{/* Large screens: the links are in the bar */}
 				<div className="hidden gap-12 lg:flex">
 					{links.map(({ label, to }) => (
-						<NavbarLink key={to} to={to}>
+						<NavbarLink key={to} to={to} end={to === "/student"}>
 							{label}
 						</NavbarLink>
 					))}
@@ -64,11 +69,28 @@ export default function StudentNavbar() {
 				>
 					{links.map(({ label, to }) => (
 						<li key={to}>
-							<NavbarLink to={to}>{label}</NavbarLink>
+							<NavbarLink to={to} end={to === "/student"}>{label}</NavbarLink>
 						</li>
 					))}
 				</ul>
 
+				{user && (
+					<button
+						type="button"
+						className={`cursor-pointer rounded-full px-3 py-2 text-primary ${focus}`}
+						disabled={signingOut}
+						onClick={async () => {
+							setSigningOut(true);
+							setLogoutError(false);
+							if (await signOut()) navigate("/login", { replace: true });
+							else setLogoutError(true);
+							setSigningOut(false);
+						}}
+					>
+						Déconnexion
+					</button>
+				)}
+				{logoutError && <p role="alert" className="absolute top-full right-0 mt-3 rounded-xl bg-white p-3 text-sm text-red-600">Déconnexion impossible. Réessayez.</p>}
 				{/* TODO: notifications */}
 			</div>
 		</Navbar>

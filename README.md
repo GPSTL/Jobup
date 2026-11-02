@@ -68,6 +68,34 @@ Once running, access the application at `http://127.0.0.1:8000/`.
 
 ## Signup and login forms (JOB-027)
 
+For a frontend demonstration, sign in with `test@gmail.com` and `Demo123!`.
+This opens Mon espace with simulated profile/CV data and a Déconnexion action
+in the student navigation. The demo flag lives in sessionStorage and
+survives refreshes in the same tab; it does not create a Django session or grant
+access to backend endpoints. Other email addresses use the real login API.
+Profile/CV changes remain temporary. Messages, applications and filters still
+show their existing placeholders.
+
+Presentation walkthrough:
+
+1. Start with `make dev` (or `make all` before starting Django) so the CSS and
+   JavaScript match the current checkout. Built files are not tracked in Git.
+2. Visit `/` and show the student, school, employer and pricing pages. Visitors
+   can preview the sample listings at `/offers` and `/companies`.
+3. Sign in with the test credentials above. `/student` opens Mon espace;
+   profile editing, photo selection and CV import use local simulated services.
+4. The signed-in Offres link opens `/student/offers`, showing Bientôt disponible.
+   Visiting `/offers` while signed in redirects there too. Filters, messages,
+   applications, company details and favourites also have upcoming screens.
+5. Use the logo to return home: student navigation remains visible. Refreshing
+   retains the session in the same tab. Déconnexion restores visitor navigation;
+   protected pages redirect back to login. `/MonEspace` redirects to `/student`.
+
+Validation: run `npx tsc --noEmit`, `make all`, `.venv/bin/python manage.py test`,
+and bundle `tests/*.ts tests/*.tsx` with esbuild (`--bundle --platform=node
+--format=cjs --jsx=automatic --outdir=/tmp/jobup-tests`), then run
+`node --test /tmp/jobup-tests/*.js`.
+
 Activate `.venv` with `source .venv/bin/activate`. The student form at
 `/signup?role=student` now requires only `prenom`, `nom`, `email`, and `password`.
 React Hook Form uses the Zod resolver; names allow letters, spaces, apostrophes

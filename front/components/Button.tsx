@@ -65,7 +65,7 @@ export default function Button({
 
 	return (
 
-		<button disabled={disabled} type={type} onClick={onClick} className={classes}>
+		<button ref={ref} disabled={disabled} type={type} onClick={onClick} className={classes}>
 			{children}
 		</button>
 	);

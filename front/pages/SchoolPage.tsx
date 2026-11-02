@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
-import Navbar, { NavbarLink } from "../components/Navbar";
-import Button from "../components/Button";
+import PublicNavbar from "../components/PublicNavbar";
 import HandshakeIcon from "../components/HandshakeIcon";
 import Filter from "../components/Filter";
 import Megaphone from "../components/Megaphone";
@@ -29,16 +28,7 @@ export default function SchoolPage() {
 	return (
 		<div className="min-h-dvh bg-[#f0f0f0] pb-16 font-sans text-[#151a29]">
 			<header className="relative p-4 md:p-6">
-				<Navbar variant="glass">
-					{/* Hidden on small screens: the full bar does not fit on a phone. */}
-					<div className="hidden gap-12 lg:flex">
-						<NavbarLink to="/offers">Trouver une alternance</NavbarLink>
-						<NavbarLink to="/companies">Explorer les entreprises</NavbarLink>
-						<NavbarLink to="/pricing">Tarifs</NavbarLink>
-					</div>
-					<NavbarLink to="/signup?role=school" className="ml-auto">Inscription</NavbarLink>
-					<Button to="/login">Connexion</Button>
-				</Navbar>
+				<PublicNavbar variant="glass" signupTo="/signup?role=school" />
 			</header>
 
 			<main className="mx-auto max-w-[1272px] px-5 md:px-10">

@@ -1,5 +1,5 @@
 import Button from "../components/Button";
-import Navbar, { NavbarLink } from "../components/Navbar";
+import PublicNavbar from "../components/PublicNavbar";
 
 import { ROLES } from "../utils/roles";
 
@@ -14,16 +14,7 @@ export default function HomePage() {
 
 			{/* `relative` puts the header and the content above the veil. */}
 			<header className="relative p-4 md:p-6">
-				<Navbar variant="glass">
-					{/* Hidden on small screens: the full bar does not fit on a phone. */}
-					<div className="hidden gap-12 lg:flex">
-						<NavbarLink to="/offers">Trouver une alternance</NavbarLink>
-						<NavbarLink to="/companies">Explorer les entreprises</NavbarLink>
-						<NavbarLink to="/pricing">Tarifs</NavbarLink>
-					</div>
-					<NavbarLink to="/signup" className="ml-auto">Inscription</NavbarLink>
-					<Button to="/login">Connexion</Button>
-				</Navbar>
+				<PublicNavbar variant="glass" />
 			</header>
 
 			<main className="relative flex flex-1 flex-col items-center justify-center gap-12 px-4 pt-8 pb-16 text-center md:gap-28">

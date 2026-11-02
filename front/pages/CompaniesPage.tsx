@@ -3,16 +3,16 @@ import { Link } from "react-router-dom";
 
 import ArrowUpRightIcon from "../components/ArrowUpRightIcon";
 import BookmarkIcon from "../components/BookmarkIcon";
-import Button from "../components/Button";
 import ChevronDownIcon from "../components/ChevronDownIcon";
 import LoginBanner from "../components/LoginBanner";
 import MapPinIcon from "../components/MapPinIcon";
-import Navbar, { NavbarLink } from "../components/Navbar";
+import PublicNavbar from "../components/PublicNavbar";
 import Pagination from "../components/Pagination";
 import SearchIcon from "../components/SearchIcon";
 import SortIcon from "../components/SortIcon";
 import UsersIcon from "../components/UsersIcon";
 import { card, field, focus, input, searchButton, select } from "../utils/searchPageStyles";
+import { useSession } from "../components/SessionProvider";
 
 // TODO: replace these provisional sample companies with backend results.
 // `emblem`: letters shown in the colored square instead of a logo.
@@ -85,6 +85,7 @@ const fit = "field-sizing-content";
 const filter = `${select} ${fit}`;
 
 export default function CompaniesPage() {
+	const { user } = useSession();
 	// Local pagination works on sample data.
 	// TODO: use backend pagination and its total result count when the API is connected.
 	const [page, setPage] = useState(1);
@@ -101,16 +102,7 @@ export default function CompaniesPage() {
 	return (
 		<div className="min-h-dvh bg-[#f0f0f0] px-4 pt-4 pb-16 md:px-6 md:pt-6">
 			<header>
-				<Navbar>
-					{/* Hidden on small screens: the full bar does not fit on a phone. */}
-					<div className="hidden gap-12 lg:flex">
-						<NavbarLink to="/offers">Trouver une alternance</NavbarLink>
-						<NavbarLink to="/companies">Explorer les entreprises</NavbarLink>
-						<NavbarLink to="/pricing">Tarifs</NavbarLink>
-					</div>
-					<NavbarLink to="/signup" className="ml-auto">Inscription</NavbarLink>
-					<Button to="/login">Connexion</Button>
-				</Navbar>
+				<PublicNavbar />
 			</header>
 
 			<main className="mx-auto mt-10 flex max-w-[1236px] flex-col gap-[22px] leading-[normal] text-[#111827]">
@@ -145,7 +137,7 @@ export default function CompaniesPage() {
 							Toutes les entreprises
 						</Link>
 						{/* Favorites need an account */}
-						<Link to="/login" className={`rounded-[10px] px-5 py-2 text-[12px] text-[#6b7280] hover:bg-[#f1f3f6] ${focus}`}>
+						<Link to={user ? "/student/favorites" : "/login"} className={`rounded-[10px] px-5 py-2 text-[12px] text-[#6b7280] hover:bg-[#f1f3f6] ${focus}`}>
 							Mes favoris
 						</Link>
 					</nav>
@@ -204,7 +196,7 @@ export default function CompaniesPage() {
 									</p>
 								</div>
 								{/* Grey bookmark, blue on hover */}
-								<Link to="/login" aria-label={`Ajouter ${name} à mes favoris`} className={`group shrink-0 rounded-sm ${focus}`}>
+								<Link to={user ? "/student/favorites" : "/login"} aria-label={`Ajouter ${name} à mes favoris`} className={`group shrink-0 rounded-sm ${focus}`}>
 									<BookmarkIcon width={18} height={18} className="text-gray-400 group-hover:text-primary group-focus-visible:text-primary" />
 								</Link>
 							</div>
@@ -215,7 +207,7 @@ export default function CompaniesPage() {
 									<UsersIcon width={14} height={14} className="text-gray-500" />
 									{employees} salariés
 								</p>
-								<Link to="/login" className={`flex items-center gap-[5px] rounded-sm text-[12px] font-semibold text-primary hover:underline ${focus}`}>
+								<Link to={user ? `/student/companies/${encodeURIComponent(name)}` : "/login"} className={`flex items-center gap-[5px] rounded-sm text-[12px] font-semibold text-primary hover:underline ${focus}`}>
 									Voir la fiche<span className="sr-only"> de {name}</span>
 									<ArrowUpRightIcon width={14} height={14} className="" />
 								</Link>

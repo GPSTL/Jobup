@@ -1,8 +1,10 @@
 import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
-import { getSession, login } from "../front/services/auth";
+import { getSession, login, logout } from "../front/services/auth";
+import { DEMO_EMAIL, DEMO_PASSWORD, endDemoSession } from "../front/services/demoAuth";
 
 const realFetch = globalThis.fetch;
+const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
 const student = { id: 1, name: "Durand", first_name: "Élodie", role: 1 };
 
 // Remplace fetch par une réponse simulée et garde la trace de la requête envoyée
@@ -17,6 +19,87 @@ function mockFetch(respond: () => Response | Promise<Response>) {
 
 afterEach(() => {
 	globalThis.fetch = realFetch;
+	if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow);
+	else Reflect.deleteProperty(globalThis, "window");
+});
+
+function mockSessionStorage() {
+	const values = new Map<string, string>();
+	Object.defineProperty(globalThis, "window", {
+		configurable: true,
+		value: { sessionStorage: {
+			getItem: (key: string) => values.get(key) ?? null,
+			setItem: (key: string, value: string) => values.set(key, value),
+			removeItem: (key: string) => values.delete(key),
+		} },
+	});
+}
+
+test("demo login persists a simulated session without calling the authentication API", async () => {
+	mockSessionStorage();
+	const calls = mockFetch(() => { throw new Error("Demo must not call the backend"); });
+	const result = await login(` ${DEMO_EMAIL.toUpperCase()} `, DEMO_PASSWORD);
+	assert.equal(result.ok, true);
+	assert.deepEqual(await getSession(), result);
+	assert.equal(calls.length, 0);
+});
+
+test("demo rejects incorrect passwords without creating a session or calling the API", async () => {
+	mockSessionStorage();
+	const calls = mockFetch(() => Response.json({}, { status: 403 }));
+	assert.deepEqual(await login(DEMO_EMAIL, "wrong"), { ok: false, reason: "invalidCredentials" });
+	assert.equal(calls.length, 0);
+	assert.deepEqual(await getSession(), { ok: false, reason: "noSession" });
+});
+
+test("leaving demo restores backend session checks", async () => {
+	mockSessionStorage();
+	await login(DEMO_EMAIL, DEMO_PASSWORD);
+	endDemoSession();
+	const calls = mockFetch(() => Response.json({}, { status: 403 }));
+	assert.deepEqual(await getSession(), { ok: false, reason: "noSession" });
+	assert.equal(calls[0].url, "/api/me");
+});
+
+test("demo logout clears the session without calling the backend", async () => {
+	mockSessionStorage();
+	await login(DEMO_EMAIL, DEMO_PASSWORD);
+	const calls = mockFetch(() => Response.json({}, { status: 403 }));
+	assert.equal(await logout(), true);
+	assert.equal(calls.length, 0);
+	assert.deepEqual(await getSession(), { ok: false, reason: "noSession" });
+});
+
+test("real logout sends CSRF and session cookies", async () => {
+	let request = 0;
+	const calls = mockFetch(() => ++request === 1 ? Response.json({ csrfToken: "csrf-test" }) : new Response(null, { status: 204 }));
+	assert.equal(await logout(), true);
+	assert.equal(calls[1].url, "/api/logout");
+	assert.equal(calls[1].init?.method, "POST");
+	assert.equal(calls[1].init?.credentials, "same-origin");
+	assert.deepEqual(calls[1].init?.headers, { "X-CSRFToken": "csrf-test" });
+});
+
+test("real logout failure is reported instead of claiming the user is signed out", async () => {
+	mockFetch(() => new Response(null, { status: 403 }));
+	assert.equal(await logout(), false);
+});
+
+test("a real login clears a previous demo session and uses the backend", async () => {
+	mockSessionStorage();
+	await login(DEMO_EMAIL, DEMO_PASSWORD);
+	const calls = mockFetch(() => Response.json(student));
+	assert.deepEqual(await login("real@example.fr", "Example123"), { ok: true, user: student });
+	assert.deepEqual(await getSession(), { ok: true, user: student });
+	assert.deepEqual(calls.map((call) => call.url), ["/api/login", "/api/me"]);
+});
+
+test("demo reports a failure when browser storage is unavailable", async () => {
+	Object.defineProperty(globalThis, "window", {
+		configurable: true,
+		get: () => { throw new Error("Storage disabled"); },
+	});
+	assert.deepEqual(await login(DEMO_EMAIL, DEMO_PASSWORD), { ok: false, reason: "server" });
 });
 
 test("connexion réussie : renvoie l'utilisateur et envoie les identifiants avec le cookie de session", async () => {

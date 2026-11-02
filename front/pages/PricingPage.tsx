@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
-import Button from "../components/Button";
-import Navbar, { NavbarLink } from "../components/Navbar";
+import PublicNavbar from "../components/PublicNavbar";
 import type { Role } from "../utils/roles";
 
 const plans: { role: Role; title: string; price: string; popular?: boolean; features: string[] }[] = [
@@ -42,17 +41,7 @@ export default function PricingPage() {
 	return (
 		<div className="min-h-dvh bg-[#f0f0f0] pb-16 font-sans text-[#151a29]">
 			<header className="p-4 md:p-6">
-				<Navbar variant="glass">
-					<div className="hidden gap-12 lg:flex">
-						<NavbarLink to="/offers">Trouver une alternance</NavbarLink>
-						<NavbarLink to="/companies">Explorer les entreprises</NavbarLink>
-						<NavbarLink to="/pricing">Tarifs</NavbarLink>
-					</div>
-					<div className="ml-auto hidden sm:block">
-						<NavbarLink to="/signup">Inscription</NavbarLink>
-					</div>
-					<Button to="/login" className="ml-auto sm:ml-0">Connexion</Button>
-				</Navbar>
+				<PublicNavbar variant="glass" />
 			</header>
 
 			<main className="mx-auto max-w-[1268px] px-5 pt-8 md:px-10 md:pt-6">

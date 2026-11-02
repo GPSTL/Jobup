@@ -1,12 +1,11 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 
-import Button from "../components/Button";
 import ChevronDownIcon from "../components/ChevronDownIcon";
 import HeartIcon from "../components/HeartIcon";
 import LoginBanner from "../components/LoginBanner";
 import MapPinIcon from "../components/MapPinIcon";
-import Navbar, { NavbarLink } from "../components/Navbar";
+import PublicNavbar from "../components/PublicNavbar";
 import Pagination from "../components/Pagination";
 import SearchIcon from "../components/SearchIcon";
 import { card, field, focus, input, searchButton, select } from "../utils/searchPageStyles";
@@ -43,16 +42,7 @@ export default function OffersPage() {
 	return (
 		<div className="min-h-dvh bg-[#f0f0f0] px-4 pt-4 pb-16 text-[#111827] md:px-6 md:pt-6">
 			<header>
-				<Navbar>
-					{/* Hidden on small screens: the full bar does not fit on a phone. */}
-					<div className="hidden gap-12 lg:flex">
-						<NavbarLink to="/offers">Trouver une alternance</NavbarLink>
-						<NavbarLink to="/companies">Explorer les entreprises</NavbarLink>
-						<NavbarLink to="/pricing">Tarifs</NavbarLink>
-					</div>
-					<NavbarLink to="/signup" className="ml-auto">Inscription</NavbarLink>
-					<Button to="/login">Connexion</Button>
-				</Navbar>
+				<PublicNavbar />
 			</header>
 
 			<main className="mx-auto mt-10 flex max-w-[1236px] flex-col gap-[22px] leading-[normal]">
