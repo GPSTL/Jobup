@@ -7,11 +7,12 @@ from django.contrib.auth.models import PermissionsMixin
 from django.core.validators import RegexValidator
 from django.db import models
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 # ----- ENUMS ----- #
 
 
-def choice_from_frontend(derived_class, frontend_choice):
+def choice_from_frontend(derived_class: Any, frontend_choice: int | str) -> int | None:
     for choice_tuple in derived_class.choices:
         if frontend_choice in choice_tuple:
             return choice_tuple[0]
@@ -211,29 +212,20 @@ def getUser(_id: int) -> User | None:
 
 
 class SignupSerializer(serializers.ModelSerializer):
-    choice_error = None
-
     class Meta:
         model = User
         fields = ("email", "password", "last_name", "first_name", "role")
 
-    def to_internal_value(self, data):
-        if not "role" in data:
-            data["role"] = Role.STUDENT
-            self.choice_error = "This field is required."
+    def to_internal_value(self, data: dict[str, str | int | None | bool]):
+        if "role" not in data:
+            raise ValidationError({"role": "This field is required."})
+        if not isinstance(data["role"], (str, int)):
+            raise ValidationError({"role": "This field is invalid."})
         role = choice_from_frontend(Role, data["role"])
         if role is None:
-            data["role"] = Role.STUDENT
-            self.choice_error = "This field is invalid."
-        else:
-            data["role"] = role
+            raise ValidationError({"role": "This field is invalid."})
+        data["role"] = role
         return super().to_internal_value(data)
-
-    def validate_role(self, data):
-        # super().validate_role(data)
-        if self.choice_error is not None:
-            raise serializers.ValidationError(self.choice_error)
-        return data
 
     def save(self, **kwargs):
         # token = token_generator.make_token(self.validated_data)
