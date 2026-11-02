@@ -1,11 +1,14 @@
-import { useRef, useState, type FormEvent } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { loginSchema, type LoginForm } from "../utils/login";
 
 import Logo from "../components/Logo";
 import Field from "../components/Field";
 import Button from "../components/Button";
 import { login } from "../services/auth";
-import { MESSAGES, validateEmail, validatePassword } from "../utils/validation";
+import { MESSAGES } from "../utils/validation";
 
 const FORM_ERRORS = {
 	invalidCredentials: MESSAGES.invalidCredentials,
@@ -14,46 +17,28 @@ const FORM_ERRORS = {
 };
 
 export default function Connexion() {
-	const [email, setEmail] = useState<string>("");
-	const [password, setPassword] = useState<string>("");
-	const [errors, setErrors] = useState({ email: "", password: "" });
-	// Error returned by the API, shown under the fields
-	const [formError, setFormError] = useState<string>("");
-	const [submitting, setSubmitting] = useState<boolean>(false);
-	// Updated immediately, unlike the state, so fast double clicks are blocked too
-	const submittingRef = useRef<boolean>(false);
-
-	const onSubmit = async (e: FormEvent) => {
-		e.preventDefault();
-		// Avoids sending the form twice while waiting for the answer
+	const { register, handleSubmit, setFocus, formState: { errors, isSubmitting } } = useForm<LoginForm>({
+		resolver: zodResolver(loginSchema),
+		defaultValues: { email: "", password: "" },
+	});
+	const [formError, setFormError] = useState("");
+	const submittingRef = useRef(false);
+	const onSubmit = handleSubmit(async ({ email, password }) => {
 		if (submittingRef.current) return;
-
-		const next = { email: validateEmail(email), password: validatePassword(password) };
-		setErrors(next);
-		setFormError("");
-
-		const firstInvalid = (Object.keys(next) as (keyof typeof next)[]).find((key) => next[key]);
-		if (firstInvalid) {
-			document.getElementById(firstInvalid)?.focus();
-			return;
-		}
-
 		submittingRef.current = true;
-		setSubmitting(true);
-		const result = await login(email.trim(), password);
-		submittingRef.current = false;
-		setSubmitting(false);
-
-		if (!result.ok) {
-			// The fields are kept so the user can fix them
-			setFormError(FORM_ERRORS[result.reason]);
-			// Le message des identifiants incorrects est lié au champ mot de passe : le focus le fait lire
-			if (result.reason === "invalidCredentials") document.getElementById("password")?.focus();
-			return;
+		setFormError("");
+		try {
+			const result = await login(email.trim(), password);
+			if (!result.ok) {
+				setFormError(FORM_ERRORS[result.reason]);
+				if (result.reason === "invalidCredentials") setFocus("password");
+				return;
+			}
+			// TODO: redirect to the student space once its route is confirmed (JOB-006).
+		} finally {
+			submittingRef.current = false;
 		}
-
-		// TODO: redirect to the student space once its route is confirmed (JOB-006)
-	};
+	}, () => setFormError(""));
 
 	// Identifiants incorrects : les deux champs en rouge, message sous le mot de passe (maquette)
 	const credentialsError = formError === MESSAGES.invalidCredentials;
@@ -69,29 +54,19 @@ export default function Connexion() {
 						Créez un compte
 					</Link>
 				</p>
-				<form className="flex w-full max-w-73 flex-col [&_label]:text-sm [&_label]:leading-4.5" onSubmit={onSubmit} noValidate aria-busy={submitting}>
-					<Field id="email" label="Adresse mail" error={errors.email} invalid={credentialsError} className="mt-7">
+				<form className="flex w-full max-w-73 flex-col [&_label]:text-sm [&_label]:leading-4.5" onSubmit={onSubmit} noValidate aria-busy={isSubmitting}>
+					<Field id="email" label="Adresse mail" error={errors.email?.message} invalid={credentialsError} className="mt-7">
 						<input
 							type="email"
 							autoComplete="email"
-							value={email}
-							onChange={(e) => {
-								setEmail(e.target.value);
-								setFormError("");
-								if (errors.email) setErrors({ ...errors, email: validateEmail(e.target.value) });
-							}}
+							{...register("email", { onChange: () => setFormError("") })}
 						/>
 					</Field>
-					<Field id="password" label="Mot de passe" error={errors.password || (credentialsError ? formError : "")} className="mt-[29px]">
+					<Field id="password" label="Mot de passe" error={errors.password?.message || (credentialsError ? formError : "")} className="mt-[29px]">
 						<input
 							type="password"
 							autoComplete="current-password"
-							value={password}
-							onChange={(e) => {
-								setPassword(e.target.value);
-								setFormError("");
-								if (errors.password) setErrors({ ...errors, password: validatePassword(e.target.value) });
-							}}
+							{...register("password", { onChange: () => setFormError("") })}
 						/>
 					</Field>
 					{formError && !credentialsError && (
@@ -104,9 +79,10 @@ export default function Connexion() {
 					</a>
 					<Button
 						type="submit"
-						className={`mt-2 w-[205px] self-center py-2.5! leading-3.75 ${submitting ? "cursor-wait opacity-70" : ""}`}
+						disabled={isSubmitting}
+						className={`mt-2 w-[205px] self-center py-2.5! leading-3.75 ${isSubmitting ? "cursor-wait opacity-70" : ""}`}
 					>
-						{submitting ? "Connexion…" : "Connexion"}
+						{isSubmitting ? "Connexion…" : "Connexion"}
 					</Button>
 				</form>
 			</div>

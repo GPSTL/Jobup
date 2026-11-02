@@ -46,10 +46,10 @@ export default function Button({
 	children,
 	to,
 	onClick,
+	disabled = false,
 	type = "button",
 	size = "md",
 	variant = "primary",
-	disabled = false,
 	ref,
 	className = "",
 }: ButtonProps) {
@@ -64,7 +64,8 @@ export default function Button({
 	}
 
 	return (
-		<button ref={ref} type={type} onClick={onClick} disabled={disabled} className={classes}>
+
+		<button disabled={disabled} type={type} onClick={onClick} className={classes}>
 			{children}
 		</button>
 	);
