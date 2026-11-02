@@ -52,10 +52,14 @@ class SignupTests(TestCase):
         self.assertEqual(set(self.signup({}).json()["errors"]), {"prenom", "nom", "email", "password"})
         self.assertEqual(self.signup([]).status_code, 400)
 
-    def test_role_is_assigned_by_server(self):
-        response = self.signup({**self.payload, "role": "admin"})
-        self.assertEqual(response.status_code, 201)
-        self.assertEqual(User.objects.get().role, Role.STUDENT)
+    def test_non_student_roles_never_create_student_accounts(self):
+        for role in ("school", "recruiter", "admin", 127, None):
+            with self.subTest(role=role):
+                response = self.signup({**self.payload, "role": role})
+                self.assertEqual(response.status_code, 400)
+                self.assertIn("role", response.json()["errors"])
+        self.assertEqual(User.objects.count(), 0)
+        self.assertEqual(Student.objects.count(), 0)
 
     def test_profile_failure_rolls_back_user(self):
         with patch("jobup.signup.Student.objects.create", side_effect=RuntimeError("profile unavailable")):

@@ -76,16 +76,23 @@ at least eight characters, an ASCII uppercase letter, and a digit.
 
 The login form at `/login` also uses React Hook Form and a Zod resolver. It
 validates the email and requires a password, preserving support for existing
-passwords without applying signup strength rules. API errors retain entered
+passwords without applying signup strength rules. Successful login redirects to
+`/student`, protected by JOB-006’s `RequireStudent` session guard. API errors retain entered
 values, and submit buttons are disabled while requests are pending.
 
 `GET /api/csrf` issues a CSRF token and cookie. `POST /api/signup` takes those four
 fields plus the optional frontend marker `role: "student"`; the server assigns
-the student role independently. It returns `201` with the public user data,
+the student role independently and rejects non-student role values. It returns `201` with the public user data,
 `400` with `{ "errors": { "field": "French message" } }` for invalid input, or
 `409` with an email error for a duplicate address (case insensitive). Creation
 of the account and student profile is atomic. Passwords are hashed; signup does
 not automatically log in. Success prompts the user to follow the login link.
+
+The role selector from JOB-028 is retained and follows `?role=` on direct links
+and reloads. Only the student form can submit. School and company forms retain their fields
+(including phone) but are disabled with an explicit unavailable message until
+their signup APIs exist; they cannot submit to the student endpoint. Changing roles unmounts the
+student form and clears its in-memory values.
 
 Phone, school and domain are absent from the form, schema and request. Student
 `category` and `study_degree` now allow NULL; school was already optional.
@@ -104,6 +111,10 @@ Validation commands:
 npx tsc --noEmit
 npx esbuild tests/signup.test.ts --bundle --platform=node --format=cjs --outfile=/tmp/job027-signup-test.cjs
 node --test /tmp/job027-signup-test.cjs
+npx esbuild tests/login.test.ts --bundle --platform=node --format=cjs --outfile=/tmp/job027-login-test.cjs
+node --test /tmp/job027-login-test.cjs
+npx esbuild tests/auth-forms.test.tsx --bundle --platform=node --format=cjs --jsx=automatic --outfile=/tmp/job027-auth-forms-test.cjs
+node --test /tmp/job027-auth-forms-test.cjs
 make all
 ```
 

@@ -29,6 +29,8 @@ def csrf(request):
 def signup(request):
     if not isinstance(request.data, dict):
         return Response({"error": "Invalid payload"}, status=400)
+    if request.data.get("role", "student") != "student":
+        return Response({"errors": {"role": "Seule l’inscription étudiant est disponible."}}, status=400)
     values = {}
     errors = {}
     for key in ("prenom", "nom", "email", "password"):
