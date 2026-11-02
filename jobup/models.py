@@ -7,8 +7,6 @@ from django.contrib.auth.models import PermissionsMixin
 from django.core.validators import RegexValidator
 from django.db import models
 from rest_framework import serializers
-from django.core.mail import send_mail
-from django.contrib.auth.tokens import PasswordResetTokenGenerator
 
 # ----- ENUMS ----- #
 
@@ -217,7 +215,7 @@ class SignupSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = "__all__"
+        fields = ("email", "password", "last_name", "first_name", "role")
 
     def to_internal_value(self, data):
         if not "role" in data:

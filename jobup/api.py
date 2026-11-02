@@ -1,12 +1,13 @@
 from django.contrib.auth import authenticate, login, logout
 from pydantic import BaseModel, ValidationError
-from django.http import HttpRequest, JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from .models import Role, Student, User, SignupSerializer, getUser, token_generator
+from .models import Role, SignupSerializer, Student, User
+
+# from .models import token_generator
 
 
 def getStudent(_id: int) -> Student | None:
