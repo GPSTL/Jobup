@@ -10,8 +10,10 @@ import StudentPage from "./pages/StudentPage";
 import MonEspace from "./pages/MonEspace";
 import RequireStudent from "./components/RequireStudent";
 import SchoolPage from "./pages/SchoolPage";
+import RecruiterPage from "./pages/RecruiterPage";
 import OffersPage from "./pages/OffersPage";
 import CompaniesPage from "./pages/CompaniesPage";
+import PricingPage from "./pages/PricingPage";
 
 function App() {
 	return (
@@ -20,12 +22,13 @@ function App() {
 				<Route path="/" element={<HomePage />} />
 				<Route path="/students" element={<StudentPage />} />
 				<Route path="/schools" element={<SchoolPage />} />
+				<Route path="/recruiters" element={<RecruiterPage />} />
 				<Route path="/signup" element={<Inscription />} />
 				<Route path="/login" element={<Connexion />} />
 				<Route path="/student" element={<RequireStudent>{() => <ComingSoonPage />}</RequireStudent>} />
 				<Route path="/offers" element={<OffersPage />} />
 				<Route path="/companies" element={<CompaniesPage />} />
-				<Route path="/pricing" element={<ComingSoonPage />} />
+				<Route path="/pricing" element={<PricingPage />} />
 				{/* TODO: remove the route /MonEspace when login and sub apis are ready */}
 				<Route path="/MonEspace" element={<MonEspace />} />
 				<Route path="/filters" element={<ComingSoonPage />} />
