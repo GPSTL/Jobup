@@ -6,8 +6,18 @@ from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
 from django.core.validators import RegexValidator
 from django.db import models
+from rest_framework import serializers
+from django.core.mail import send_mail
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
 
 # ----- ENUMS ----- #
+
+
+def choice_from_frontend(derived_class, frontend_choice):
+    for choice_tuple in derived_class.choices:
+        if frontend_choice in choice_tuple:
+            return choice_tuple[0]
+    return None
 
 
 class Role(models.IntegerChoices):
@@ -99,21 +109,22 @@ class UserManager(BaseUserManager["User"]):
 
 class User(AbstractBaseUser, PermissionsMixin):  # pyright: ignore[reportIncompatibleVariableOverride]
     email = models.EmailField(unique=True)
-    name = models.CharField(max_length=32)
+    last_name = models.CharField(max_length=32)
     first_name = models.CharField(max_length=32)
     role = models.SmallIntegerField(choices=Role.choices)
     is_active = models.BooleanField(default=True)
+    email_confirmed = models.BooleanField(default=True)
     date_joined = models.DateTimeField(auto_now_add=True)
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS: ClassVar = ["first_name", "name"]
+    REQUIRED_FIELDS: ClassVar = ["first_name", "last_name", "role"]
 
     objects = UserManager()
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.pk,
-            "name": self.name,
+            "last_name": self.last_name,
             "first_name": self.first_name,
             "role": self.role,
         }
@@ -191,3 +202,52 @@ def getUser(_id: int) -> User | None:
         return User.objects.get(id=_id)
     except User.DoesNotExist:
         return None
+
+
+# class TokenGenerator(PasswordResetTokenGenerator):
+#     def _make_hash_value(self, user, timestamp):
+#         return f"{user['password']}{timestamp}{user['email']}"
+
+
+# token_generator = TokenGenerator()
+
+
+class SignupSerializer(serializers.ModelSerializer):
+    choice_error = None
+
+    class Meta:
+        model = User
+        fields = "__all__"
+
+    def to_internal_value(self, data):
+        if not "role" in data:
+            data["role"] = Role.STUDENT
+            self.choice_error = "This field is required."
+        role = choice_from_frontend(Role, data["role"])
+        if role is None:
+            data["role"] = Role.STUDENT
+            self.choice_error = "This field is invalid."
+        else:
+            data["role"] = role
+        return super().to_internal_value(data)
+
+    def validate_role(self, data):
+        # super().validate_role(data)
+        if self.choice_error is not None:
+            raise serializers.ValidationError(self.choice_error)
+        return data
+
+    def save(self, **kwargs):
+        # token = token_generator.make_token(self.validated_data)
+        # link = f"http://localhost:8000/api/confirm_email/{token}"
+        # send_mail(
+        #     "Confirmez votre adresse mail",
+        #     (
+        #         f"Lien de vérification: {link}\n\n"
+        #         + "Si vous n'avez pas créé de compte Jobup, "
+        #         + "veuillez ignorer ce message."
+        #     ),
+        #     "xx.yy@gmail.com",
+        #     [self.validated_data["email"]],
+        # )
+        super().save()
