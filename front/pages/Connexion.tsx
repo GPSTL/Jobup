@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import Logo from "../components/Logo";
 import Field from "../components/Field";
@@ -22,6 +22,7 @@ export default function Connexion() {
 	const [submitting, setSubmitting] = useState<boolean>(false);
 	// Updated immediately, unlike the state, so fast double clicks are blocked too
 	const submittingRef = useRef<boolean>(false);
+	const navigate = useNavigate();
 
 	const onSubmit = async (e: FormEvent) => {
 		e.preventDefault();
@@ -52,7 +53,8 @@ export default function Connexion() {
 			return;
 		}
 
-		// TODO: redirect to the student space once its route is confirmed (JOB-006)
+		// replace : le bouton retour ne ramène pas sur le formulaire de connexion
+		navigate("/student", { replace: true });
 	};
 
 	// Identifiants incorrects : les deux champs en rouge, message sous le mot de passe (maquette)
