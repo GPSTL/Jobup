@@ -229,6 +229,41 @@ class Contract(models.Model):
     student = models.ForeignKey(Student, models.PROTECT)
 
 
+# ----- MESSAGING ----- #
+
+
+# Socle commun de la messagerie (JOB-032), partagé avec le fil (JOB-034) et le côté recruteur (JOB-041).
+# Une conversation relie un étudiant à un seul interlocuteur : un recruteur ou un employé d'école.
+class Conversation(models.Model):
+    student = models.ForeignKey(Student, models.CASCADE, related_name="conversations")
+    recruiter = models.ForeignKey(
+        Recruiter, models.CASCADE, null=True, blank=True, related_name="conversations"
+    )
+    school_manager = models.ForeignKey(
+        SchoolManager, models.CASCADE, null=True, blank=True, related_name="conversations"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(recruiter__isnull=False, school_manager__isnull=True)
+                | models.Q(recruiter__isnull=True, school_manager__isnull=False),
+                name="conversation_has_one_interlocutor",
+            ),
+            # Une seule conversation par paire étudiant / interlocuteur
+            models.UniqueConstraint(fields=["student", "recruiter"], name="unique_student_recruiter"),
+            models.UniqueConstraint(fields=["student", "school_manager"], name="unique_student_school_manager"),
+        ]
+
+
+class Message(models.Model):
+    conversation = models.ForeignKey(Conversation, models.CASCADE, related_name="messages")
+    sender = models.ForeignKey(User, models.CASCADE, related_name="sent_messages")
+    body = models.CharField(max_length=2000)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+
 # Utilities #
 
 
