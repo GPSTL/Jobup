@@ -10,7 +10,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, BasePermission
 from rest_framework.response import Response
 
-from .models import Offer, Role
+from .models import JobCategory, Offer, Recruiter, Role
 
 
 class IsRecruiter(BasePermission):
@@ -44,13 +44,41 @@ def serialize_offer(offer):
     }
 
 
+class OfferCreateSerializer(serializers.ModelSerializer):
+    company = serializers.CharField(source="company_display_name", max_length=128, required=False, allow_blank=True)
+
+    class Meta:
+        model = Offer
+        fields = ["title", "description", "requirements", "category", "image_url",
+                  "contract_type", "duration", "start_date", "company", "location"]
+
+    def to_internal_value(self, data):
+        if not isinstance(data, Mapping):
+            raise serializers.ValidationError({"non_field_errors": ["Un objet JSON est attendu."]})
+        unknown = set(data) - set(self.fields)
+        if unknown:
+            raise serializers.ValidationError({key: ["Ce champ ne peut pas être défini."] for key in unknown})
+        return super().to_internal_value(data)
+
+    def validate_image_url(self, value):
+        if value and urlsplit(value).scheme not in {"http", "https"}:
+            raise serializers.ValidationError("Utilisez une URL HTTP ou HTTPS.")
+        return value
+
+
 class OfferPagination(PageNumberPagination):
     page_size = 6
 
 
-@api_view(["GET"])
+@api_view(["GET", "POST"])
 @permission_classes([IsRecruiter])
 def offer_list(request):
+    if request.method == "POST":
+        recruiter = get_object_or_404(Recruiter, user=request.user)
+        serializer = OfferCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        offer = serializer.save(recruiter=recruiter, is_active=True)
+        return Response(serialize_offer(offer), status=201)
     paginator = OfferPagination()
     page = paginator.paginate_queryset(owned_offers(request.user), request)
     return paginator.get_paginated_response([serialize_offer(offer) for offer in page])
@@ -124,3 +152,9 @@ def public_offer_list(request):
 def public_offer_detail(request, id):
     offer = get_object_or_404(Offer.objects.select_related("recruiter__company"), pk=id, is_active=True)
     return Response(serialize_offer(offer))
+
+
+@api_view(["GET"])
+@permission_classes([IsRecruiter])
+def offer_categories(request):
+    return Response([{"value": value, "label": label} for value, label in JobCategory.choices])

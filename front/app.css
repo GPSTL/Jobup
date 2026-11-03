@@ -42,10 +42,10 @@
 }
 .recruiter-offers-main { max-width: 1332px; margin: 24px auto 0; }
 .recruiter-offers-toolbar { display: flex; justify-content: flex-end; padding-right: 34px; margin-bottom: 28px; }
-.recruiter-offers-toolbar button {
+.recruiter-offers-toolbar button, .recruiter-offers-toolbar a {
   padding: 14px 20px; border-radius: 25px; background: var(--color-primary);
   color: white; font-size: 18px; font-weight: 500; line-height: 1.2;
-  cursor: not-allowed;
+  cursor: pointer;
 }
 .recruiter-offer-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 396px)); justify-content: space-between; gap: 32px; }
 .recruiter-offer-card {

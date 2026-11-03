@@ -94,7 +94,7 @@ class RecruiterOffersTests(APITestCase):
         self.assertEqual(len(response.data["results"]), 6)
         for page in ["0", "-1", "abc", "6", "9999999999999999999999999"]:
             self.assertEqual(self.client.get(f"/api/recruiter/offers?page={page}").status_code, 404)
-        self.assertEqual(self.client.post("/api/recruiter/offers", {}, format="json").status_code, 405)
+        self.assertEqual(self.client.post("/api/recruiter/offers", {}, format="json").status_code, 400)
         self.assertEqual(self.client.post(f"/api/recruiter/offers/{self.offers[0].pk}", {}).status_code, 405)
 
     def test_seed_is_repeatable_and_scoped(self):

@@ -37,7 +37,7 @@ export default function Connexion() {
 				return;
 			}
 			const returnTo = location.state?.recruiterReturnTo;
-			const recruiterPath = typeof returnTo === "string" && /^\/recruiter\/offers(?:\/\d+)?(?:\?.*)?$/.test(returnTo) ? returnTo : "/recruiter/offers";
+			const recruiterPath = typeof returnTo === "string" && /^\/recruiter\/offers(?:\/(?:new|\d+))?(?:\?.*)?$/.test(returnTo) ? returnTo : "/recruiter/offers";
 			navigate(result.user.role === RECRUITER_ROLE ? recruiterPath : "/student", { replace: true });
 		} finally {
 			submittingRef.current = false;
