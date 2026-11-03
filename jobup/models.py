@@ -91,6 +91,24 @@ siret_validator = RegexValidator(r"^\d{14}$", "A SIRET must be exactly 14 digits
 class Company(models.Model):
     name = StrictCharField(max_length=128, unique=True)
     siret = StrictCharField(max_length=14, unique=True, validators=[siret_validator])
+    # Présentation publique (JOB-021) : tout est facultatif, l'entreprise peut ne pas l'avoir renseignée
+    sector = models.SmallIntegerField(choices=JobCategory.choices, null=True, blank=True)
+    city = models.CharField(max_length=64, blank=True)
+    employees = models.PositiveIntegerField(null=True, blank=True)
+    website = models.URLField(blank=True)
+    description = models.CharField(max_length=2048, blank=True)
+
+    # Seuls ces champs sont publics : le SIRET et les recruteurs ne sont jamais exposés
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.pk,
+            "name": self.name,
+            "sector": self.sector,
+            "city": self.city,
+            "employees": self.employees,
+            "website": self.website,
+            "description": self.description,
+        }
 
 
 # ----- USERS ----- #
