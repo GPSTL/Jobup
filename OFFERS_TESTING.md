@@ -61,3 +61,5 @@ npm run test:offers
 npx tsc --noEmit
 make all
 ```
+
+Public cards now include a description preview, hide empty optional metadata, and link to `/offers/:id`. The public detail shows all supplied offer fields and handles unavailable offers and retryable failures. Verified by four public-offer interaction tests and in Chrome against the demo offer. Run `npm run test:public-offers` for these tests.
