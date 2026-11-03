@@ -6,11 +6,12 @@ from jobup import api
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("api/csrf", api.csrf),
+    path("api/signup", api.signup),
     path("api/login", api.api_login),
     path("api/logout", api.api_logout),
     path("api/me", api.me),
     path("api/student/<int:id>", api.student),
-    path("api/signup", api.signup),
     re_path(r"^(?!api)[^.]*$", serve, kwargs={"path": "index.html"}),
     path("favicon.ico", serve, kwargs={"path": "favicon.ico"}),
 ]

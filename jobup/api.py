@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate, login, logout
+from django.middleware.csrf import get_token
 from pydantic import BaseModel, ValidationError
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -58,13 +59,13 @@ def student(request: Request, id: int) -> Response:
     target = getStudent(id)
     if target is None:
         return Response({"error": "Student not found"}, status=404)
-    return Response(
-        {
-            "description": target.description,
-            "category": target.category,
-            "experience": target.experience_level,
-        }
-    )
+    return Response(target.to_dict())
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def csrf(request):
+    return Response({"csrfToken": get_token(request._request)})
 
 
 @api_view(["POST"])

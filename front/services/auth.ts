@@ -1,10 +1,12 @@
 // Calls to the authentication API (JOB-004).
 // The backend opens a Django session (cookie) on success.
 
+import { RoleApiName } from "../utils/roles"
+
 // Aligné sur User.to_dict() côté Django : le rôle est un entier (Role)
 export type User = {
 	id: number;
-	name: string;
+	last_name: string;
 	first_name: string;
 	role: number;
 };
@@ -63,5 +65,33 @@ export async function getSession(): Promise<SessionResult> {
 		return { ok: true, user: (await response.json()) as User };
 	} catch {
 		return { ok: false, reason: "server" };
+	}
+}
+
+export type SignupPayload = { first_name: string; last_name: string; email: string; password: string; role: RoleApiName };
+type SignupResult =
+	| { ok: true }
+	| { ok: false; reason: "validation"; errors: Partial<Record<"first_name" | "last_name" | "email" | "password" | "role", string>> }
+	| { ok: false; reason: "server" | "network" };
+
+export async function signup(payload: SignupPayload): Promise<SignupResult> {
+	try {
+		const csrf = await fetch("/api/csrf", { credentials: "same-origin" });
+		if (!csrf.ok) return { ok: false, reason: "server" };
+		const { csrfToken } = await csrf.json();
+		const response = await fetch("/api/signup", {
+			method: "POST",
+			credentials: "same-origin",
+			headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+			body: JSON.stringify(payload),
+		});
+		if (response.status === 201) return { ok: true };
+		if (response.status === 400 || response.status === 409) {
+			const data = await response.json();
+			if (data.errors && typeof data.errors === "object") return { ok: false, reason: "validation", errors: data.errors };
+		}
+		return { ok: false, reason: "server" };
+	} catch (error) {
+		return { ok: false, reason: error instanceof TypeError ? "network" : "server" };
 	}
 }

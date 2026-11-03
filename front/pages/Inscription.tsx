@@ -1,45 +1,74 @@
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import Logo from "../components/Logo";
 import Field from "../components/Field";
 import Button from "../components/Button";
-import { ROLES, getRole, type Role } from "../utils/roles";
-import {
-	validateEmail,
-	validateNewPassword,
-	validateNom,
-	validatePrenom,
-	validateTelephone,
-} from "../utils/validation";
+import { signup } from "../services/auth";
+import { signupSchema, toSignupPayload, type SignupForm, organizationSignupSchema, type OrganizationSignupForm } from "../utils/signup";
+import { MESSAGES } from "../utils/validation";
+import { ROLES, getRole, type Role, getRoleApiName, type RoleApiName } from "../utils/roles";
 
-const EMPTY_FORM = {
-	prenom: "",
-	nom: "",
-	email: "",
-	telephone: "",
-	password: "",
-};
+export { toSignupPayload } from "../utils/signup";
 
-type Key = keyof typeof EMPTY_FORM;
+function GenericSignupForm({ role }: { role: RoleApiName }) {
+	const { register, handleSubmit, setError, formState: { errors, isSubmitting } } = useForm<SignupForm>({
+		resolver: zodResolver(signupSchema),
+		defaultValues: { first_name: "", last_name: "", email: "", password: "" },
+	});
+	const [created, setCreated] = useState(false);
+	const pending = useRef(false);
+	const onSubmit = handleSubmit(async (form) => {
+		if (pending.current) return;
+		pending.current = true;
+		try {
+			const result = await signup(toSignupPayload(form, role));
+			if (result.ok) {
+				setCreated(true);
+			} else if (result.reason === "validation") {
+				const fields = ["first_name", "last_name", "email", "password"] as const;
+				let focused = false;
+				for (const field of fields) {
+					if (result.errors[field]) {
+						setError(field, { type: "server", message: result.errors[field] }, { shouldFocus: !focused });
+						focused = true;
+					}
+				}
+				if (!focused) setError("root", { message: MESSAGES.serverError });
+			} else {
+				setError("root", { message: result.reason === "network" ? MESSAGES.networkError : MESSAGES.serverError });
+			}
+		} finally {
+			pending.current = false;
+		}
+	});
 
-// Données à envoyer à l'API d'inscription (JOB-003)
-export const toSignupPayload = (form: typeof EMPTY_FORM, role: Role = "student") => ({
-	prenom: form.prenom.trim(),
-	nom: form.nom.trim(),
-	email: form.email.trim(),
-	telephone: form.telephone.replace(/[\s.-]/g, ""),
-	password: form.password,
-	role,
-});
+	if (created) {
+		return <p role="status" className="mt-8 text-center">Votre compte a été créé. Vous pouvez maintenant vous connecter.</p>;
+	}
 
-const VALIDATORS: Record<Key, (value: string) => string> = {
-	prenom: validatePrenom,
-	nom: validateNom,
-	email: validateEmail,
-	telephone: validateTelephone,
-	password: validateNewPassword,
-};
+	return (
+		<form aria-busy={isSubmitting} className="flex w-full max-w-73 flex-col [&_label]:text-sm [&_label]:leading-4.5" onSubmit={onSubmit} noValidate>
+			<Field id="prenom" label="Prénom" error={errors.first_name?.message} className="mt-[45px]">
+				<input autoComplete="given-name" {...register("first_name")} />
+			</Field>
+			<Field id="nom" label="Nom" error={errors.last_name?.message} className="mt-[29px]">
+				<input autoComplete="family-name" {...register("last_name")} />
+			</Field>
+			<Field id="email" label="Adresse mail" error={errors.email?.message} className="mt-[29px]">
+				<input type="email" autoComplete="email" {...register("email")} />
+			</Field>
+			<Field id="password" label="Mot de passe" error={errors.password?.message} className="mt-[29px]">
+				<input type="password" autoComplete="new-password" {...register("password")} />
+			</Field>
+			{errors.root && <p role="alert" className="mt-4 text-sm text-red-600">{errors.root.message}</p>}
+			<Button type="submit" disabled={isSubmitting} className="mt-11.5 w-[205px] self-center py-2.5! leading-3.75">
+				{isSubmitting ? "Inscription…" : "S’inscrire"}
+			</Button>
+		</form>
+	);
+}
 
 export default function Inscription() {
 	const [searchParams, setSearchParams] = useSearchParams();
@@ -50,34 +79,6 @@ export default function Inscription() {
 			next.set("role", value);
 			return next;
 		}, { replace: true });
-	};
-	const [form, setForm] = useState(EMPTY_FORM);
-	const [errors, setErrors] = useState(EMPTY_FORM);
-
-	// Once a field shows an error, it is re-checked on each change so the message disappears when fixed
-	const update = (key: Key) => (e: ChangeEvent<HTMLInputElement>) => {
-		const value = e.target.value;
-		setForm({ ...form, [key]: value });
-		if (errors[key]) setErrors({ ...errors, [key]: VALIDATORS[key](value) });
-	};
-
-	// Not connected to the backend yet
-	const onSubmit = (e: FormEvent) => {
-		e.preventDefault();
-
-		const next = { ...EMPTY_FORM };
-		(Object.keys(VALIDATORS) as Key[]).forEach((key) => (next[key] = VALIDATORS[key](form[key])));
-		setErrors(next);
-
-		const firstInvalid = (Object.keys(next) as Key[]).find((key) => next[key]);
-		if (firstInvalid) {
-			document.getElementById(firstInvalid)?.focus();
-			return;
-		}
-
-		const payload = toSignupPayload(form, role);
-		// TODO : envoyer payload à l'API d'inscription quand JOB-003 existera
-		void payload;
 	};
 
 	return (
@@ -106,26 +107,7 @@ export default function Inscription() {
 						</label>
 					))}
 				</div>
-				<form className="flex w-full max-w-73 flex-col [&_label]:text-sm [&_label]:leading-4.5" onSubmit={onSubmit} noValidate>
-					<Field id="prenom" label="Prénom" error={errors.prenom} className="mt-[45px]">
-						<input autoComplete="given-name" value={form.prenom} onChange={update("prenom")} />
-					</Field>
-					<Field id="nom" label="Nom" error={errors.nom} className="mt-[29px]">
-						<input autoComplete="family-name" value={form.nom} onChange={update("nom")} />
-					</Field>
-					<Field id="email" label="Adresse mail" error={errors.email} className="mt-[29px]">
-						<input type="email" autoComplete="email" value={form.email} onChange={update("email")} />
-					</Field>
-					<Field id="telephone" label="Numéro de téléphone" error={errors.telephone} className="mt-[29px]">
-						<input type="tel" autoComplete="tel" value={form.telephone} onChange={update("telephone")} />
-					</Field>
-					<Field id="password" label="Mot de passe" error={errors.password} className="mt-[29px]">
-						<input type="password" autoComplete="new-password" value={form.password} onChange={update("password")} />
-					</Field>
-					<Button type="submit" className="mt-11.5 w-[205px] self-center py-2.5! leading-3.75">
-						S’inscrire
-					</Button>
-				</form>
+				<GenericSignupForm role={getRoleApiName(role)}/>
 				<Link to="/login" className="mt-4 text-sm leading-4.5 font-medium text-primary hover:underline">
 					Déjà inscrit&nbsp;? Se connecter
 				</Link>

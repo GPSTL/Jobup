@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
@@ -8,6 +8,19 @@ from django.core.validators import RegexValidator
 from django.db import models
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+
+from .settings import DEBUG
+
+
+class StrictCharField(models.CharField):
+    if DEBUG:
+
+        def pre_save(self, model_instance: models.Model, add: bool) -> str | None:
+            value: str | None = super().pre_save(model_instance, add)
+            if not self.blank and (value is None or value.strip() == ""):
+                raise ValidationError({self.name: "Field is required"})
+            return value
+
 
 # ----- ENUMS ----- #
 
@@ -77,15 +90,15 @@ class StudyDegree(models.IntegerChoices):
 
 
 class School(models.Model):
-    name = models.CharField(max_length=128, unique=True)
+    name = StrictCharField(max_length=128, unique=True)
 
 
 siret_validator = RegexValidator(r"^\d{14}$", "A SIRET must be exactly 14 digits")
 
 
 class Company(models.Model):
-    name = models.CharField(max_length=128, unique=True)
-    siret = models.CharField(max_length=14, unique=True, validators=[siret_validator])
+    name = StrictCharField(max_length=128, unique=True)
+    siret = StrictCharField(max_length=14, unique=True, validators=[siret_validator])
 
 
 # ----- USERS ----- #
@@ -108,8 +121,8 @@ class UserManager(BaseUserManager["User"]):
 
 class User(AbstractBaseUser, PermissionsMixin):  # pyright: ignore[reportIncompatibleVariableOverride]
     email = models.EmailField(unique=True)
-    last_name = models.CharField(max_length=32)
-    first_name = models.CharField(max_length=32)
+    last_name = StrictCharField(max_length=32)
+    first_name = StrictCharField(max_length=32)
     role = models.SmallIntegerField(choices=Role.choices)
     is_active = models.BooleanField(default=True)
     email_confirmed = models.BooleanField(default=True)
@@ -120,8 +133,12 @@ class User(AbstractBaseUser, PermissionsMixin):  # pyright: ignore[reportIncompa
 
     objects = UserManager()
 
+    if TYPE_CHECKING:
+        id: int
+
     def to_dict(self) -> dict[str, Any]:
         return {
+            "email": self.email,
             "id": self.pk,
             "last_name": self.last_name,
             "first_name": self.first_name,
@@ -137,11 +154,15 @@ class Student(models.Model):
     )
     resume = models.FileField(upload_to="CVs", blank=True)
     description = models.CharField(max_length=512, blank=True)
-    category = models.SmallIntegerField(choices=JobCategory.choices)
+    category = models.SmallIntegerField(
+        choices=JobCategory.choices, null=True, blank=True
+    )
     experience_level = models.PositiveSmallIntegerField(default=0)  # months
     skills = models.CharField(max_length=256, blank=True)  # Comma separated skills
     region = models.CharField(max_length=64, default="Île-de-France")
-    study_degree = models.SmallIntegerField(choices=StudyDegree.choices)
+    study_degree = models.SmallIntegerField(
+        choices=StudyDegree.choices, null=True, blank=True
+    )
     rhythm = models.CharField(
         max_length=64, blank=True
     )  # years\d{1} (weeks(\d{1}){2-48} | days(\d{1}){2-7})
@@ -150,6 +171,21 @@ class Student(models.Model):
     school = models.ForeignKey(
         School, models.SET_NULL, null=True, blank=True, related_name="students"
     )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "uid": self.user.id,
+            "subscription": self.subscription,
+            "description": self.description,
+            "category": self.category,
+            "experience_level": self.experience_level,
+            "skills": self.skills,
+            "region": self.region,
+            "rhythm": self.rhythm,
+            "available_from": self.available_from,
+            "available_to": self.available_to,
+            "school": self.school.id if self.school else -1,
+        }
 
 
 class Recruiter(models.Model):
@@ -171,8 +207,8 @@ class SchoolManager(models.Model):
 
 class Offer(models.Model):
     recruiter = models.ForeignKey(Recruiter, models.CASCADE, related_name="offers")
-    title = models.CharField(max_length=128)
-    description = models.CharField(max_length=2048)
+    title = StrictCharField(max_length=128)
+    description = StrictCharField(max_length=2048)
     requirements = models.CharField(max_length=256, blank=True)
     category = models.SmallIntegerField(choices=JobCategory.choices)
     is_active = models.BooleanField(default=True)
@@ -182,7 +218,7 @@ class Offer(models.Model):
 class JobApplication(models.Model):
     student = models.ForeignKey(Student, models.CASCADE, related_name="applications")
     offer = models.ForeignKey(Offer, models.CASCADE, "applications")
-    message = models.CharField(max_length=1024)
+    message = models.CharField(max_length=1024, blank=True)
     cover_letter = models.FileField(upload_to="covers", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -216,7 +252,7 @@ class SignupSerializer(serializers.ModelSerializer):
         model = User
         fields = ("email", "password", "last_name", "first_name", "role")
 
-    def to_internal_value(self, data: dict[str, str | int | None | bool]):
+    def to_internal_value(self, data: dict[str, str | int | None | bool], **kwargs):
         if "role" not in data:
             raise ValidationError({"role": "This field is required."})
         if not isinstance(data["role"], (str, int)):
@@ -226,6 +262,13 @@ class SignupSerializer(serializers.ModelSerializer):
             raise ValidationError({"role": "This field is invalid."})
         data["role"] = role
         return super().to_internal_value(data)
+
+    def create(self, validated_data):
+        password = validated_data.pop('password')
+        user = super().create(validated_data)
+        user.set_password(password)
+        user.save()
+        return user
 
     def save(self, **kwargs):
         # token = token_generator.make_token(self.validated_data)
