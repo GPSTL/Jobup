@@ -1,75 +1,125 @@
 import { useEffect, useState } from "react";
-import { Link, Navigate, useParams, useNavigate } from "react-router-dom";
-import Button from "../components/Button";
+import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Pagination from "../components/Pagination";
+import Button from "../components/Button";
+import { fetchOffers, OfferError, type Offer, type OfferPage } from "../services/offers";
+
 import { EditOfferDialog, DeleteOfferDialog } from "../components/OfferDialogs";
-import { getSession, type SessionResult } from "../services/auth";
-import { offerRequest, offerUrl, type Offer, type OfferPage } from "../services/offers";
-import { card, focus } from "../utils/searchPageStyles";
+
+const focus = "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary";
+const panel = "recruiter-state-panel";
+const unavailable = "Fonctionnalité bientôt disponible";
+const fallbackImage = "/static/img/recruiter/offer-team.png";
+
+export function RecruiterNavbar() {
+  return <Navbar variant="recruiter">
+    <div className="recruiter-nav-items">
+      {["Mon espace", "Filtrer", "Candidats"].map(label => <button key={label} type="button" disabled title={unavailable}>{label}</button>)}
+      <Link to="/recruiter/offers" aria-current="page" className={`recruiter-nav-active ${focus}`}>Vos offres</Link>
+      <button type="button" disabled title={unavailable}>Messages</button>
+      <button type="button" disabled title={unavailable} aria-label="Notifications bientôt disponibles" className="recruiter-notifications"><img src="/static/img/recruiter/bell.svg" alt="" /></button>
+    </div>
+  </Navbar>;
+}
+
+function OfferImage({ offer }: { offer: Offer }) {
+  return <img src={offer.image_url || fallbackImage} alt="" loading="lazy" className="recruiter-offer-image" onError={(event) => {
+    if (!event.currentTarget.src.endsWith(fallbackImage)) event.currentTarget.src = fallbackImage;
+  }} />;
+}
 
 export default function RecruiterOffersPage() {
-	const { id } = useParams();
-	const navigate = useNavigate();
-	const [session, setSession] = useState<SessionResult | null>(null);
-	const [page, setPage] = useState(1);
-	const [data, setData] = useState<OfferPage | null>(null);
-	const [detail, setDetail] = useState<Offer | null>(null);
-	const [error, setError] = useState("");
-	const [notice, setNotice] = useState("");
-	const [loading, setLoading] = useState(true);
-	const [revision, setRevision] = useState(0);
-	const [dialog, setDialog] = useState<{ action: "edit" | "delete"; offer: Offer } | null>(null);
-	useEffect(() => { getSession().then(setSession); }, [revision]);
-	useEffect(() => {
-		if (!session?.ok || session.user.role !== 3) return;
-		let active = true;
-		setLoading(true); setError(""); setData(null); setDetail(null);
-		const load = id ? offerRequest<Offer>(offerUrl(Number(id))) : offerRequest<OfferPage>(`/api/recruiter/offers?page=${page}`);
-		load.then(result => {
-			if (!active) return;
-			if (id) setDetail(result as Offer); else setData(result as OfferPage);
-		}).catch(error => { if (active) setError(error.message); }).finally(() => { if (active) setLoading(false); });
-		return () => { active = false; };
-	}, [session, id, page, revision]);
-	if (session && !session.ok && session.reason === "noSession") return <Navigate to="/login" replace />;
-	if (session?.ok && session.user.role !== 3) return <main className="p-8"><h1>Accès réservé aux recruteurs</h1><Link to="/">Accueil</Link></main>;
-	function changed(message: string) { setDialog(null); setNotice(message); setPage(1); setRevision(value => value + 1); }
-	function actions(offer: Offer) { return <div className="flex gap-4">
-		<button className={`rounded-lg p-2 text-primary ${focus}`} aria-label={`Modifier l’offre ${offer.title}`} onClick={() => setDialog({ action: "edit", offer })}>✎ Modifier</button>
-		<button className={`inline-flex items-center gap-2 rounded-lg p-2 text-red-700 ${focus}`} aria-label={`Supprimer l’offre ${offer.title}`} onClick={() => setDialog({ action: "delete", offer })}>
-			<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7" /></svg>
-			Supprimer
-		</button>
-	</div>; }
-	return <div className="min-h-dvh bg-[#f0f0f0] p-4 pb-16 md:p-6">
-		<Navbar><Link className="ml-auto text-primary" to="/recruiter/offers">Vos offres</Link></Navbar>
-		<main className="mx-auto mt-10 max-w-[1236px]">
-			<h1 className="mb-6 text-4xl font-bold">{id ? "Détail de l’offre" : "Vos offres"}</h1>
-			{notice && <p role="status" className="mb-4 text-green-800">{notice}</p>}
-			{(!session || (session.ok && loading)) && <p role="status">Chargement…</p>}
-			{session && !session.ok && <p role="alert">Impossible de vérifier votre connexion.</p>}
-			{error && <p role="alert" className="mb-4 text-red-700">{error}</p>}
-			{(error || (session && !session.ok)) && <Button onClick={() => setRevision(value => value + 1)}>Réessayer</Button>}
-			{id && <Link to="/recruiter/offers" className="mb-6 block text-primary underline">Retour à vos offres</Link>}
-			{detail && <article className={`${card} max-w-3xl`}>
-				{detail.image_url && <img className="h-56 w-full rounded-xl object-cover" src={detail.image_url} alt="" />}
-				<h2 className="text-2xl font-semibold">{detail.title}</h2><p>{detail.company} · {detail.location}</p>
-				<p>{detail.contract_type} · {detail.duration}{detail.start_date && ` · À partir du ${detail.start_date}`}</p>
-				<p className="whitespace-pre-wrap break-words">{detail.description}</p><p>Compétences : {detail.requirements || "Non précisées"}</p>{actions(detail)}
-			</article>}
-			{data && <><p className="mb-4 text-gray-600">{data.count} offre(s)</p>
-				{data.count === 0 && <p>Aucune offre publiée pour le moment.</p>}
-				<ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{data.results.map(offer => <li key={offer.id} className={card}>
-					{offer.image_url && <img className="h-40 w-full rounded-xl object-cover" src={offer.image_url} alt="" />}
-					<h2 className="break-words text-xl font-semibold">{offer.title}</h2><p>{offer.company} · {offer.location}</p>
-					<p className="line-clamp-3 break-words">{offer.description}</p>
-					<Link className="text-primary underline" to={`/recruiter/offers/${offer.id}`}>Plus d’informations<span className="sr-only"> sur {offer.title}</span></Link>{actions(offer)}
-				</li>)}</ul>
-				<Pagination currentPage={page} totalPages={Math.ceil(data.count / 6)} onPageChange={setPage} />
-			</>}
-		</main>
-		{dialog?.action === "edit" && <EditOfferDialog offer={dialog.offer} onClose={() => setDialog(null)} onSaved={() => changed("L’offre a été modifiée.")} />}
-		{dialog?.action === "delete" && <DeleteOfferDialog offer={dialog.offer} onClose={() => setDialog(null)} onDeleted={() => { changed("L’offre a été supprimée."); if (id) navigate("/recruiter/offers"); }} />}
-	</div>;
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [notice, setNotice] = useState("");
+  const [dialog, setDialog] = useState<{ action: "edit" | "delete"; offer: Offer } | null>(null);
+  const [params, setParams] = useSearchParams();
+  const location = useLocation();
+  const pageValue = params.get("page") || "1";
+  const page = /^[1-9]\d*$/.test(pageValue) && Number.isSafeInteger(Number(pageValue)) ? Number(pageValue) : 1;
+  const path = id ? `/${id}` : `?page=${page}`;
+  const [request, setRequest] = useState<{ path: string; data?: OfferPage | Offer; error?: number }>({ path });
+  const [retry, setRetry] = useState(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setRequest({ path });
+    fetchOffers<OfferPage | Offer>(path, controller.signal).then(
+      data => { if (!controller.signal.aborted) setRequest({ path, data }); },
+      error => { if (!controller.signal.aborted) setRequest({ path, error: error instanceof OfferError ? error.status : 0 }); },
+    );
+    return () => controller.abort();
+  }, [path, retry]);
+
+  const current = request.path === path ? request : { path };
+  if (current.error === 401 || current.error === 403) return <Navigate to="/login" state={{ recruiterReturnTo: location.pathname + location.search }} replace />;
+  const offerPage = current.data && "results" in current.data ? current.data : undefined;
+  const list = offerPage?.results;
+  const offer = current.data && !("results" in current.data) ? current.data : undefined;
+  const totalPages = offerPage ? Math.max(1, Math.ceil(offerPage.count / 6)) : 1;
+  const pageMissing = list !== undefined && page > totalPages;
+  const error = pageMissing ? 404 : current.error;
+  const visibleOffers = list;
+  const back = `/recruiter/offers${params.toString() ? `?${params}` : ""}`;
+
+  function changed(message: string) { setDialog(null); setNotice(message); setRetry(value => value + 1); }
+  function actions(item: Offer) {
+    return <div className="flex justify-center gap-4">
+      <button type="button" className={`cursor-pointer rounded-lg p-2 text-primary hover:bg-primary/10 hover:text-blue-700 focus-visible:bg-primary/10 motion-safe:transition-colors motion-safe:duration-150 ${focus}`} onClick={() => setDialog({ action: "edit", offer: item })} aria-label={`Modifier l’offre ${item.title}`}>✎ Modifier</button>
+      <button type="button" className={`cursor-pointer rounded-lg p-2 text-red-700 hover:bg-red-50 hover:text-red-800 focus-visible:bg-red-50 motion-safe:transition-colors motion-safe:duration-150 ${focus}`} onClick={() => setDialog({ action: "delete", offer: item })} aria-label={`Supprimer l’offre ${item.title}`}>Supprimer</button>
+    </div>;
+  }
+  return <div className="recruiter-offers-page">
+    <header className="recruiter-header"><RecruiterNavbar /></header>
+    <main className={id ? "recruiter-detail-main" : "recruiter-offers-main"}>
+      <h1 className="sr-only">{id ? "Détail de l’offre" : "Vos offres"}</h1>
+      {notice && <p role="status" className="mb-4 text-green-800">{notice}</p>}
+
+      {!id && <div className="recruiter-offers-toolbar"><button type="button" disabled title={unavailable}>Créer une offre</button></div>}
+      {!current.data && current.error === undefined && <p role="status" aria-busy="true">Chargement des offres…</p>}
+      {error !== undefined && <div className={`${panel} flex flex-col items-start gap-4`}>
+        <p role="alert">{error === 404 ? (id ? "Cette offre est introuvable ou n’est plus disponible." : "Cette page d’offres n’existe pas.") : "Impossible de charger les offres. Vérifiez votre connexion et réessayez."}</p>
+        {error === 404 ? <Link to="/recruiter/offers" className={`text-primary underline ${focus}`}>Voir vos offres</Link> : <Button onClick={() => setRetry(value => value + 1)}>Réessayer</Button>}
+      </div>}
+      {list && !pageMissing && <>
+        <p className="sr-only" role="status">{offerPage?.count} offres publiées. Page {page}. Les plus récentes en premier.</p>
+        {list.length === 0 ? <p className={panel}>Vous n’avez aucune offre publiée pour le moment.</p> : <ul className="recruiter-offer-grid">
+          {visibleOffers?.map(item => <li key={item.id} className="recruiter-offer-card">
+            <h2>{item.title}</h2>
+            <OfferImage offer={item} />
+            <div className="recruiter-card-description"><p>{item.description}</p>
+              <Link to={`/recruiter/offers/${item.id}?page=${page}`} className={`recruiter-more-link ${focus}`}>Plus d’informations<span className="sr-only"> : {item.title}</span></Link>
+            </div>
+            {actions(item)}
+          </li>)}
+        </ul>}
+        <Pagination variant="recruiter" currentPage={page} totalPages={totalPages} onPageChange={value => setParams({ page: String(value) })} />
+      </>}
+      {offer && <article className="recruiter-offer-detail">
+        <Link to={back} className={`recruiter-back-link ${focus}`}><img src="/static/img/recruiter/back.svg" alt="" />Retour à vos offres</Link>
+        <div className="recruiter-detail-summary">
+          <OfferImage offer={offer} />
+          <div className="recruiter-detail-info">
+            <h2>{offer.title}</h2>
+            <p className="recruiter-detail-company"><img src="/static/img/recruiter/building.svg" alt="" />{offer.company}</p>
+            <p className="recruiter-detail-tag">{offer.category}</p>
+            {offer.location && <p>{offer.location}</p>}
+            {offer.contract_type && <p>{offer.contract_type}{offer.duration && ` · ${offer.duration}`}</p>}
+            {offer.start_date && <p>À partir du {new Date(`${offer.start_date}T00:00:00`).toLocaleDateString("fr-FR")}</p>}
+            <p className="text-gray-500">Publiée le {new Date(offer.created_at).toLocaleDateString("fr-FR")}</p>
+          </div>
+        </div>
+        <h3>Description du poste</h3>
+        <p className="recruiter-detail-copy">{offer.description}</p>
+        {offer.requirements && <><h3>Profil recherché</h3><p className="recruiter-detail-copy">{offer.requirements}</p></>}
+        {actions(offer)}
+      </article>}
+    </main>
+    {dialog?.action === "edit" && <EditOfferDialog offer={dialog.offer} onClose={() => setDialog(null)} onSaved={() => changed("L’offre a été modifiée.")} />}
+    {dialog?.action === "delete" && <DeleteOfferDialog offer={dialog.offer} onClose={() => setDialog(null)} onDeleted={() => {
+      changed("L’offre a été supprimée.");
+      if (id || page > 1) navigate("/recruiter/offers");
+    }} />}
+  </div>;
 }

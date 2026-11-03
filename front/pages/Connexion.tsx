@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, type LoginForm } from "../utils/login";
@@ -7,7 +7,7 @@ import { loginSchema, type LoginForm } from "../utils/login";
 import Logo from "../components/Logo";
 import Field from "../components/Field";
 import Button from "../components/Button";
-import { login } from "../services/auth";
+import { login, RECRUITER_ROLE } from "../services/auth";
 import { MESSAGES } from "../utils/validation";
 
 const FORM_ERRORS = {
@@ -18,6 +18,7 @@ const FORM_ERRORS = {
 
 export default function Connexion() {
 	const navigate = useNavigate();
+	const location = useLocation();
 	const { register, handleSubmit, setFocus, formState: { errors, isSubmitting } } = useForm<LoginForm>({
 		resolver: zodResolver(loginSchema),
 		defaultValues: { email: "", password: "" },
@@ -35,7 +36,9 @@ export default function Connexion() {
 				if (result.reason === "invalidCredentials") setFocus("password");
 				return;
 			}
-			navigate(result.user.role === 3 ? "/recruiter/offers" : "/student", { replace: true });
+			const returnTo = location.state?.recruiterReturnTo;
+			const recruiterPath = typeof returnTo === "string" && /^\/recruiter\/offers(?:\/\d+)?(?:\?.*)?$/.test(returnTo) ? returnTo : "/recruiter/offers";
+			navigate(result.user.role === RECRUITER_ROLE ? recruiterPath : "/student", { replace: true });
 		} finally {
 			submittingRef.current = false;
 		}

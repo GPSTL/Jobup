@@ -178,3 +178,7 @@ make all
 After integration with current main, all 32 Django tests pass, including the 11
 offer tests. Validation used the current models to generate the test schema
 (`MIGRATION_MODULES={"jobup": None}`), since this repository ignores local migrations.
+
+Stack order: main ← JOB-22 (#23) ← JOB-23 (#24) ← JOB-51 (#25). This layer retains JOB-22's recruiter layout and guard, adds server pagination, editing and withdrawal, and wires public offer cards to `/offers/:id`. Edit/delete actions provide hover and keyboard focus feedback. Creation is introduced by the next layer.
+
+Public detail and missing metadata regression checks: `npm run test:public-offers`.

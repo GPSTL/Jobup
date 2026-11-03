@@ -39,3 +39,9 @@ export async function offerRequest<T>(url: string, method = "GET", changes?: Off
 export const offerUrl = (id: number) => `/api/recruiter/offers/${id}`;
 export const updateOffer = (id: number, changes: OfferChanges) => offerRequest<Offer>(offerUrl(id), "PATCH", changes);
 export const removeOffer = (id: number) => offerRequest<void>(offerUrl(id), "DELETE");
+
+export async function fetchOffers<T>(path: string, signal: AbortSignal): Promise<T> {
+  const response = await fetch(`/api/recruiter/offers${path}`, { credentials: "same-origin", signal });
+  if (!response.ok) throw new OfferError(response.status);
+  return response.json();
+}

@@ -92,7 +92,7 @@ export default function OffersPage() {
 				{error && <div role="alert"><p>{error}</p><Button onClick={() => setRevision(value => value + 1)}>Réessayer</Button></div>}
 				{data?.count === 0 && <p>Aucune offre disponible.</p>}
 				<ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-					{(data?.results ?? []).map(({ id, title, company, location: city, duration, image_url, contract_type }) => (
+					{(data?.results ?? []).map(({ id, title, company, location: city, duration, image_url, contract_type, description }) => (
 						<li key={id} className={card}>
 							{image_url && <img src={image_url} alt="" loading="lazy" className="h-[150px] w-full rounded-[14px] object-cover" />}
 							<div className="flex items-center gap-2">
@@ -102,14 +102,15 @@ export default function OffersPage() {
 								</Link>
 							</div>
 							<p className="text-[15px] text-[#6b7280]">
-								{company} • {city}
+								{company}{city && ` • ${city}`}
 							</p>
-							<div className="flex gap-2">
+							{(contract_type || duration) && <div className="flex gap-2">
 								{contract_type && <span className="rounded-full bg-primary/10 px-2.5 py-[5px] text-[13px] font-semibold text-primary">{contract_type.toUpperCase()}</span>}
-								<span className="rounded-full bg-[#f3f4f6] px-2.5 py-[5px] text-[13px] font-semibold text-[#6b7280]">{duration}</span>
-							</div>
+								{duration && <span className="rounded-full bg-[#f3f4f6] px-2.5 py-[5px] text-[13px] font-semibold text-[#6b7280]">{duration}</span>}
+							</div>}
+							<p className="line-clamp-3 break-words text-[15px] text-[#6b7280]">{description}</p>
 							<Link
-								to="/login"
+								to={`/offers/${id}`}
 								className={`rounded-[10px] border-[1.5px] border-[#d1d5db] bg-white px-3.5 py-[9px] text-center text-[14px] font-semibold hover:bg-[#f9fafb] ${focus}`}
 							>
 								Voir l’offre<span className="sr-only"> {title}</span>
