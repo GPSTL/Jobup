@@ -12,12 +12,12 @@ class RecruiterOffersTests(APITestCase):
     def setUpTestData(cls):
         company = Company.objects.create(name="Entreprise", siret="12345678901234")
         cls.user = User.objects.create_user(
-            email="recruiter@example.com", password="Password123", name="Nom",
+            email="recruiter@example.com", password="Password123", last_name="Nom",
             first_name="Prénom", role=Role.RECRUITER,
         )
         cls.recruiter = Recruiter.objects.create(user=cls.user, company=company)
         colleague = User.objects.create_user(
-            email="colleague@example.com", password="Password123", name="Nom",
+            email="colleague@example.com", password="Password123", last_name="Nom",
             first_name="Prénom", role=Role.RECRUITER,
         )
         cls.colleague = Recruiter.objects.create(user=colleague, company=company)
@@ -72,7 +72,7 @@ class RecruiterOffersTests(APITestCase):
             self.assertEqual(self.client.get(path).status_code, 403)
         for role in [Role.STUDENT, Role.MANAGER, Role.ADMIN]:
             user = User.objects.create_user(
-                email=f"{role}@example.com", password="Password123", name="Nom",
+                email=f"{role}@example.com", password="Password123", last_name="Nom",
                 first_name="Prénom", role=role,
             )
             self.client.force_login(user)

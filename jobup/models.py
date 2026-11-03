@@ -6,7 +6,8 @@ from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
 from django.core.validators import RegexValidator
 from django.db import models
-from django.forms import ValidationError
+from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from .settings import DEBUG
 
@@ -22,6 +23,13 @@ class StrictCharField(models.CharField):
 
 
 # ----- ENUMS ----- #
+
+
+def choice_from_frontend(derived_class: Any, frontend_choice: int | str) -> int | None:
+    for choice_tuple in derived_class.choices:
+        if frontend_choice in choice_tuple:
+            return choice_tuple[0]
+    return None
 
 
 class Role(models.IntegerChoices):
@@ -113,14 +121,15 @@ class UserManager(BaseUserManager["User"]):
 
 class User(AbstractBaseUser, PermissionsMixin):  # pyright: ignore[reportIncompatibleVariableOverride]
     email = models.EmailField(unique=True)
-    name = StrictCharField(max_length=32)
+    last_name = StrictCharField(max_length=32)
     first_name = StrictCharField(max_length=32)
     role = models.SmallIntegerField(choices=Role.choices)
     is_active = models.BooleanField(default=True)
+    email_confirmed = models.BooleanField(default=True)
     date_joined = models.DateTimeField(auto_now_add=True)
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS: ClassVar = ["first_name", "name"]
+    REQUIRED_FIELDS: ClassVar = ["first_name", "last_name", "role"]
 
     objects = UserManager()
 
@@ -131,7 +140,7 @@ class User(AbstractBaseUser, PermissionsMixin):  # pyright: ignore[reportIncompa
         return {
             "email": self.email,
             "id": self.pk,
-            "name": self.name,
+            "last_name": self.last_name,
             "first_name": self.first_name,
             "role": self.role,
         }
@@ -145,11 +154,15 @@ class Student(models.Model):
     )
     resume = models.FileField(upload_to="CVs", blank=True)
     description = models.CharField(max_length=512, blank=True)
-    category = models.SmallIntegerField(choices=JobCategory.choices, null=True, blank=True)
+    category = models.SmallIntegerField(
+        choices=JobCategory.choices, null=True, blank=True
+    )
     experience_level = models.PositiveSmallIntegerField(default=0)  # months
     skills = models.CharField(max_length=256, blank=True)  # Comma separated skills
     region = models.CharField(max_length=64, default="Île-de-France")
-    study_degree = models.SmallIntegerField(choices=StudyDegree.choices, null=True, blank=True)
+    study_degree = models.SmallIntegerField(
+        choices=StudyDegree.choices, null=True, blank=True
+    )
     rhythm = models.CharField(
         max_length=64, blank=True
     )  # years\d{1} (weeks(\d{1}){2-48} | days(\d{1}){2-7})
@@ -168,7 +181,6 @@ class Student(models.Model):
             "experience_level": self.experience_level,
             "skills": self.skills,
             "region": self.region,
-            "age": self.age,
             "rhythm": self.rhythm,
             "available_from": self.available_from,
             "available_to": self.available_to,
@@ -226,3 +238,50 @@ def getUser(_id: int) -> User | None:
         return User.objects.get(id=_id)
     except User.DoesNotExist:
         return None
+
+
+# class TokenGenerator(PasswordResetTokenGenerator):
+#     def _make_hash_value(self, user, timestamp):
+#         return f"{user['password']}{timestamp}{user['email']}"
+
+
+# token_generator = TokenGenerator()
+
+
+class SignupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("email", "password", "last_name", "first_name", "role")
+
+    def to_internal_value(self, data: dict[str, str | int | None | bool], **kwargs):
+        if "role" not in data:
+            raise ValidationError({"role": "This field is required."})
+        if not isinstance(data["role"], (str, int)):
+            raise ValidationError({"role": "This field is invalid."})
+        role = choice_from_frontend(Role, data["role"])
+        if role is None:
+            raise ValidationError({"role": "This field is invalid."})
+        data["role"] = role
+        return super().to_internal_value(data)
+
+    def create(self, validated_data):
+        password = validated_data.pop('password')
+        user = super().create(validated_data)
+        user.set_password(password)
+        user.save()
+        return user
+
+    def save(self, **kwargs):
+        # token = token_generator.make_token(self.validated_data)
+        # link = f"http://localhost:8000/api/confirm_email/{token}"
+        # send_mail(
+        #     "Confirmez votre adresse mail",
+        #     (
+        #         f"Lien de vérification: {link}\n\n"
+        #         + "Si vous n'avez pas créé de compte Jobup, "
+        #         + "veuillez ignorer ce message."
+        #     ),
+        #     "xx.yy@gmail.com",
+        #     [self.validated_data["email"]],
+        # )
+        super().save()

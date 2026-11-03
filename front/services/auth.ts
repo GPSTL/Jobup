@@ -1,10 +1,12 @@
 // Calls to the authentication API (JOB-004).
 // The backend opens a Django session (cookie) on success.
 
+import { RoleApiName } from "../utils/roles"
+
 // Aligné sur User.to_dict() côté Django : le rôle est un entier (Role)
 export type User = {
 	id: number;
-	name: string;
+	last_name: string;
 	first_name: string;
 	role: number;
 };
@@ -67,10 +69,10 @@ export async function getSession(): Promise<SessionResult> {
 	}
 }
 
-export type SignupPayload = { prenom: string; nom: string; email: string; password: string; role: "student" };
+export type SignupPayload = { first_name: string; last_name: string; email: string; password: string; role: RoleApiName };
 type SignupResult =
 	| { ok: true }
-	| { ok: false; reason: "validation"; errors: Partial<Record<"prenom" | "nom" | "email" | "password", string>> }
+	| { ok: false; reason: "validation"; errors: Partial<Record<"first_name" | "last_name" | "email" | "password" | "role", string>> }
 	| { ok: false; reason: "server" | "network" };
 
 export async function signup(payload: SignupPayload): Promise<SignupResult> {

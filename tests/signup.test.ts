@@ -3,14 +3,14 @@ import assert from "node:assert/strict";
 import { signupSchema, toSignupPayload } from "../front/utils/signup";
 import { signup } from "../front/services/auth";
 
-const valid = { prenom: " Élodie ", nom: "D'Angelo", email: " test@example.fr ", password: "Example123" };
+const valid = { first_name: " Élodie ", last_name: "D'Angelo", email: " test@example.fr ", password: "Example123", role: "Student" };
 test("schema and outgoing payload exclude the removed fields", () => {
 	const parsed = signupSchema.parse({ ...valid, telephone: "0600000000", etablissement: "School", domaine: "IT" });
-	assert.deepEqual(Object.keys(parsed).sort(), ["email", "nom", "password", "prenom"]);
-	assert.deepEqual(toSignupPayload(parsed), { ...valid, prenom: "Élodie", email: "test@example.fr", role: "student" });
+	assert.deepEqual(Object.keys(parsed).sort(), ["email", "first_name", "last_name", "password", "role"]);
+	assert.deepEqual(toSignupPayload(parsed), { ...valid, first_name: "Élodie", email: "test@example.fr", role: "Student" });
 });
-test("required values, invalid email, names and weak passwords return French errors", () => {
-	for (const [field, value] of [["prenom", ""], ["nom", "123"], ["email", "bad"], ["password", "short"], ["password", "lowercase123"], ["password", "NoDigitsHere"]]) {
+test("required values, invalid email, names and weak passwords return errors", () => {
+	for (const [field, value] of [["first_name", ""], ["last_name", "123"], ["email", "bad"], ["password", "short"], ["password", "lowercase123"], ["password", "NoDigitsHere"]]) {
 		const result = signupSchema.safeParse({ ...valid, [field]: value });
 		assert.equal(result.success, false);
 		if (!result.success) assert.equal(result.error.issues[0].path[0], field);
