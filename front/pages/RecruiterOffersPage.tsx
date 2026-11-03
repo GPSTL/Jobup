@@ -66,8 +66,8 @@ export default function RecruiterOffersPage() {
   function changed(message: string) { setDialog(null); setNotice(message); setRetry(value => value + 1); }
   function actions(item: Offer) {
     return <div className="flex justify-center gap-4">
-      <button type="button" className={`rounded-lg p-2 text-primary ${focus}`} onClick={() => setDialog({ action: "edit", offer: item })} aria-label={`Modifier l’offre ${item.title}`}>✎ Modifier</button>
-      <button type="button" className={`rounded-lg p-2 text-red-700 ${focus}`} onClick={() => setDialog({ action: "delete", offer: item })} aria-label={`Supprimer l’offre ${item.title}`}>Supprimer</button>
+      <button type="button" className={`cursor-pointer rounded-lg p-2 text-primary hover:bg-primary/10 hover:text-blue-700 focus-visible:bg-primary/10 motion-safe:transition-colors motion-safe:duration-150 ${focus}`} onClick={() => setDialog({ action: "edit", offer: item })} aria-label={`Modifier l’offre ${item.title}`}>✎ Modifier</button>
+      <button type="button" className={`cursor-pointer rounded-lg p-2 text-red-700 hover:bg-red-50 hover:text-red-800 focus-visible:bg-red-50 motion-safe:transition-colors motion-safe:duration-150 ${focus}`} onClick={() => setDialog({ action: "delete", offer: item })} aria-label={`Supprimer l’offre ${item.title}`}>Supprimer</button>
     </div>;
   }
   return <div className="recruiter-offers-page">
