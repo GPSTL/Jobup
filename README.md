@@ -133,8 +133,10 @@ controls. The public `/offers` page now reads published offers from the API.
 This checkout did not include JOB-022. Its necessary list/detail foundation is
 included here using the API paths and individual-recruiter ownership convention
 found in the adjacent JOB-022 worktree. Reconcile these shared files when merging
-both tickets. The Figma file could not be accessed, so exact visual fidelity and
-native browser keyboard/mobile behavior still need verification.
+both tickets. Figma comparison confirms the UI is provisional: editing uses a
+two-column modal instead of the designed single-column page, image editing uses
+a URL instead of an upload control, and navigation/cards/deletion styling differ.
+Visual matching and native browser keyboard/mobile verification remain unfinished.
 
 API contract:
 
@@ -173,6 +175,6 @@ npx tsc --noEmit
 make all
 ```
 
-The full Django suite currently has seven pre-existing errors: six student tests
-still construct the removed `age` field, and one signup fixture omits the required
-user names. These are independent of offer editing and withdrawal.
+After integration with current main, all 32 Django tests pass, including the 11
+offer tests. Validation used the current models to generate the test schema
+(`MIGRATION_MODULES={"jobup": None}`), since this repository ignores local migrations.

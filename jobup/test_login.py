@@ -3,6 +3,7 @@ from collections.abc import Iterable
 from typing import Any, Self
 
 from django.core.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from django.db import IntegrityError, transaction
 from rest_framework.test import APITestCase
 
@@ -11,11 +12,11 @@ from .models import Role, Student, User, getUser
 
 class UserFactory:
     def __init__(
-        self, email: str, password: str, name: str, first_name: str, role: Role
+        self, email: str, password: str, last_name: str, first_name: str, role: Role
     ):
         self.email = email
         self.password = password
-        self.name = name
+        self.last_name = last_name
         self.first_name = first_name
         self.role = role
 
@@ -86,7 +87,7 @@ class UserCreationTests(APITestCase):
         self.assertEqual(admin.is_superuser, True)
 
     def test_user_without_name(self):
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(DRFValidationError):
             User.objects.create_user(**USERS[0].fork(first_name=""))
 
     def test_getting_user(self):
@@ -164,8 +165,8 @@ class StudentApiTests(APITestCase):
         alice = User.objects.create_user(**USERS[0])
         bob = User.objects.create_user(**USERS[1])
         User.objects.create_superuser(**USERS[2])
-        Student.objects.create(user=alice, age=22)
-        Student.objects.create(user=bob, age=25)
+        Student.objects.create(user=alice)
+        Student.objects.create(user=bob)
         self.alice_uid = alice.id
         self.bob_uid = bob.id
 
@@ -177,7 +178,6 @@ class StudentApiTests(APITestCase):
         USERS[0].login(self)
         response = self.client.get(f"/api/student/{self.alice_uid}")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["age"], 22)
 
     def test_student_cannot_read_other_sheet(self):
         USERS[0].login(self)

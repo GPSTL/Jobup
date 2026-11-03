@@ -8,11 +8,11 @@ class OfferTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.company = Company.objects.create(name="Atelier", siret="12345678901234")
-        cls.owner = User.objects.create_user("owner@example.com", "Password1", name="Nom", first_name="Prénom", role=Role.RECRUITER)
+        cls.owner = User.objects.create_user("owner@example.com", "Password1", last_name="Nom", first_name="Prénom", role=Role.RECRUITER)
         cls.recruiter = Recruiter.objects.create(user=cls.owner, company=cls.company)
-        cls.other = User.objects.create_user("other@example.com", "Password1", name="Nom", first_name="Prénom", role=Role.RECRUITER)
+        cls.other = User.objects.create_user("other@example.com", "Password1", last_name="Nom", first_name="Prénom", role=Role.RECRUITER)
         Recruiter.objects.create(user=cls.other, company=cls.company)
-        cls.student = User.objects.create_user("student@example.com", "Password1", name="Nom", first_name="Prénom", role=Role.STUDENT)
+        cls.student = User.objects.create_user("student@example.com", "Password1", last_name="Nom", first_name="Prénom", role=Role.STUDENT)
         student = Student.objects.create(user=cls.student)
         cls.offer = Offer.objects.create(recruiter=cls.recruiter, title="Développeur", description="Description initiale", category=1)
         cls.application = JobApplication.objects.create(student=student, offer=cls.offer, message="Candidature")

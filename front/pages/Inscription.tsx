@@ -8,14 +8,14 @@ import Button from "../components/Button";
 import { signup } from "../services/auth";
 import { signupSchema, toSignupPayload, type SignupForm, organizationSignupSchema, type OrganizationSignupForm } from "../utils/signup";
 import { MESSAGES } from "../utils/validation";
-import { ROLES, getRole, type Role } from "../utils/roles";
+import { ROLES, getRole, type Role, getRoleApiName, type RoleApiName } from "../utils/roles";
 
 export { toSignupPayload } from "../utils/signup";
 
-function StudentSignupForm() {
+function GenericSignupForm({ role }: { role: RoleApiName }) {
 	const { register, handleSubmit, setError, formState: { errors, isSubmitting } } = useForm<SignupForm>({
 		resolver: zodResolver(signupSchema),
-		defaultValues: { prenom: "", nom: "", email: "", password: "" },
+		defaultValues: { first_name: "", last_name: "", email: "", password: "" },
 	});
 	const [created, setCreated] = useState(false);
 	const pending = useRef(false);
@@ -23,11 +23,11 @@ function StudentSignupForm() {
 		if (pending.current) return;
 		pending.current = true;
 		try {
-			const result = await signup(toSignupPayload(form));
+			const result = await signup(toSignupPayload(form, role));
 			if (result.ok) {
 				setCreated(true);
 			} else if (result.reason === "validation") {
-				const fields = ["prenom", "nom", "email", "password"] as const;
+				const fields = ["first_name", "last_name", "email", "password"] as const;
 				let focused = false;
 				for (const field of fields) {
 					if (result.errors[field]) {
@@ -50,11 +50,11 @@ function StudentSignupForm() {
 
 	return (
 		<form aria-busy={isSubmitting} className="flex w-full max-w-73 flex-col [&_label]:text-sm [&_label]:leading-4.5" onSubmit={onSubmit} noValidate>
-			<Field id="prenom" label="Prénom" error={errors.prenom?.message} className="mt-[45px]">
-				<input autoComplete="given-name" {...register("prenom")} />
+			<Field id="prenom" label="Prénom" error={errors.first_name?.message} className="mt-[45px]">
+				<input autoComplete="given-name" {...register("first_name")} />
 			</Field>
-			<Field id="nom" label="Nom" error={errors.nom?.message} className="mt-[29px]">
-				<input autoComplete="family-name" {...register("nom")} />
+			<Field id="nom" label="Nom" error={errors.last_name?.message} className="mt-[29px]">
+				<input autoComplete="family-name" {...register("last_name")} />
 			</Field>
 			<Field id="email" label="Adresse mail" error={errors.email?.message} className="mt-[29px]">
 				<input type="email" autoComplete="email" {...register("email")} />
@@ -66,42 +66,6 @@ function StudentSignupForm() {
 			<Button type="submit" disabled={isSubmitting} className="mt-11.5 w-[205px] self-center py-2.5! leading-3.75">
 				{isSubmitting ? "Inscription…" : "S’inscrire"}
 			</Button>
-		</form>
-	);
-}
-
-// No organization signup endpoint exists yet. Retain JOB-028's form without
-// allowing a school/company selection to post to the student-only endpoint.
-function OrganizationSignupForm({ role }: { role: "school" | "recruiter" }) {
-	const { register } = useForm<OrganizationSignupForm>({
-		resolver: zodResolver(organizationSignupSchema),
-		defaultValues: { prenom: "", nom: "", email: "", telephone: "", password: "" },
-	});
-	return (
-		<form onSubmit={(event) => event.preventDefault()} className="w-full max-w-73">
-			<p role="status" className="mt-8 text-center">
-				L’inscription {role === "school" ? "école" : "entreprise"} sera bientôt disponible.
-			</p>
-			<fieldset disabled className="flex flex-col [&_label]:text-sm [&_label]:leading-4.5">
-				<Field id="prenom" label="Prénom" className="mt-6">
-					<input autoComplete="given-name" {...register("prenom")} />
-				</Field>
-				<Field id="nom" label="Nom" className="mt-[29px]">
-					<input autoComplete="family-name" {...register("nom")} />
-				</Field>
-				<Field id="email" label="Adresse mail" className="mt-[29px]">
-					<input type="email" autoComplete="email" {...register("email")} />
-				</Field>
-				<Field id="telephone" label="Numéro de téléphone" className="mt-[29px]">
-					<input type="tel" autoComplete="tel" {...register("telephone")} />
-				</Field>
-				<Field id="password" label="Mot de passe" className="mt-[29px]">
-					<input type="password" autoComplete="new-password" {...register("password")} />
-				</Field>
-				<Button type="submit" disabled className="mt-11.5 w-[205px] self-center py-2.5! leading-3.75 opacity-60 cursor-not-allowed!">
-					Bientôt disponible
-				</Button>
-			</fieldset>
 		</form>
 	);
 }
@@ -143,7 +107,7 @@ export default function Inscription() {
 						</label>
 					))}
 				</div>
-				{role === "student" ? <StudentSignupForm /> : <OrganizationSignupForm key={role} role={role} />}
+				<GenericSignupForm role={getRoleApiName(role)}/>
 				<Link to="/login" className="mt-4 text-sm leading-4.5 font-medium text-primary hover:underline">
 					Déjà inscrit&nbsp;? Se connecter
 				</Link>
