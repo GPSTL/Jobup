@@ -1,3 +1,7 @@
+from io import StringIO
+
+from django.core.management import CommandError, call_command
+from django.test import TestCase, override_settings
 from rest_framework.test import APITestCase
 
 from . import companies as api
@@ -94,3 +98,21 @@ class CompaniesTests(APITestCase):
     def test_read_only(self):
         self.assertEqual(self.client.post("/api/companies", {}).status_code, 405)
         self.assertEqual(self.client.patch(f"/api/companies/{self.acme.pk}", {}).status_code, 405)
+
+
+class SeedDemoTests(TestCase):
+    # Le lanceur de tests force DEBUG=False : on simule le développement local
+    @override_settings(DEBUG=True)
+    def test_seed_is_idempotent_and_hides_filled_offers(self):
+        call_command("seed_demo", stdout=StringIO())
+        call_command("seed_demo", stdout=StringIO())
+        self.assertEqual(Company.objects.filter(siret__startswith="9000000000").count(), 10)
+        self.assertEqual(Offer.objects.filter(is_active=False).count(), 1)
+        atelier = self.client.get(f"/api/companies/{Company.objects.get(name='Atelier Studio').pk}").json()
+        self.assertEqual(atelier["active_offers"], 3)
+
+    @override_settings(DEBUG=False)
+    def test_seed_is_refused_outside_development(self):
+        with self.assertRaises(CommandError):
+            call_command("seed_demo", stdout=StringIO())
+        self.assertEqual(Company.objects.count(), 0)
