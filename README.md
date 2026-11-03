@@ -163,3 +163,5 @@ make all
 The unchanged base revision also has seven backend test errors: six student API
 fixtures refer to the removed `Student.age` field, and one signup fixture omits
 required user names. These remain outside JOB-51.
+
+For combined JOB-22/JOB-23/JOB-51 testing, see [OFFERS_TESTING.md](OFFERS_TESTING.md). The combined branch includes the shared signup/model updates and all 47 backend tests pass.

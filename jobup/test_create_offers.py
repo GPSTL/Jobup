@@ -37,7 +37,7 @@ class OfferCreationTests(APITestCase):
         self.assertEqual(offer.start_date.isoformat(), "2027-01-01")
         self.assertEqual(offer.company_display_name, "Atelier Studio")
         self.assertEqual(self.company.name, "Atelier")
-        self.assertEqual(self.client.get("/api/recruiter/offers").data, [response.data])
+        self.assertEqual(self.client.get("/api/recruiter/offers").data["results"], [response.data])
         self.assertEqual(self.client.get(f"/api/recruiter/offers/{offer.pk}").data, response.data)
 
     def test_minimal_offer_and_company_defaults(self):
@@ -91,13 +91,13 @@ class OfferCreationTests(APITestCase):
     def test_colleagues_cannot_see_new_offer_and_newest_is_first(self):
         first = self.create().data
         second = self.create().data
-        self.assertEqual([item["id"] for item in self.client.get("/api/recruiter/offers").data],
+        self.assertEqual([item["id"] for item in self.client.get("/api/recruiter/offers").data["results"]],
                          [second["id"], first["id"]])
         colleague = User.objects.create_user("colleague@example.com", "Password123",
                                             last_name="Nom", first_name="Prénom", role=Role.RECRUITER)
         Recruiter.objects.create(user=colleague, company=self.company)
         self.client.force_login(colleague)
-        self.assertEqual(self.client.get("/api/recruiter/offers").data, [])
+        self.assertEqual(self.client.get("/api/recruiter/offers").data["results"], [])
         self.assertEqual(self.client.get(f'/api/recruiter/offers/{first["id"]}').status_code, 404)
         Offer.objects.filter(pk=first["id"]).update(is_active=False)
         self.client.force_login(self.user)
