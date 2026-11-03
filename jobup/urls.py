@@ -3,6 +3,7 @@ from django.contrib.staticfiles.views import serve
 from django.urls import path, re_path
 
 from jobup import api
+from jobup.companies import cities, companies, company
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -12,6 +13,9 @@ urlpatterns = [
     path("api/logout", api.api_logout),
     path("api/me", api.me),
     path("api/student/<int:id>", api.student),
+    path("api/companies", companies),
+    path("api/companies/cities", cities),
+    path("api/companies/<int:id>", company),
     re_path(r"^(?!api)[^.]*$", serve, kwargs={"path": "index.html"}),
     path("favicon.ico", serve, kwargs={"path": "favicon.ico"}),
 ]

@@ -63,6 +63,7 @@ Once running, access the application at `http://127.0.0.1:8000/`.
 | `make debug` | Builds the non-minified JS and CSS without starting the server. |
 | `make run_only` | Starts the server without rebuilding the frontend. |
 | `make migrate` | Creates and applies the database migrations of the `jobup` app. |
+| `make seed` | Adds demo companies, recruiters and job offers to the local database (development only, can be run again safely). |
 | `make watch_js` | Rebuilds the JS on every change. Used by `make dev`. |
 | `make watch_css` | Rebuilds the CSS on every change. Used by `make dev`. |
 
