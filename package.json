@@ -13,10 +13,14 @@
     "@types/react-dom": "^19.3.0",
     "esbuild": "^0.25.0",
     "tailwindcss": "^4.3.3",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "jsdom": "^29.1.1"
   },
   "allowScripts": {
     "esbuild@0.25.12": true,
     "@parcel/watcher@2.5.1": true
+  },
+  "scripts": {
+    "test:create-offer": "esbuild tests/create-offer.test.tsx --bundle --platform=node --format=cjs --jsx=automatic --packages=external --outfile=.test-build/create-offer.test.cjs && node --test .test-build/create-offer.test.cjs"
   }
 }

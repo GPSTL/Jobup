@@ -122,3 +122,44 @@ Browser checks: open `/signup?role=student`, submit empty and invalid fields,
 create a disposable account using only the four remaining fields, then submit
 the same email again. Check that API/network errors preserve entered values,
 keyboard focus reaches each field, and mobile has no horizontal overflow.
+
+## Recruiter offer creation (JOB-51)
+
+Recruiters can open `/recruiter/offers`, choose **Créer une offre**, and publish
+from `/recruiter/offers/new`. Success opens the new offer's detail with a
+confirmation; it also appears first in the recruiter list. Cancel returns to
+the list without writing. Field errors, expired access and network failures
+preserve the form for retry, and pending publication disables duplicate submits.
+
+This work reuses JOB-22's recruiter list/detail, guard, and styling without
+bringing in its unrelated signup changes. Offer fields match JOB-23's editing
+model: title, description, category, requirements, image URL, contract type,
+duration, start date, display company name, and location. JOB-23's edit/delete
+work remains separate. Title, description, and category are required. Omitting
+the display name uses the recruiter's company name.
+
+`GET /api/recruiter/offers/categories` returns the model's category values and
+labels. `POST /api/recruiter/offers` accepts the creation fields above and returns
+`201` with the persisted offer, or `400` with field error arrays. The server
+assigns the current recruiter's profile and active status; unknown fields,
+including ownership/publication overrides, are rejected. A recruiter session
+and CSRF token are required. Recruiters without a profile receive `404`.
+The JOB-22 recruiter GET list/detail remain scoped to the individual recruiter.
+
+After installing updated npm dependencies, run `make migrate` to generate and
+apply the additional optional offer fields using this repository's local
+migration convention. Existing offers retain their data. Use `make migrate`
+on an existing database; `make init` deletes the database.
+
+Validation:
+
+```bash
+python manage.py test jobup.test_offers
+npm run test:create-offer
+npx tsc --noEmit
+make all
+```
+
+The unchanged base revision also has seven backend test errors: six student API
+fixtures refer to the removed `Student.age` field, and one signup fixture omits
+required user names. These remain outside JOB-51.

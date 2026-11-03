@@ -12,6 +12,10 @@ import SchoolPage from "./pages/SchoolPage";
 import OffersPage from "./pages/OffersPage";
 import CompaniesPage from "./pages/CompaniesPage";
 
+import RecruiterOffersPage from "./pages/RecruiterOffersPage";
+import CreateOfferPage from "./pages/CreateOfferPage";
+import RequireRecruiter from "./components/RequireRecruiter";
+
 function App() {
 	return (
 		<BrowserRouter>
@@ -22,6 +26,9 @@ function App() {
 				<Route path="/signup" element={<Inscription />} />
 				<Route path="/login" element={<Connexion />} />
 				<Route path="/student" element={<RequireStudent>{() => <ComingSoonPage />}</RequireStudent>} />
+				<Route path="/recruiter/offers" element={<RequireRecruiter>{() => <RecruiterOffersPage />}</RequireRecruiter>} />
+				<Route path="/recruiter/offers/new" element={<RequireRecruiter>{() => <CreateOfferPage />}</RequireRecruiter>} />
+				<Route path="/recruiter/offers/:id" element={<RequireRecruiter>{() => <RecruiterOffersPage />}</RequireRecruiter>} />
 				<Route path="/offers" element={<OffersPage />} />
 				<Route path="/companies" element={<CompaniesPage />} />
 				<Route path="/pricing" element={<ComingSoonPage />} />
