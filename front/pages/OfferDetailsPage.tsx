@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import Button from "../components/Button";
+import OfferImage from "../components/OfferImage";
 import Navbar, { NavbarLink } from "../components/Navbar";
 import { OfferError, offerRequest, type Offer } from "../services/offers";
 import { card, focus } from "../utils/searchPageStyles";
@@ -45,7 +46,7 @@ export default function OfferDetailsPage() {
         {current.error !== 404 && <Button onClick={() => setRevision(value => value + 1)}>Réessayer</Button>}
       </div>}
       {offer && <article className={`${card} gap-6! p-6! sm:p-8!`}>
-        {offer.image_url && <img src={offer.image_url} alt="" className="max-h-80 w-full rounded-xl object-cover" />}
+		<OfferImage imageUrl={offer.image_url} className="max-h-80 w-full rounded-xl object-cover" />
         <div className="flex flex-col gap-3">
           <h1 className="break-words text-3xl font-semibold">{offer.title}</h1>
           <p className="break-words text-lg text-gray-600">{offer.company}{offer.location && ` • ${offer.location}`}</p>

@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 
 import Button from "../components/Button";
+import OfferImage from "../components/OfferImage";
 import { offerRequest, type OfferPage } from "../services/offers";
 import HeartIcon from "../components/HeartIcon";
 import LoginBanner from "../components/LoginBanner";
@@ -94,7 +95,7 @@ export default function OffersPage() {
 				<ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
 					{(data?.results ?? []).map(({ id, title, company, location: city, duration, image_url, contract_type, description }) => (
 						<li key={id} className={card}>
-							{image_url && <img src={image_url} alt="" loading="lazy" className="h-[150px] w-full rounded-[14px] object-cover" />}
+							<OfferImage imageUrl={image_url} className="h-[150px] w-full rounded-[14px] object-cover" />
 							<div className="flex items-center gap-2">
 								<h2 className="flex-1 text-[19px] font-semibold">{title}</h2>
 								<Link to="/login" aria-label={`Sauvegarder l’offre ${title}`} className={`group shrink-0 rounded-sm ${focus}`}>
