@@ -197,6 +197,7 @@ class Offer(models.Model):
     recruiter = models.ForeignKey(Recruiter, models.CASCADE, related_name="offers")
     title = StrictCharField(max_length=128)
     description = StrictCharField(max_length=2048)
+    image_url = models.URLField(blank=True)
     requirements = models.CharField(max_length=256, blank=True)
     category = models.SmallIntegerField(choices=JobCategory.choices)
     is_active = models.BooleanField(default=True)

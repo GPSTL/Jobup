@@ -7,10 +7,11 @@ type NavbarProps = {
 	/** Links and buttons shown after the logo. Give an item `ml-auto` to push it and the next ones to the right. */
 	children: ReactNode;
 	/** "glass": translucent, over a photo (home page). "solid": white (app pages). */
-	variant?: "glass" | "solid";
+	variant?: "glass" | "solid" | "recruiter";
 };
 
 const variants = {
+	recruiter: "bg-surface",
 	glass: "bg-surface/40 backdrop-blur-md border border-surface/50",
 	solid: "bg-surface border border-transparent shadow-[0_4px_12px_rgba(0,0,0,0.1)]",
 };
@@ -20,7 +21,7 @@ export default function Navbar({ children, variant = "solid" }: NavbarProps) {
 	return (
 		<nav
 			aria-label="Navigation principale"
-			className={`flex items-center gap-4 rounded-full px-4 py-3 text-ink md:gap-8 md:px-8 md:py-4 ${variants[variant]}`}
+			className={variant === "recruiter" ? `recruiter-navbar ${variants[variant]}` : `flex items-center gap-4 rounded-full px-4 py-3 text-ink md:gap-8 md:px-8 md:py-4 ${variants[variant]}`}
 		>
 			<Logo />
 			{children}

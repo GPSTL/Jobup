@@ -122,3 +122,52 @@ Browser checks: open `/signup?role=student`, submit empty and invalid fields,
 create a disposable account using only the four remaining fields, then submit
 the same email again. Check that API/network errors preserve entered values,
 keyboard focus reaches each field, and mobile has no horizontal overflow.
+
+## Recruiter offers (JOB-022)
+
+Recruiters land on `/recruiter/offers` after login. Cards show the title, image
+and description; “Plus d’informations” opens `/recruiter/offers/:id`. Pagination
+runs entirely in the frontend, using `?page=` in the browser URL and three
+offers per page. Offers are ordered newest first (ID breaks date ties).
+Returning from a detail preserves the originating page. Loading, retry, empty,
+missing-offer and missing-page states are included. The public `/offers` page
+remains the student discovery page.
+
+`GET /api/recruiter/offers` returns a JSON array of all authorized offers.
+The frontend fetches the list once and slices it locally; changing pages does
+not send another API request. The API does not paginate or interpret `page`.
+`GET /api/recruiter/offers/:id` returns one offer. Both require a recruiter
+session and select only that individual recruiter's active offers, including
+when colleagues share a company. Other owners' offers, inactive offers and
+missing IDs all return 404. The individual recruiter ownership scope is a
+conservative implementation assumption pending product confirmation.
+
+The existing Offer model now supports an optional `image_url`; absent or broken
+images use the locally downloaded Figma team photo. Run `make migrate` against an existing
+checkout to generate/apply the field migration (this repository ignores generated
+migrations). Do not reset an existing database. Creation, editing, deletion and candidate consultation remain outside this ticket.
+Creation, candidate, edit and delete controls remain visible in their original
+positions, disabled until the corresponding workflows are available.
+
+For local pagination checks, use an existing recruiter account with a Recruiter
+profile and company, then run:
+
+```bash
+python manage.py seed_recruiter_offers recruiter@example.com
+python manage.py test jobup.test_offers
+npx tsc --noEmit
+make all
+```
+
+The seed command adds 14 clearly labelled offers for that account, is repeatable,
+and does not change passwords or create accounts. Use a development database.
+Check pages 1–5, direct detail/reload, keyboard links, mobile layout, an unknown
+ID, and access using a different recruiter or a non-recruiter account.
+
+The layout retains the Figma composition: rounded recruiter navigation, three
+cards per page, centered titles above the original team image, description and
+blue detail link, then candidate and edit/delete actions. Refinements are limited
+to more readable typography and line spacing, balanced card padding, softer
+shadows, subtle borders and a quieter background. The detail retains its original
+image-and-information layout. Mobile layouts and reduced-motion preferences are
+supported. Assets are stored in `jobup/static/img/recruiter/`.
