@@ -1,105 +1,127 @@
-from io import StringIO
+from django.test import TestCase
+from rest_framework.test import APIClient
 
-from django.core.management import call_command
-from django.core.management.base import CommandError
-from rest_framework.test import APITestCase
-
-from .models import Company, JobCategory, Offer, Recruiter, Role, User
+from .models import Company, JobApplication, Offer, Recruiter, Role, Student, User
 
 
-class RecruiterOffersTests(APITestCase):
+class OfferTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        company = Company.objects.create(name="Entreprise", siret="12345678901234")
-        cls.user = User.objects.create_user(
-            email="recruiter@example.com", password="Password123", last_name="Nom",
-            first_name="Prénom", role=Role.RECRUITER,
-        )
-        cls.recruiter = Recruiter.objects.create(user=cls.user, company=company)
-        colleague = User.objects.create_user(
-            email="colleague@example.com", password="Password123", last_name="Nom",
-            first_name="Prénom", role=Role.RECRUITER,
-        )
-        cls.colleague = Recruiter.objects.create(user=colleague, company=company)
-        cls.offers = [Offer.objects.create(
-            recruiter=cls.recruiter, title=f"Offre {i}", description=f"Description {i}",
-            category=JobCategory.COMPUTER_SCIENCE,
-        ) for i in range(14)]
-        cls.private = Offer.objects.create(
-            recruiter=cls.colleague, title="Autre recruteur", description="Confidentiel",
-            category=JobCategory.COMPUTER_SCIENCE,
-        )
-        cls.inactive = Offer.objects.create(
-            recruiter=cls.recruiter, title="Brouillon", description="Non publiée",
-            category=JobCategory.COMPUTER_SCIENCE, is_active=False,
-        )
+        cls.company = Company.objects.create(name="Atelier", siret="12345678901234")
+        cls.owner = User.objects.create_user("owner@example.com", "Password1", last_name="Nom", first_name="Prénom", role=Role.RECRUITER)
+        cls.recruiter = Recruiter.objects.create(user=cls.owner, company=cls.company)
+        cls.other = User.objects.create_user("other@example.com", "Password1", last_name="Nom", first_name="Prénom", role=Role.RECRUITER)
+        Recruiter.objects.create(user=cls.other, company=cls.company)
+        cls.student = User.objects.create_user("student@example.com", "Password1", last_name="Nom", first_name="Prénom", role=Role.STUDENT)
+        student = Student.objects.create(user=cls.student)
+        cls.offer = Offer.objects.create(recruiter=cls.recruiter, title="Développeur", description="Description initiale", category=1)
+        cls.application = JobApplication.objects.create(student=student, offer=cls.offer, message="Candidature")
+        cls.url = f"/api/recruiter/offers/{cls.offer.pk}"
+        cls.public_url = f"/api/offers/{cls.offer.pk}"
 
     def setUp(self):
-        self.client.force_login(self.user)
+        self.client = APIClient()
+        self.client.force_authenticate(self.owner)
 
-    def test_complete_list_order_and_serialization(self):
-        response = self.client.get("/api/recruiter/offers")
+    def test_prefill_and_update_are_visible_in_list_and_detail(self):
+        before = self.client.get(self.url).json()
+        self.assertEqual(before["title"], "Développeur")
+        changes = {"title": "Data analyst", "description": "Nouvelle description", "requirements": "SQL, Python",
+                   "image_url": "https://example.com/image.webp", "contract_type": "alternance", "duration": "12 mois",
+                   "start_date": "2027-01-01", "location": "Paris", "company": "Nouveau nom"}
+        response = self.client.patch(self.url, changes, format="json")
+        self.assertEqual(response.status_code, 200, response.data)
+        for key, value in changes.items():
+            self.assertEqual(response.json()[key], value)
+            self.assertEqual(self.client.get(self.url).json()[key], value)
+            self.assertEqual(self.client.get("/api/recruiter/offers").json()["results"][0][key], value)
+            self.assertEqual(self.client.get(self.public_url).json()[key], value)
+        self.offer.refresh_from_db()
+        self.recruiter.refresh_from_db()
+        self.company.refresh_from_db()
+        self.assertEqual(self.offer.recruiter_id, self.recruiter.pk)
+        self.assertEqual(self.recruiter.company_id, self.company.pk)
+        self.assertEqual(self.company.name, "Atelier")
+
+    def test_delete_withdraws_everywhere_and_preserves_applications(self):
+        self.assertEqual(self.client.delete(self.url).status_code, 204)
+        self.offer.refresh_from_db()
+        self.assertFalse(self.offer.is_active)
+        self.assertTrue(JobApplication.objects.filter(pk=self.application.pk).exists())
+        for url in [self.url, self.public_url]:
+            self.assertEqual(self.client.get(url).status_code, 404)
+        for url in ["/api/recruiter/offers", "/api/offers"]:
+            self.assertEqual(self.client.get(url).json()["count"], 0)
+        self.assertEqual(self.client.patch(self.url, {"title": "Restore"}, format="json").status_code, 404)
+        self.assertEqual(self.client.delete(self.url).status_code, 404)
+
+    def test_other_recruiter_even_same_company_cannot_access(self):
+        self.client.force_authenticate(self.other)
+        self.assertEqual(self.client.get("/api/recruiter/offers").json()["count"], 0)
+        for method in ["get", "patch", "delete"]:
+            self.assertEqual(getattr(self.client, method)(self.url).status_code, 404)
+        self.offer.refresh_from_db()
+        self.assertTrue(self.offer.is_active)
+
+    def test_roles_and_anonymous_cannot_modify(self):
+        for user in [None, self.student]:
+            self.client.force_authenticate(user)
+            for method in ["get", "patch", "delete"]:
+                self.assertEqual(getattr(self.client, method)(self.url).status_code, 403)
+        self.assertEqual(self.client.get(self.public_url).status_code, 200)
+
+    def test_unknown_or_inactive_offer_is_not_mutable(self):
+        for method in ["get", "patch", "delete"]:
+            self.assertEqual(getattr(self.client, method)("/api/recruiter/offers/999999").status_code, 404)
+
+    def test_invalid_payload_is_atomic_and_can_be_retried(self):
+        cases = [{"title": ""}, {"title": "  "}, {"title": "x" * 129}, {"description": "x" * 2049},
+                 {"requirements": "x" * 257}, {"location": "x" * 129}, {"duration": "x" * 65},
+                 {"contract_type": "invalid"}, {"start_date": "2027-02-30"}, {"image_url": "not a URL"},
+                 {"image_url": "ftp://example.com/image"}, {"image_url": "javascript:alert(1)"},
+                 {"company": "x" * 129}, {"title": None}, ["invalid"], {"title": "New", "description": ""}]
+        for changes in cases:
+            with self.subTest(changes=changes):
+                response = self.client.patch(self.url, changes, format="json")
+                self.assertEqual(response.status_code, 400, response.data)
+                self.offer.refresh_from_db()
+                self.assertEqual(self.offer.title, "Développeur")
+        self.assertEqual(self.client.patch(self.url, {"title": "Retry"}, format="json").status_code, 200)
+
+    def test_ownership_and_publication_fields_cannot_be_changed(self):
+        for field in ["recruiter", "recruiter_id", "company_id", "is_active", "category", "id"]:
+            response = self.client.patch(self.url, {"title": "New", field: 2}, format="json")
+            self.assertEqual(response.status_code, 400)
+            self.offer.refresh_from_db()
+            self.assertEqual(self.offer.title, "Développeur")
+
+    def test_optional_fields_can_be_cleared(self):
+        changes = {"image_url": "", "contract_type": "", "requirements": "", "duration": "", "start_date": None, "company": "", "location": ""}
+        response = self.client.patch(self.url, changes, format="json")
         self.assertEqual(response.status_code, 200)
-        self.assertIsInstance(response.data, list)
-        self.assertEqual(len(response.data), 14)
-        self.assertEqual(
-            [item["id"] for item in response.data],
-            [offer.pk for offer in reversed(self.offers)],
-        )
-        item = response.data[0]
-        for key in ["title", "image_url", "description", "requirements", "company", "category", "created_at"]:
-            self.assertIn(key, item)
-        self.assertEqual(item["image_url"], "/static/img/recruiter/offer-team.png")
+        self.assertEqual(response.json()["company"], self.company.name)
 
-    def test_detail_and_custom_image(self):
-        offer = self.offers[0]
-        offer.image_url = "https://example.com/offer.webp"
-        offer.save()
-        response = self.client.get(f"/api/recruiter/offers/{offer.pk}")
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["image_url"], offer.image_url)
-        self.assertEqual(response.data["description"], offer.description)
+    def test_csrf_required_for_session_writes(self):
+        client = APIClient(enforce_csrf_checks=True)
+        client.force_login(self.owner)
+        self.assertEqual(client.patch(self.url, {"title": "New"}, format="json").status_code, 403)
+        self.assertEqual(client.delete(self.url).status_code, 403)
+        token = client.get("/api/csrf").json()["csrfToken"]
+        self.assertEqual(client.patch(self.url, {"title": "New"}, format="json", HTTP_X_CSRFTOKEN=token).status_code, 200)
+        self.assertEqual(client.delete(self.url, HTTP_X_CSRFTOKEN=token).status_code, 204)
 
-    def test_direct_access_never_exposes_other_or_inactive_offers(self):
-        for pk in [self.private.pk, self.inactive.pk, 999999]:
-            response = self.client.get(f"/api/recruiter/offers/{pk}")
-            self.assertEqual(response.status_code, 404)
-
-    def test_requires_recruiter_session(self):
-        paths = ["/api/recruiter/offers", f"/api/recruiter/offers/{self.offers[0].pk}"]
-        self.client.logout()
-        for path in paths:
-            self.assertEqual(self.client.get(path).status_code, 403)
-        for role in [Role.STUDENT, Role.MANAGER, Role.ADMIN]:
-            user = User.objects.create_user(
-                email=f"{role}@example.com", password="Password123", last_name="Nom",
-                first_name="Prénom", role=role,
-            )
-            self.client.force_login(user)
-            for path in paths:
-                self.assertEqual(self.client.get(path).status_code, 403)
-
-    def test_empty_and_missing_profile(self):
-        self.client.force_login(self.colleague.user)
-        self.private.delete()
+    def test_pagination_only_includes_active_offers(self):
+        for i in range(7):
+            Offer.objects.create(recruiter=self.recruiter, title=f"Offre {i}", description="Description", category=1)
         response = self.client.get("/api/recruiter/offers")
-        self.assertEqual(response.data, [])
-        self.colleague.delete()
-        self.assertEqual(self.client.get("/api/recruiter/offers").data, [])
+        self.assertEqual(response.json()["count"], 8)
+        self.assertEqual(len(response.json()["results"]), 6)
+        self.assertEqual(len(self.client.get("/api/recruiter/offers?page=2").json()["results"]), 2)
 
-    def test_page_parameter_does_not_paginate_and_endpoints_are_read_only(self):
-        for page in ["0", "-1", "abc", "6", "9999999999999999999999999"]:
-            response = self.client.get(f"/api/recruiter/offers?page={page}")
-            self.assertEqual(response.status_code, 200)
-            self.assertEqual(len(response.data), 14)
-        for path in ["/api/recruiter/offers", f"/api/recruiter/offers/{self.offers[0].pk}"]:
-            self.assertEqual(self.client.post(path, {}).status_code, 405)
-
-    def test_seed_is_repeatable_and_scoped(self):
-        output = StringIO()
-        call_command("seed_recruiter_offers", self.user.email, stdout=output)
-        call_command("seed_recruiter_offers", self.user.email, stdout=output)
-        self.assertEqual(self.recruiter.offers.filter(title__startswith="[Démo JOB-022]").count(), 14)
-        self.assertEqual(self.colleague.offers.count(), 1)
-        with self.assertRaises(CommandError):
-            call_command("seed_recruiter_offers", "missing@example.com", stdout=output)
+    def test_public_search_uses_updated_values(self):
+        self.client.patch(self.url, {"title": "Data analyst", "requirements": "SQL", "location": "Paris"}, format="json")
+        for query in ["q=SQL", "q=Data", "location=Paris", "category=1"]:
+            self.assertEqual(self.client.get(f"/api/offers?{query}").json()["count"], 1)
+        for query in ["q=Unknown", "location=Lyon", "category=2"]:
+            self.assertEqual(self.client.get(f"/api/offers?{query}").json()["count"], 0)
+        self.assertEqual(self.client.get("/api/offers?category=invalid").status_code, 400)

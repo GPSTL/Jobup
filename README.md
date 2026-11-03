@@ -123,51 +123,62 @@ create a disposable account using only the four remaining fields, then submit
 the same email again. Check that API/network errors preserve entered values,
 keyboard focus reaches each field, and mobile has no horizontal overflow.
 
-## Recruiter offers (JOB-022)
+## Recruiter offer editing and withdrawal (JOB-023)
 
-Recruiters land on `/recruiter/offers` after login. Cards show the title, image
-and description; “Plus d’informations” opens `/recruiter/offers/:id`. Pagination
-runs entirely in the frontend, using `?page=` in the browser URL and three
-offers per page. Offers are ordered newest first (ID breaks date ties).
-Returning from a detail preserves the originating page. Loading, retry, empty,
-missing-offer and missing-page states are included. The public `/offers` page
-remains the student discovery page.
+Recruiters sign in at `/login` and land on `/recruiter/offers`. Each offer has
+an edit action, a deletion confirmation, and a detail link. Edits are prefilled;
+failed requests preserve the form and allow retry. Pending operations disable
+controls. The public `/offers` page now reads published offers from the API.
 
-`GET /api/recruiter/offers` returns a JSON array of all authorized offers.
-The frontend fetches the list once and slices it locally; changing pages does
-not send another API request. The API does not paginate or interpret `page`.
-`GET /api/recruiter/offers/:id` returns one offer. Both require a recruiter
-session and select only that individual recruiter's active offers, including
-when colleagues share a company. Other owners' offers, inactive offers and
-missing IDs all return 404. The individual recruiter ownership scope is a
-conservative implementation assumption pending product confirmation.
+This checkout did not include JOB-022. Its necessary list/detail foundation is
+included here using the API paths and individual-recruiter ownership convention
+found in the adjacent JOB-022 worktree. Reconcile these shared files when merging
+both tickets. Figma comparison confirms the UI is provisional: editing uses a
+two-column modal instead of the designed single-column page, image editing uses
+a URL instead of an upload control, and navigation/cards/deletion styling differ.
+Visual matching and native browser keyboard/mobile verification remain unfinished.
 
-The existing Offer model now supports an optional `image_url`; absent or broken
-images use the locally downloaded Figma team photo. Run `make migrate` against an existing
-checkout to generate/apply the field migration (this repository ignores generated
-migrations). Do not reset an existing database. Creation, editing, deletion and candidate consultation remain outside this ticket.
-Creation, candidate, edit and delete controls remain visible in their original
-positions, disabled until the corresponding workflows are available.
+API contract:
 
-For local pagination checks, use an existing recruiter account with a Recruiter
-profile and company, then run:
+- `GET /api/recruiter/offers?page=1`: own active offers, six per page.
+- `GET /api/recruiter/offers/<id>`: own active offer details.
+- `PATCH /api/recruiter/offers/<id>`: partial update of `title`, `description`,
+  `image_url`, `requirements` (skills), `contract_type`, `duration`, `start_date`,
+  `company` (display name only), and `location`. Validation errors return `400`
+  with field-name arrays. Session authentication and CSRF are required for writes.
+- `DELETE /api/recruiter/offers/<id>`: withdraws the offer (`is_active=False`),
+  returns `204`, and retains the offer and its applications. Further reads,
+  edits, and deletions return `404`. Other recruiters also receive `404`, even
+  if they belong to the same company; other roles and anonymous users get `403`.
+- `GET /api/offers` and `/api/offers/<id>`: only active offers. The paginated list
+  supports `q`, `location`, and numeric `category` filters.
+
+Provisional choices for the ticket's open questions: withdrawal preserves data;
+images use optional HTTP(S) URLs up to 200 characters (no upload API); only title
+and description are required. Contract values are blank, `alternance`, `stage`,
+`cdd`, or `cdi`; dates use `YYYY-MM-DD` or null, duration is free text (64 characters).
+Company display names never update Company records or transfer ownership.
+Existing offers keep their original title, description, category and ownership;
+new fields default to blank/null. Recruiter signup and offer creation remain
+outside this ticket; use prepared recruiter accounts and offers.
+
+As elsewhere in this repository, migrations are generated locally and ignored.
+After updating, activate your Python environment and run `make migrate` to add the
+fields without resetting data. Do not run `make init` on an existing database.
+Then run:
 
 ```bash
-python manage.py seed_recruiter_offers recruiter@example.com
 python manage.py test jobup.test_offers
+npm install
+npm run test:offers
 npx tsc --noEmit
 make all
 ```
 
-The seed command adds 14 clearly labelled offers for that account, is repeatable,
-and does not change passwords or create accounts. Use a development database.
-Check pages 1–5, direct detail/reload, keyboard links, mobile layout, an unknown
-ID, and access using a different recruiter or a non-recruiter account.
+After integration with current main, all 32 Django tests pass, including the 11
+offer tests. Validation used the current models to generate the test schema
+(`MIGRATION_MODULES={"jobup": None}`), since this repository ignores local migrations.
 
-The layout retains the Figma composition: rounded recruiter navigation, three
-cards per page, centered titles above the original team image, description and
-blue detail link, then candidate and edit/delete actions. Refinements are limited
-to more readable typography and line spacing, balanced card padding, softer
-shadows, subtle borders and a quieter background. The detail retains its original
-image-and-information layout. Mobile layouts and reduced-motion preferences are
-supported. Assets are stored in `jobup/static/img/recruiter/`.
+Stack order: main ← JOB-22 (#23) ← JOB-23 (#24) ← JOB-51 (#25). This layer retains JOB-22's recruiter layout and guard, adds server pagination, editing and withdrawal, and wires public offer cards to `/offers/:id`. Edit/delete actions provide hover and keyboard focus feedback. Creation is introduced by the next layer.
+
+Public detail and missing metadata regression checks: `npm run test:public-offers`.

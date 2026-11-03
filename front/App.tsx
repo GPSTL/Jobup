@@ -10,9 +10,11 @@ import StudentPage from "./pages/StudentPage";
 import RequireStudent from "./components/RequireStudent";
 import SchoolPage from "./pages/SchoolPage";
 import OffersPage from "./pages/OffersPage";
+import OfferDetailsPage from "./pages/OfferDetailsPage";
+import CompaniesPage from "./pages/CompaniesPage";
+
 import RecruiterOffersPage from "./pages/RecruiterOffersPage";
 import RequireRecruiter from "./components/RequireRecruiter";
-import CompaniesPage from "./pages/CompaniesPage";
 
 function App() {
 	return (
@@ -27,6 +29,7 @@ function App() {
 				<Route path="/recruiter/offers" element={<RequireRecruiter>{() => <RecruiterOffersPage />}</RequireRecruiter>} />
 				<Route path="/recruiter/offers/:id" element={<RequireRecruiter>{() => <RecruiterOffersPage />}</RequireRecruiter>} />
 				<Route path="/offers" element={<OffersPage />} />
+				<Route path="/offers/:id" element={<OfferDetailsPage />} />
 				<Route path="/companies" element={<CompaniesPage />} />
 				<Route path="/pricing" element={<ComingSoonPage />} />
 				<Route path="*" element={<NotFoundPage />} />

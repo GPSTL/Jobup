@@ -210,6 +210,14 @@ class Offer(models.Model):
     title = StrictCharField(max_length=128)
     description = StrictCharField(max_length=2048)
     image_url = models.URLField(blank=True)
+    contract_type = models.CharField(max_length=32, blank=True, choices=[
+        ("alternance", "Alternance"), ("stage", "Stage"),
+        ("cdd", "CDD"), ("cdi", "CDI"),
+    ])
+    duration = models.CharField(max_length=64, blank=True)
+    start_date = models.DateField(null=True, blank=True)
+    company_display_name = models.CharField(max_length=128, blank=True)
+    location = models.CharField(max_length=128, blank=True)
     requirements = models.CharField(max_length=256, blank=True)
     category = models.SmallIntegerField(choices=JobCategory.choices)
     is_active = models.BooleanField(default=True)

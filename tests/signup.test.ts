@@ -6,8 +6,8 @@ import { signup } from "../front/services/auth";
 const valid = { first_name: " Élodie ", last_name: "D'Angelo", email: " test@example.fr ", password: "Example123", role: "Student" };
 test("schema and outgoing payload exclude the removed fields", () => {
 	const parsed = signupSchema.parse({ ...valid, telephone: "0600000000", etablissement: "School", domaine: "IT" });
-	assert.deepEqual(Object.keys(parsed).sort(), ["email", "first_name", "last_name", "password", "role"]);
-	assert.deepEqual(toSignupPayload(parsed), { ...valid, first_name: "Élodie", email: "test@example.fr", role: "Student" });
+	assert.deepEqual(Object.keys(parsed).sort(), ["email", "first_name", "last_name", "password"]);
+	assert.deepEqual(toSignupPayload(parsed, "Student"), { ...valid, first_name: "Élodie", email: "test@example.fr", role: "Student" });
 });
 test("required values, invalid email, names and weak passwords return errors", () => {
 	for (const [field, value] of [["first_name", ""], ["last_name", "123"], ["email", "bad"], ["password", "short"], ["password", "lowercase123"], ["password", "NoDigitsHere"]]) {
@@ -25,17 +25,17 @@ test("signup sends CSRF and handles duplicate, server, malformed and network err
 				if (++calls === 1) return Response.json({ csrfToken: "test-token" });
 				assert.equal(url, "/api/signup");
 				assert.equal((init?.headers as Record<string, string>)["X-CSRFToken"], "test-token");
-				assert.deepEqual(JSON.parse(init?.body as string), toSignupPayload(valid));
+				assert.deepEqual(JSON.parse(init?.body as string), toSignupPayload(valid, "Student"));
 				return Response.json({ errors: { email: "Cette adresse e-mail est déjà utilisée." } }, { status });
 			};
-			const result = await signup(toSignupPayload(valid));
+			const result = await signup(toSignupPayload(valid, "Student"));
 			assert.equal(result.ok, status === 201);
 			if (!result.ok) assert.equal(result.reason, status === 409 ? "validation" : "server");
 		}
 		globalThis.fetch = async () => new Response("not-json");
-		assert.deepEqual(await signup(toSignupPayload(valid)), { ok: false, reason: "server" });
+		assert.deepEqual(await signup(toSignupPayload(valid, "Student")), { ok: false, reason: "server" });
 		globalThis.fetch = async () => { throw new TypeError("offline"); };
-		assert.deepEqual(await signup(toSignupPayload(valid)), { ok: false, reason: "network" });
+		assert.deepEqual(await signup(toSignupPayload(valid, "Student")), { ok: false, reason: "network" });
 	} finally { globalThis.fetch = original; }
 });
 
