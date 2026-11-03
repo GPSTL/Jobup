@@ -123,6 +123,66 @@ create a disposable account using only the four remaining fields, then submit
 the same email again. Check that API/network errors preserve entered values,
 keyboard focus reaches each field, and mobile has no horizontal overflow.
 
+## Recruiter offer editing and withdrawal (JOB-023)
+
+Recruiters sign in at `/login` and land on `/recruiter/offers`. Each offer has
+an edit action, a deletion confirmation, and a detail link. Edits are prefilled;
+failed requests preserve the form and allow retry. Pending operations disable
+controls. The public `/offers` page now reads published offers from the API.
+
+This checkout did not include JOB-022. Its necessary list/detail foundation is
+included here using the API paths and individual-recruiter ownership convention
+found in the adjacent JOB-022 worktree. Reconcile these shared files when merging
+both tickets. Figma comparison confirms the UI is provisional: editing uses a
+two-column modal instead of the designed single-column page, image editing uses
+a URL instead of an upload control, and navigation/cards/deletion styling differ.
+Visual matching and native browser keyboard/mobile verification remain unfinished.
+
+API contract:
+
+- `GET /api/recruiter/offers?page=1`: own active offers, six per page.
+- `GET /api/recruiter/offers/<id>`: own active offer details.
+- `PATCH /api/recruiter/offers/<id>`: partial update of `title`, `description`,
+  `image_url`, `requirements` (skills), `contract_type`, `duration`, `start_date`,
+  `company` (display name only), and `location`. Validation errors return `400`
+  with field-name arrays. Session authentication and CSRF are required for writes.
+- `DELETE /api/recruiter/offers/<id>`: withdraws the offer (`is_active=False`),
+  returns `204`, and retains the offer and its applications. Further reads,
+  edits, and deletions return `404`. Other recruiters also receive `404`, even
+  if they belong to the same company; other roles and anonymous users get `403`.
+- `GET /api/offers` and `/api/offers/<id>`: only active offers. The paginated list
+  supports `q`, `location`, and numeric `category` filters.
+
+Provisional choices for the ticket's open questions: withdrawal preserves data;
+images use optional HTTP(S) URLs up to 200 characters (no upload API); only title
+and description are required. Contract values are blank, `alternance`, `stage`,
+`cdd`, or `cdi`; dates use `YYYY-MM-DD` or null, duration is free text (64 characters).
+Company display names never update Company records or transfer ownership.
+Existing offers keep their original title, description, category and ownership;
+new fields default to blank/null. Recruiter signup and offer creation remain
+outside this ticket; use prepared recruiter accounts and offers.
+
+As elsewhere in this repository, migrations are generated locally and ignored.
+After updating, activate your Python environment and run `make migrate` to add the
+fields without resetting data. Do not run `make init` on an existing database.
+Then run:
+
+```bash
+python manage.py test jobup.test_offers
+npm install
+npm run test:offers
+npx tsc --noEmit
+make all
+```
+
+After integration with current main, all 32 Django tests pass, including the 11
+offer tests. Validation used the current models to generate the test schema
+(`MIGRATION_MODULES={"jobup": None}`), since this repository ignores local migrations.
+
+Stack order: main ← JOB-22 (#23) ← JOB-23 (#24) ← JOB-51 (#25). This layer retains JOB-22's recruiter layout and guard, adds server pagination, editing and withdrawal, and wires public offer cards to `/offers/:id`. Edit/delete actions provide hover and keyboard focus feedback. Creation is introduced by the next layer.
+
+Public detail and missing metadata regression checks: `npm run test:public-offers`.
+
 ## Recruiter offer creation (JOB-51)
 
 Recruiters can open `/recruiter/offers`, choose **Créer une offre**, and publish
@@ -160,8 +220,5 @@ npx tsc --noEmit
 make all
 ```
 
-The unchanged base revision also has seven backend test errors: six student API
-fixtures refer to the removed `Student.age` field, and one signup fixture omits
-required user names. These remain outside JOB-51.
 
-For combined JOB-22/JOB-23/JOB-51 testing, see [OFFERS_TESTING.md](OFFERS_TESTING.md). The combined branch includes the shared signup/model updates and all 47 backend tests pass.
+The complete stack passes all 47 backend tests. See [OFFERS_TESTING.md](OFFERS_TESTING.md) for combined testing instructions.

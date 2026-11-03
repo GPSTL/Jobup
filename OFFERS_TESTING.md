@@ -1,10 +1,12 @@
 # Combined offer workflow: JOB-22, JOB-23, JOB-51
 
-Branch: `test/JOB-22-JOB-23-JOB-51`.
+PR stack: `main` ← `JOB-22` (#23) ← `JOB-23` (#24) ← `JOB-51` (#25).
+Checkout `JOB-51` for all three tickets. Merge the PRs in that order.
+The original combined test branch is `test/JOB-22-JOB-23-JOB-51`.
 This branch merges all three ticket branches and resolves their shared screens,
 model fields, API routes, tests, and npm scripts. JOB-22's layout is retained;
 JOB-23's server pagination, public reads, edit dialogs and withdrawal are
-combined with JOB-51's creation page. Each ticket branch remains separate.
+combined with JOB-51's creation page. The ticket PRs are stacked without rewriting existing branch history.
 
 The prepared local checkout is `/private/tmp/jobup-offers-integration`, with its
 own database. The running demo is <http://127.0.0.1:8010/recruiter/offers>.
@@ -50,7 +52,7 @@ python manage.py seed_recruiter_offers offers.demo@example.test
 ```
 
 Validation performed: all 47 backend tests, 6 creation tests, 4 edit/delete
-interaction tests, 13 existing frontend tests, TypeScript and the production build pass. The full browser
+interaction tests, 4 public-offer tests, 13 existing frontend tests, TypeScript and the production build pass. The full browser
 flow was also checked: login, creation, detail, edit/save, confirmation and
 withdrawal back to the list.
 
