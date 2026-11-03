@@ -13,7 +13,7 @@ class CompaniesTests(APITestCase):
         self.blue = Company.objects.create(name="Blue Health", siret="22345678901234", sector=JobCategory.HEALTH, city="Lyon")
         self.cosy = Company.objects.create(name="Cosy Data", siret="32345678901234", sector=JobCategory.DATA_AI, city="Paris")
 
-        user = User.objects.create_user("rh@acme.example", "Example123", name="Martin", first_name="Léa", role=Role.RECRUITER)
+        user = User.objects.create_user("rh@acme.example", "Example123", last_name="Martin", first_name="Léa", role=Role.RECRUITER)
         recruiter = Recruiter.objects.create(user=user, company=self.acme)
         self.active = Offer.objects.create(recruiter=recruiter, title="Alternance dev", description="...", category=JobCategory.COMPUTER_SCIENCE)
         Offer.objects.create(recruiter=recruiter, title="Offre pourvue", description="...", category=JobCategory.COMPUTER_SCIENCE, is_active=False)

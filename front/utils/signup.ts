@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { validateEmail, validateNewPassword, validateNom, validatePrenom } from "./validation";
+import { RoleApiName } from "./roles";
 
 const validated = (validator: (value: string) => string) => z.string().superRefine((value, ctx) => {
 	const message = validator(value);
@@ -9,18 +10,18 @@ const name = (validator: (value: string) => string) => validated(validator)
 	.refine(value => value.trim().length <= 32, "32 caractères maximum.");
 
 export const signupSchema = z.object({
-	prenom: name(validatePrenom),
-	nom: name(validateNom),
+	first_name: name(validatePrenom),
+	last_name: name(validateNom),
 	email: validated(validateEmail).refine(value => value.trim().length <= 254, "254 caractères maximum."),
 	password: validated(validateNewPassword),
 });
 export type SignupForm = z.infer<typeof signupSchema>;
-export const toSignupPayload = (form: SignupForm) => ({
-	prenom: form.prenom.trim(),
-	nom: form.nom.trim(),
+export const toSignupPayload = (form: SignupForm, role: RoleApiName) => ({
+	first_name: form.first_name.trim(),
+	last_name: form.last_name.trim(),
 	email: form.email.trim(),
 	password: form.password,
-	role: "student" as const,
+	role: role,
 });
 
 // Preserve JOB-028's non-student fields while their signup APIs are unavailable.
