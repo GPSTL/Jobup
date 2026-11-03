@@ -11,6 +11,7 @@ import RequireStudent from "./components/RequireStudent";
 import SchoolPage from "./pages/SchoolPage";
 import OffersPage from "./pages/OffersPage";
 import CompaniesPage from "./pages/CompaniesPage";
+import RecruiterOffersPage from "./pages/RecruiterOffersPage";
 
 function App() {
 	return (
@@ -23,6 +24,8 @@ function App() {
 				<Route path="/login" element={<Connexion />} />
 				<Route path="/student" element={<RequireStudent>{() => <ComingSoonPage />}</RequireStudent>} />
 				<Route path="/offers" element={<OffersPage />} />
+				<Route path="/recruiter/offers" element={<RecruiterOffersPage />} />
+				<Route path="/recruiter/offers/:id" element={<RecruiterOffersPage />} />
 				<Route path="/companies" element={<CompaniesPage />} />
 				<Route path="/pricing" element={<ComingSoonPage />} />
 				<Route path="*" element={<NotFoundPage />} />

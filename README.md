@@ -122,3 +122,57 @@ Browser checks: open `/signup?role=student`, submit empty and invalid fields,
 create a disposable account using only the four remaining fields, then submit
 the same email again. Check that API/network errors preserve entered values,
 keyboard focus reaches each field, and mobile has no horizontal overflow.
+
+## Recruiter offer editing and withdrawal (JOB-023)
+
+Recruiters sign in at `/login` and land on `/recruiter/offers`. Each offer has
+an edit action, a deletion confirmation, and a detail link. Edits are prefilled;
+failed requests preserve the form and allow retry. Pending operations disable
+controls. The public `/offers` page now reads published offers from the API.
+
+This checkout did not include JOB-022. Its necessary list/detail foundation is
+included here using the API paths and individual-recruiter ownership convention
+found in the adjacent JOB-022 worktree. Reconcile these shared files when merging
+both tickets. The Figma file could not be accessed, so exact visual fidelity and
+native browser keyboard/mobile behavior still need verification.
+
+API contract:
+
+- `GET /api/recruiter/offers?page=1`: own active offers, six per page.
+- `GET /api/recruiter/offers/<id>`: own active offer details.
+- `PATCH /api/recruiter/offers/<id>`: partial update of `title`, `description`,
+  `image_url`, `requirements` (skills), `contract_type`, `duration`, `start_date`,
+  `company` (display name only), and `location`. Validation errors return `400`
+  with field-name arrays. Session authentication and CSRF are required for writes.
+- `DELETE /api/recruiter/offers/<id>`: withdraws the offer (`is_active=False`),
+  returns `204`, and retains the offer and its applications. Further reads,
+  edits, and deletions return `404`. Other recruiters also receive `404`, even
+  if they belong to the same company; other roles and anonymous users get `403`.
+- `GET /api/offers` and `/api/offers/<id>`: only active offers. The paginated list
+  supports `q`, `location`, and numeric `category` filters.
+
+Provisional choices for the ticket's open questions: withdrawal preserves data;
+images use optional HTTP(S) URLs up to 200 characters (no upload API); only title
+and description are required. Contract values are blank, `alternance`, `stage`,
+`cdd`, or `cdi`; dates use `YYYY-MM-DD` or null, duration is free text (64 characters).
+Company display names never update Company records or transfer ownership.
+Existing offers keep their original title, description, category and ownership;
+new fields default to blank/null. Recruiter signup and offer creation remain
+outside this ticket; use prepared recruiter accounts and offers.
+
+As elsewhere in this repository, migrations are generated locally and ignored.
+After updating, activate your Python environment and run `make migrate` to add the
+fields without resetting data. Do not run `make init` on an existing database.
+Then run:
+
+```bash
+python manage.py test jobup.test_offers
+npm install
+npm run test:offers
+npx tsc --noEmit
+make all
+```
+
+The full Django suite currently has seven pre-existing errors: six student tests
+still construct the removed `age` field, and one signup fixture omits the required
+user names. These are independent of offer editing and withdrawal.

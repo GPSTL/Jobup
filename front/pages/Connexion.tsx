@@ -35,7 +35,7 @@ export default function Connexion() {
 				if (result.reason === "invalidCredentials") setFocus("password");
 				return;
 			}
-			navigate("/student", { replace: true });
+			navigate(result.user.role === 3 ? "/recruiter/offers" : "/student", { replace: true });
 		} finally {
 			submittingRef.current = false;
 		}
