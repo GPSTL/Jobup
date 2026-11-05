@@ -44,3 +44,7 @@ init: reset_db
 
 test:
 	pytest -v
+
+view_coverage:
+	-pytest --cov=jobup --cov-report=html
+	open ./htmlcov/index.html

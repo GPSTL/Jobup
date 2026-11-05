@@ -8,6 +8,8 @@ from jobup import api
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("api/csrf", api.csrf),
+    path("api/signup", api.signup),
     path("api/login", api.api_login),
     path("api/logout", api.api_logout),
     path("api/me", api.me),

@@ -1,7 +1,7 @@
-from typing import Any
 from uuid import uuid4
 
 from django.contrib.auth import authenticate, login, logout
+from django.middleware.csrf import get_token
 from PIL import Image
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from rest_framework.decorators import api_view, permission_classes
@@ -9,7 +9,9 @@ from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from .models import Role, Student, User
+from .models import Role, SignupSerializer, Student, User
+
+# from .models import token_generator
 
 
 def getStudent(_id: int) -> Student | None:
@@ -22,14 +24,6 @@ def canViewStudent(user: User, id: int) -> bool:
 
 def canEditStudent(user: User, id: int) -> bool:
     return id == user.pk
-
-
-def studentProfile(student: Student) -> dict[str, Any]:
-    return {
-        "photo_url": student.photo.url if student.photo else None,
-        "description": student.description,
-        "desired_position": student.desired_position,
-    }
 
 
 class Credentials(BaseModel):
@@ -122,7 +116,7 @@ def student_photo(request: Request, id: int) -> Response:
     target.save(update_fields=["photo"])
     if old:
         target.photo.storage.delete(old)
-    return Response(studentProfile(target))
+    return Response(target.to_dict())
 
 
 @api_view(["GET", "PATCH"])
@@ -148,4 +142,30 @@ def student(request: Request, id: int) -> Response:
             setattr(target, field, getattr(changes, field))
         target.save(update_fields=changes.model_fields_set)
 
-    return Response({"category": target.category, "experience": target.experience_level, **studentProfile(target)})
+    return Response(target.to_dict())
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def csrf(request):
+    return Response({"csrfToken": get_token(request._request)})
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def signup(request: Request):
+    serializer = SignupSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    return Response({"message": "User successfully registered"}, status=201)
+
+
+# @api_view(["POST"])
+# @permission_classes([AllowAny])
+# def confirm_email(request: Request):
+#     user = getUser(request.uid)
+#     if user is None or not token_generator.check_token(user, request.token):
+#         return Response({"error": "Invalid request"}, status=400)
+#     user.email_confirmed = True
+#     user.is_active = True
+#     return Response({"message": "User email successfully confirmed"}, status=201)

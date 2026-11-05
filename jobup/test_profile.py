@@ -14,7 +14,7 @@ PASSWORD = "pw12345!"
 
 def createStudent(email: str, **profile: str) -> User:
     user = User.objects.create_user(
-        email, PASSWORD, name="Martin", first_name="Camille", role=Role.STUDENT
+        email, PASSWORD, last_name="Martin", first_name="Camille", role=Role.STUDENT
     )
     Student.objects.create(
         user=user,
@@ -42,7 +42,7 @@ class ProfileTestCase(APITestCase):
         )
         cls.bob = createStudent("bob@mail.fr")
         cls.admin = User.objects.create_superuser(
-            "admin@jobup.io", PASSWORD, name="Taire", first_name="Jean"
+            "admin@jobup.io", PASSWORD, last_name="Taire", first_name="Jean"
         )
 
 
