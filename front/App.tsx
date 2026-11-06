@@ -12,6 +12,8 @@ import SchoolPage from "./pages/SchoolPage";
 import OffersPage from "./pages/OffersPage";
 import CompaniesPage from "./pages/CompaniesPage";
 
+import EntrepriseCandita from "./pages/CompanieCandita";
+
 function App() {
 	return (
 		<BrowserRouter>
@@ -24,6 +26,8 @@ function App() {
 				<Route path="/student" element={<RequireStudent>{() => <ComingSoonPage />}</RequireStudent>} />
 				<Route path="/offers" element={<OffersPage />} />
 				<Route path="/companies" element={<CompaniesPage />} />
+				<Route path="/entreprise/candidats" element={<EntrepriseCandita />} />
+				<Route path="/coming-soon" element={<ComingSoonPage />} />
 				<Route path="/pricing" element={<ComingSoonPage />} />
 				<Route path="*" element={<NotFoundPage />} />
 			</Routes>
