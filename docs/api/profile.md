@@ -6,11 +6,11 @@ Contract between the profile API (JOB-008) and the “Mon espace” page (JOB-01
 
 - The routes use the Django session opened by `POST /api/login`: every front-end request passes `credentials: "same-origin"`.
 - `<id>` is the account id, that is, the `id` field returned by `POST /api/login` and `GET /api/me`.
-- `PATCH` and `POST` requests send the `X-CSRFToken` header with the value of the `csrftoken` cookie. This cookie is set by the `POST /api/login` response and changes at every login.
+- `PATCH` and `POST` requests send the `X-CSRFToken` header with the value of the `csrftoken` cookie. This cookie is set by the `POST /api/login` response and changes at every login. `GET /api/csrf` also returns the token, as `{"csrfToken": "…"}`: this is what the signup page uses.
 
 ## The profile
 
-All three routes respond with the profile:
+All three routes respond with the same body, the profile:
 
 ```json
 {
@@ -26,7 +26,7 @@ All three routes respond with the profile:
 | `description` | string | Personal description, 500 characters max; empty string if not written yet. |
 | `desired_position` | string | Desired position as free text, 100 characters max; empty string if not filled in. |
 
-No field is required: the profile can be incomplete. The response may contain other student fields, which are not part of this contract.
+No field is required: the profile can be incomplete. The body is the student sheet (`Student.to_dict()`), so it also contains other student fields (`uid`, `category`, `experience_level`…), which are not part of this contract. Since the body is the same for the three routes, the front end can replace its copy of the profile with the response to a `PATCH` or a `POST`.
 
 ## Routes
 
@@ -50,7 +50,9 @@ Leading and trailing spaces are removed, and an empty string clears the field. A
 
 Replaces the photo. Restricted to the student themselves.
 
-The body is `multipart/form-data`, with the file in the `photo` field: JPG or PNG (checked on the file content, not on its extension), 2 MB max, that is 2 × 1024 × 1024 bytes. The previous photo is deleted.
+The body is `multipart/form-data`, with the file in the `photo` field: JPG or PNG (checked on the file content, not on its extension), 2 MB max, that is 2 × 1024 × 1024 bytes, and 25 megapixels max (width × height ≤ 25,000,000).
+
+The photo is saved again from its pixels: its metadata (EXIF, which holds the GPS position of phone photos, XMP, comment) are removed, except the color profile, and the orientation given by the EXIF is applied to the image. The previous photo is deleted.
 
 ## Status codes
 
@@ -80,6 +82,7 @@ The messages in `errors` are in French, like the interface, and are displayed as
 | `photo` | No file sent | Aucune photo reçue. |
 | `photo` | Neither JPG nor PNG | La photo doit être au format JPG ou PNG. |
 | `photo` | More than 2 MB | La photo ne doit pas dépasser 2 Mo. |
+| `photo` | More than 25 megapixels | La photo ne doit pas dépasser 25 mégapixels. |
 
 ## Front-end example
 

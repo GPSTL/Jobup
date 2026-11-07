@@ -1,8 +1,12 @@
+import io
 from uuid import uuid4
 
 from django.contrib.auth import authenticate, login, logout
+from django.core.files.base import ContentFile
+from django.core.files.uploadedfile import UploadedFile
 from django.middleware.csrf import get_token
-from PIL import Image
+from django.utils.datastructures import MultiValueDict
+from PIL import Image, ImageOps
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -58,6 +62,23 @@ def profileErrors(e: ValidationError) -> dict[str, str]:
 
 
 PHOTO_MAX_SIZE = 2 * 1024 * 1024
+# Once decoded, each pixel takes up to 4 bytes in memory
+PHOTO_MAX_PIXELS = 25_000_000
+
+
+def photoError(message: str) -> Response:
+    return Response({"errors": {"photo": message}}, status=400)
+
+
+def reencodedPhoto(image: Image.Image) -> tuple[bytes, str]:
+    # Saved again from its pixels alone, so without its metadata (EXIF with the
+    # GPS position, XMP, comment) except the color profile. The orientation
+    # given by the EXIF is applied to the pixels.
+    kind, extension = ("PNG", "png") if image.format == "PNG" else ("JPEG", "jpg")
+    ImageOps.exif_transpose(image, in_place=True)
+    content = io.BytesIO()
+    image.save(content, kind, icc_profile=image.info.get("icc_profile"), comment=b"")
+    return content.getvalue(), extension
 
 
 @api_view(["POST"])
@@ -96,23 +117,28 @@ def student_photo(request: Request, id: int) -> Response:
     if target is None:
         return Response({"error": "Student not found"}, status=404)
 
-    photo = request.FILES.get("photo")
-    if photo is None:
-        return Response({"errors": {"photo": "Aucune photo reçue."}}, status=400)
-    if photo.size > PHOTO_MAX_SIZE:
-        return Response({"errors": {"photo": "La photo ne doit pas dépasser 2 Mo."}}, status=400)
+    files = request.FILES
+    # Checked for the type checker: DRF does not type FILES
+    photo = files.get("photo") if isinstance(files, MultiValueDict) else None
+    if not isinstance(photo, UploadedFile):
+        return photoError("Aucune photo reçue.")
+    # The size is None only for a file created without it, never for an upload
+    if photo.size is None or photo.size > PHOTO_MAX_SIZE:
+        return photoError("La photo ne doit pas dépasser 2 Mo.")
     try:
         # Format read from the content, whatever the file name. Pillow raises
         # various errors when the file is not a JPG or PNG image.
         with Image.open(photo, formats=["JPEG", "PNG"]) as image:
-            image.verify()
-            extension = "png" if image.format == "PNG" else "jpg"
-    except Exception:
-        return Response({"errors": {"photo": "La photo doit être au format JPG ou PNG."}}, status=400)
+            # Only the header is read so far: a light file can hold a huge image
+            if image.width * image.height > PHOTO_MAX_PIXELS:
+                return photoError("La photo ne doit pas dépasser 25 mégapixels.")
+            content, extension = reencodedPhoto(image)
+    except Exception:  # noqa: BLE001
+        return photoError("La photo doit être au format JPG ou PNG.")
 
     old = target.photo.name
     # A new name for each photo, so that its URL changes too
-    target.photo.save(f"{uuid4().hex}.{extension}", photo, save=False)
+    target.photo.save(f"{uuid4().hex}.{extension}", ContentFile(content), save=False)
     target.save(update_fields=["photo"])
     if old:
         target.photo.storage.delete(old)
@@ -122,7 +148,11 @@ def student_photo(request: Request, id: int) -> Response:
 @api_view(["GET", "PATCH"])
 def student(request: Request, id: int) -> Response:
     user: User = request.user
-    allowed = canViewStudent(user, id) if request.method == "GET" else canEditStudent(user, id)
+    allowed = (
+        canViewStudent(user, id)
+        if request.method == "GET"
+        else canEditStudent(user, id)
+    )
     if not allowed:
         return Response({"error": "Forbidden"}, status=403)
 

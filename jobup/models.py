@@ -155,7 +155,7 @@ class Student(models.Model):
     resume = models.FileField(upload_to="CVs", blank=True)
     photo = models.ImageField(upload_to="photos", blank=True)
     desired_position = models.CharField(max_length=100, blank=True)
-    description = models.CharField(max_length=512, blank=True)
+    description = models.CharField(max_length=500, blank=True)
     category = models.SmallIntegerField(
         choices=JobCategory.choices, null=True, blank=True
     )

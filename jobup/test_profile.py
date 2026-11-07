@@ -4,8 +4,8 @@ from typing import Any
 
 from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
-from PIL import Image
-from rest_framework.test import APIClient, APITestCase
+from PIL import ExifTags, Image, ImageCms
+from rest_framework.test import APITestCase
 
 from .models import JobCategory, Role, Student, StudyDegree, User
 
@@ -25,9 +25,9 @@ def createStudent(email: str, **profile: str) -> User:
     return user
 
 
-def imageBytes(kind: str, **options: Any) -> bytes:
+def imageBytes(kind: str, size: tuple[int, int] = (8, 8), **options: Any) -> bytes:
     buffer = io.BytesIO()
-    Image.new("RGB", (8, 8)).save(buffer, kind, **options)
+    Image.new("RGB", size).save(buffer, kind, **options)
     return buffer.getvalue()
 
 
@@ -170,19 +170,24 @@ class ProfileUpdateTests(ProfileTestCase):
 
     def test_anonymous_forbidden(self):
         self.client.logout()
-        response = self.client.patch(self.url, {"description": "Bonjour"}, format="json")
+        response = self.client.patch(
+            self.url, {"description": "Bonjour"}, format="json"
+        )
         self.assertEqual(response.status_code, 403)
 
     def test_only_the_student_can_update(self):
         # Neither another student nor an administrator
         for user in (self.bob, self.admin):
             self.client.force_login(user)
-            response = self.client.patch(self.url, {"description": "Bonjour"}, format="json")
+            response = self.client.patch(
+                self.url, {"description": "Bonjour"}, format="json"
+            )
             self.assertEqual(response.status_code, 403)
             self.assertEqual(response.json(), {"error": "Forbidden"})
 
     def test_csrf_token_required(self):
-        client = APIClient(enforce_csrf_checks=True)
+        # Same class as self.client, but checks the CSRF token like for a browser
+        client = self.client_class(enforce_csrf_checks=True)
         credentials = {"email": "alice@mail.fr", "password": PASSWORD}
         client.post("/api/login", credentials, format="json")
         data = {"description": "Bonjour"}
@@ -208,7 +213,7 @@ class PhotoUploadTests(ProfileTestCase):
         return self.client.post(self.url, {"photo": SimpleUploadedFile(name, content)})
 
     def currentPhoto(self) -> str:
-        return Student.objects.get(user=self.alice).photo.name
+        return Student.objects.get(user=self.alice).photo.name or ""
 
     def test_upload_replaces_photo(self):
         response = self.upload("photo.jpg", imageBytes("JPEG"))
@@ -226,6 +231,33 @@ class PhotoUploadTests(ProfileTestCase):
         self.assertEqual(response.json()["photo_url"], f"/media/{second}")
         self.assertTrue(default_storage.exists(second))
         self.assertFalse(default_storage.exists(first))
+
+    def test_same_body_as_get(self):
+        # The front end can replace its copy of the profile with the response
+        response = self.upload("photo.png", imageBytes("PNG"))
+        profile = self.client.get(f"/api/student/{self.alice.pk}").json()
+        self.assertEqual(response.json(), profile)
+
+    def test_metadata_removed(self):
+        # As a phone saves it: taken sideways, with the GPS position in the EXIF
+        exif = Image.Exif()
+        exif[ExifTags.Base.Orientation] = 6
+        exif[ExifTags.IFD.GPSInfo] = {ExifTags.GPS.GPSLatitude: (48.0, 51.0, 24.0)}
+        icc = ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()
+        jpeg = imageBytes(
+            "JPEG", (8, 4), exif=exif, comment=b"Camille Martin", icc_profile=icc
+        )
+        self.assertEqual(self.upload("photo.jpg", jpeg).status_code, 200)
+        with (
+            default_storage.open(self.currentPhoto()) as file,
+            Image.open(file) as saved,
+        ):
+            self.assertEqual(len(saved.getexif()), 0)
+            self.assertNotIn("comment", saved.info)
+            # Only the color profile is kept
+            self.assertEqual(saved.info["icc_profile"], icc)
+            # Turned upright, since the orientation is no longer in the EXIF
+            self.assertEqual(saved.size, (4, 8))
 
     def test_format_read_from_content(self):
         # A PNG named .jpg is saved as a PNG
@@ -269,6 +301,18 @@ class PhotoUploadTests(ProfileTestCase):
             response.json()["errors"], {"photo": "La photo ne doit pas dépasser 2 Mo."}
         )
 
+    def test_pixel_limit(self):
+        # One bit per pixel: a file of a few KB, refused before being decoded
+        buffer = io.BytesIO()
+        Image.new("1", (5000, 5001)).save(buffer, "PNG")
+        response = self.upload("photo.png", buffer.getvalue())
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()["errors"],
+            {"photo": "La photo ne doit pas dépasser 25 mégapixels."},
+        )
+        self.assertEqual(self.currentPhoto(), "photos/alice.png")
+
     def test_no_file(self):
         response = self.client.post(self.url, {})
         self.assertEqual(response.status_code, 400)
@@ -290,6 +334,8 @@ class PhotoUploadTests(ProfileTestCase):
     def test_no_student_profile(self):
         self.client.force_login(self.admin)
         photo = SimpleUploadedFile("photo.png", imageBytes("PNG"))
-        response = self.client.post(f"/api/student/{self.admin.pk}/photo", {"photo": photo})
+        response = self.client.post(
+            f"/api/student/{self.admin.pk}/photo", {"photo": photo}
+        )
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json(), {"error": "Student not found"})
