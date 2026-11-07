@@ -153,7 +153,9 @@ class Student(models.Model):
         default=StudentSubscription.FREE,
     )
     resume = models.FileField(upload_to="CVs", blank=True)
-    description = models.CharField(max_length=512, blank=True)
+    photo = models.ImageField(upload_to="photos", blank=True)
+    desired_position = models.CharField(max_length=100, blank=True)
+    description = models.CharField(max_length=500, blank=True)
     category = models.SmallIntegerField(
         choices=JobCategory.choices, null=True, blank=True
     )
@@ -176,7 +178,9 @@ class Student(models.Model):
         return {
             "uid": self.user.id,
             "subscription": self.subscription,
+            "photo_url": self.photo.url if self.photo else None,
             "description": self.description,
+            "desired_position": self.desired_position,
             "category": self.category,
             "experience_level": self.experience_level,
             "skills": self.skills,

@@ -4,6 +4,7 @@
 **/dist
 node_modules
 *.sqlite3
+/media
 .env
 /*.xml
 .venv
