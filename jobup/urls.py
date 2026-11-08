@@ -6,6 +6,7 @@ from django.urls import path, re_path
 
 from jobup import api
 from jobup.profile import student, student_photo
+from jobup.resume import student_resume
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -16,6 +17,7 @@ urlpatterns = [
     path("api/me", api.me),
     path("api/student/<int:id>", student),
     path("api/student/<int:id>/photo", student_photo),
+    path("api/student/<int:id>/resume", student_resume),
     re_path(r"^(?!api)[^.]*$", serve, kwargs={"path": "index.html"}),
     path("favicon.ico", serve, kwargs={"path": "favicon.ico"}),
 ]
