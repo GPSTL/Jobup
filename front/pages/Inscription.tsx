@@ -6,7 +6,7 @@ import Logo from "../components/Logo";
 import Field from "../components/Field";
 import Button from "../components/Button";
 import { signup } from "../services/auth";
-import { signupSchema, toSignupPayload, type SignupForm, organizationSignupSchema, type OrganizationSignupForm } from "../utils/signup";
+import { signupSchema, toSignupPayload, type SignupForm } from "../utils/signup";
 import { MESSAGES } from "../utils/validation";
 import { ROLES, getRole, type Role, getRoleApiName, type RoleApiName } from "../utils/roles";
 
