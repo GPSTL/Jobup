@@ -49,7 +49,7 @@ class RecruiterOffersTests(APITestCase):
         item = response.data[0]
         for key in ["title", "image_url", "description", "requirements", "company", "category", "created_at"]:
             self.assertIn(key, item)
-        self.assertEqual(item["image_url"], "/static/img/recruiter/offer-team.png")
+        self.assertEqual(item["image_url"], "/static/img/recruiter/offer-team.webp")
 
     def test_detail_and_custom_image(self):
         offer = self.offers[0]

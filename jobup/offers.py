@@ -25,7 +25,7 @@ def serialize_offer(offer):
         "id": offer.pk,
         "title": offer.title,
         "description": offer.description,
-        "image_url": offer.image_url or "/static/img/recruiter/offer-team.png",
+        "image_url": offer.image_url or "/static/img/recruiter/offer-team.webp",
         "requirements": offer.requirements,
         "category": offer.get_category_display(),
         "company": offer.recruiter.company.name,
