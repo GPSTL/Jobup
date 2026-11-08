@@ -198,11 +198,9 @@ confirmation; it also appears first in the recruiter list. Cancel returns to
 the list without writing. Field errors, expired access and network failures
 preserve the form for retry, and pending publication disables duplicate submits.
 
-This work reuses JOB-22's recruiter list/detail, guard, and styling without
-bringing in its unrelated signup changes. Offer fields match JOB-23's editing
-model: title, description, category, requirements, image URL, contract type,
-duration, start date, display company name, and location. JOB-23's edit/delete
-work remains separate. Title, description, and category are required. Omitting
+Offer fields match JOB-23's editing model: title, description, category,
+requirements, image URL, contract type, duration, start date, display company
+name, and location. Title, description, and category are required. Omitting
 the display name uses the recruiter's company name.
 
 `GET /api/recruiter/offers/categories` returns the model's category values and
@@ -226,6 +224,3 @@ npm run test:create-offer
 npx tsc --noEmit
 make all
 ```
-
-
-The complete stack passes all 47 backend tests. See [OFFERS_TESTING.md](OFFERS_TESTING.md) for combined testing instructions.
