@@ -10,7 +10,7 @@ import { EditOfferDialog, DeleteOfferDialog } from "../components/OfferDialogs";
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary";
 const panel = "recruiter-state-panel";
 const unavailable = "Fonctionnalité bientôt disponible";
-const fallbackImage = "/static/img/recruiter/offer-team.png";
+const fallbackImage = "/static/img/recruiter/offer-team.webp";
 
 export function RecruiterNavbar() {
   return <Navbar variant="recruiter">

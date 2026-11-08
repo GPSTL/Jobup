@@ -130,10 +130,7 @@ an edit action, a deletion confirmation, and a detail link. Edits are prefilled;
 failed requests preserve the form and allow retry. Pending operations disable
 controls. The public `/offers` page now reads published offers from the API.
 
-This checkout did not include JOB-022. Its necessary list/detail foundation is
-included here using the API paths and individual-recruiter ownership convention
-found in the adjacent JOB-022 worktree. Reconcile these shared files when merging
-both tickets. Figma comparison confirms the UI is provisional: editing uses a
+Figma comparison confirms the UI is provisional: editing uses a
 two-column modal instead of the designed single-column page, image editing uses
 a URL instead of an upload control, and navigation/cards/deletion styling differ.
 Visual matching and native browser keyboard/mobile verification remain unfinished.
@@ -175,9 +172,19 @@ npx tsc --noEmit
 make all
 ```
 
-After integration with current main, all 32 Django tests pass, including the 11
-offer tests. Validation used the current models to generate the test schema
-(`MIGRATION_MODULES={"jobup": None}`), since this repository ignores local migrations.
+To try the recruiter pages locally, create a recruiter with a company once
+(signup does not create the `Recruiter` profile yet), then add 14 demo offers
+to that account (the seed command can be run again safely):
+
+```bash
+python manage.py shell <<'PY'
+from jobup.models import Company, Recruiter, Role, User
+company, _ = Company.objects.get_or_create(siret="99999999999991", defaults={"name": "JobUp Démo"})
+user = User.objects.create_user("recruteur@example.test", "Password123", last_name="Démo", first_name="Recruteur", role=Role.RECRUITER)
+Recruiter.objects.create(user=user, company=company)
+PY
+python manage.py seed_recruiter_offers recruteur@example.test
+```
 
 Stack order: main ← JOB-22 (#23) ← JOB-23 (#24) ← JOB-51 (#25). This layer retains JOB-22's recruiter layout and guard, adds server pagination, editing and withdrawal, and wires public offer cards to `/offers/:id`. Edit/delete actions provide hover and keyboard focus feedback. Creation is introduced by the next layer.
 

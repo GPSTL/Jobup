@@ -4,7 +4,7 @@ type OfferImageProps = {
 	className?: string;
 };
 
-export const DEFAULT_OFFER_IMAGE = "/static/img/recruiter/offer-team.png";
+export const DEFAULT_OFFER_IMAGE = "/static/img/recruiter/offer-team.webp";
 
 export default function OfferImage({ imageUrl, alt = "", className = "" }: OfferImageProps) {
 	return <img
