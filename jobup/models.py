@@ -358,7 +358,7 @@ class DraftSerializer(serializers.Serializer):
     cover_letter = serializers.FileField(required=False)
 
     if TYPE_CHECKING:
-        validated_data: dict[str, Any] # type: ignore
+        validated_data: dict[str, Any]  # type: ignore
 
     def save_draft(self, student: Student) -> tuple[JobApplication, bool]:
         data = self.validated_data

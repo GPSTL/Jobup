@@ -1,5 +1,4 @@
 import { useId, useRef, useState, type KeyboardEvent } from "react";
-import { Link } from "react-router-dom";
 
 import MenuIcon from "./MenuIcon";
 import Navbar, { NavbarLink } from "./Navbar";
