@@ -75,8 +75,8 @@ export default function RecruiterOffersPage() {
     <main className={id ? "recruiter-detail-main" : "recruiter-offers-main"}>
       <h1 className="sr-only">{id ? "Détail de l’offre" : "Vos offres"}</h1>
       {notice && <p role="status" className="mb-4 text-green-800">{notice}</p>}
-
-      {!id && <div className="recruiter-offers-toolbar"><button type="button" disabled title={unavailable}>Créer une offre</button></div>}
+      {!notice && location.state?.offerCreated && <p role="status" className="mb-4 text-green-800">L’offre a été publiée.</p>}
+      {!id && <div className="recruiter-offers-toolbar"><Button to="/recruiter/offers/new">Créer une offre</Button></div>}
       {!current.data && current.error === undefined && <p role="status" aria-busy="true">Chargement des offres…</p>}
       {error !== undefined && <div className={`${panel} flex flex-col items-start gap-4`}>
         <p role="alert">{error === 404 ? (id ? "Cette offre est introuvable ou n’est plus disponible." : "Cette page d’offres n’existe pas.") : "Impossible de charger les offres. Vérifiez votre connexion et réessayez."}</p>
