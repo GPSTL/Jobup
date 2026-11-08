@@ -8,12 +8,8 @@ export const MESSAGES = {
 	nomInvalid: "Le nom ne doit contenir que des lettres.",
 	emailRequired: "Ce champ est obligatoire.",
 	emailInvalid: "Adresse e-mail invalide (ex. : nom@exemple.fr).",
-	telephoneRequired: "Ce champ est obligatoire.",
-	telephoneInvalid: "Numéro invalide : 10 chiffres commençant par 0 (ex. : 06 12 34 56 78).",
 	passwordRequired: "Ce champ est obligatoire.",
 	passwordWeak: "8 caractères minimum, dont une majuscule et un chiffre.",
-	etablissementRequired: "Ce champ est obligatoire.",
-	domaineRequired: "Ce champ est obligatoire.",
 
 	// Returned by the backend, to display once the forms are connected
 	invalidCredentials: "Adresse e-mail ou mot de passe incorrect.",
@@ -39,7 +35,6 @@ const PHOTO_MAX_SIZE = 2 * 1024 * 1024;
 
 const NAME_RE = /^[A-Za-zÀ-ÖØ-öø-ÿ]+(?:[ '’-][A-Za-zÀ-ÖØ-öø-ÿ]+)*$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const PHONE_RE = /^(?:0|\+33)[1-9]\d{8}$/;
 
 export const validatePrenom = (value: string) => {
 	if (!value.trim()) return MESSAGES.prenomRequired;
@@ -59,13 +54,6 @@ export const validateEmail = (value: string) => {
 	return "";
 };
 
-// Accepts spaces, dots and dashes between digits: 06 12 34 56 78, 06.12.34.56.78, +33 6 12 34 56 78
-export const validateTelephone = (value: string) => {
-	if (!value.trim()) return MESSAGES.telephoneRequired;
-	if (!PHONE_RE.test(value.replace(/[\s.-]/g, ""))) return MESSAGES.telephoneInvalid;
-	return "";
-};
-
 // Sign-up: enforces the password rules
 export const validateNewPassword = (value: string) => {
 	if (!value) return MESSAGES.passwordRequired;
@@ -75,10 +63,6 @@ export const validateNewPassword = (value: string) => {
 
 // Login: only checks that a password was typed
 export const validatePassword = (value: string) => (value ? "" : MESSAGES.passwordRequired);
-
-export const validateEtablissement = (value: string) => (value ? "" : MESSAGES.etablissementRequired);
-
-export const validateDomaine = (value: string) => (value ? "" : MESSAGES.domaineRequired);
 
 export const validateMaxLength = (value: string, max: number) =>
 	value.length > max ? `${max} caractères maximum (${value.length} actuellement).` : "";
