@@ -7,6 +7,7 @@ import ComingSoonPage from "./pages/ComingSoonPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import Connexion from "./pages/Connexion";
 import StudentPage from "./pages/StudentPage";
+import MonEspace from "./pages/MonEspace";
 import RequireStudent from "./components/RequireStudent";
 import SchoolPage from "./pages/SchoolPage";
 import OffersPage from "./pages/OffersPage";
@@ -31,6 +32,10 @@ function App() {
 				<Route path="/applications/:id" element={<RequireStudent>{() => <ApplicationDetailPage />}</RequireStudent>} />
 				<Route path="/applications/:id/edit" element={<RequireStudent>{() => <ApplicationDraftPage />}</RequireStudent>} />
 				<Route path="/pricing" element={<ComingSoonPage />} />
+				{/* TODO: remove the route /MonEspace when login and sub apis are ready */}
+				<Route path="/MonEspace" element={<MonEspace />} />
+				<Route path="/filters" element={<ComingSoonPage />} />
+				<Route path="/messages" element={<ComingSoonPage />} />
 				<Route path="*" element={<NotFoundPage />} />
 			</Routes>
 		</BrowserRouter>
