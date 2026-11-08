@@ -65,3 +65,60 @@ Once running, access the application at `http://127.0.0.1:8000/`.
 | `make migrate` | Creates and applies the database migrations of the `jobup` app. |
 | `make watch_js` | Rebuilds the JS on every change. Used by `make dev`. |
 | `make watch_css` | Rebuilds the CSS on every change. Used by `make dev`. |
+
+## Signup and login forms (JOB-027)
+
+Activate `.venv` with `source .venv/bin/activate`. The student form at
+`/signup?role=student` now requires only `prenom`, `nom`, `email`, and `password`.
+React Hook Form uses the Zod resolver; names allow letters, spaces, apostrophes
+and hyphens (32 characters maximum), email is trimmed, and passwords require
+at least eight characters, an ASCII uppercase letter, and a digit.
+
+The login form at `/login` also uses React Hook Form and a Zod resolver. It
+validates the email and requires a password, preserving support for existing
+passwords without applying signup strength rules. Successful login redirects to
+`/student`, protected by JOB-006’s `RequireStudent` session guard. API errors retain entered
+values, and submit buttons are disabled while requests are pending.
+
+`GET /api/csrf` issues a CSRF token and cookie. `POST /api/signup` takes those four
+fields plus the optional frontend marker `role: "student"`; the server assigns
+the student role independently and rejects non-student role values. It returns `201` with the public user data,
+`400` with `{ "errors": { "field": "French message" } }` for invalid input, or
+`409` with an email error for a duplicate address (case insensitive). Creation
+of the account and student profile is atomic. Passwords are hashed; signup does
+not automatically log in. Success prompts the user to follow the login link.
+
+The role selector from JOB-028 is retained and follows `?role=` on direct links
+and reloads. Only the student form can submit. School and company forms retain their fields
+(including phone) but are disabled with an explicit unavailable message until
+their signup APIs exist; they cannot submit to the student endpoint. Changing roles unmounts the
+student form and clears its in-memory values.
+
+Phone, school and domain are absent from the form, schema and request. Student
+`category` and `study_degree` now allow NULL; school was already optional.
+Existing profile data is preserved. With this repository's locally generated
+migrations, run `make migrate` after updating an existing checkout to generate
+and apply the nullable-field changes. **Do not run `make init` on an existing
+database: that target deletes it.** No data migration or placeholder category is
+needed. This updates the signup contract referenced by JOB-003/JOB-005 and the
+original ETU-01 requirement. Later profile completion and initial offer selection
+without a category remain product decisions outside JOB-027.
+
+Validation commands:
+
+```bash
+.venv/bin/python manage.py test
+npx tsc --noEmit
+npx esbuild tests/signup.test.ts --bundle --platform=node --format=cjs --outfile=/tmp/job027-signup-test.cjs
+node --test /tmp/job027-signup-test.cjs
+npx esbuild tests/login.test.ts --bundle --platform=node --format=cjs --outfile=/tmp/job027-login-test.cjs
+node --test /tmp/job027-login-test.cjs
+npx esbuild tests/auth-forms.test.tsx --bundle --platform=node --format=cjs --jsx=automatic --outfile=/tmp/job027-auth-forms-test.cjs
+node --test /tmp/job027-auth-forms-test.cjs
+make all
+```
+
+Browser checks: open `/signup?role=student`, submit empty and invalid fields,
+create a disposable account using only the four remaining fields, then submit
+the same email again. Check that API/network errors preserve entered values,
+keyboard focus reaches each field, and mobile has no horizontal overflow.
