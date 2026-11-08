@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 
 import Button from "../components/Button";
+import ChevronDownIcon from "../components/ChevronDownIcon";
 import OfferImage from "../components/OfferImage";
 import { offerRequest, type OfferPage } from "../services/offers";
 import HeartIcon from "../components/HeartIcon";
@@ -72,12 +73,14 @@ export default function OffersPage() {
 						<input value={location} onChange={event => setLocation(event.target.value)} placeholder="Ville ou code postal" className={input} />
 						<MapPinIcon width={20} height={20} className="text-gray-500" />
 					</label>
-					<label className="md:w-[220px]">
+					{/* The select fills the whole field so a click on the chevron opens it too */}
+					<label className="relative md:w-[220px]">
 						<span className="sr-only">Secteur</span>
-						<select value={secteur} onChange={event => setSecteur(event.target.value)} className={select}>
+						<select value={secteur} onChange={event => setSecteur(event.target.value)} className={`${select} ${secteur ? "text-[#111827]" : "text-[#9ca3af]"}`}>
 							<option value="">Secteur</option>
-							{SECTEURS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+							{SECTEURS.map(([value, label]) => <option key={value} value={value} className="text-[#111827]">{label}</option>)}
 						</select>
+						<ChevronDownIcon width={20} height={20} className="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-gray-500" />
 					</label>
 					<button
 						type="submit"
