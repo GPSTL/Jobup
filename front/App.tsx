@@ -29,7 +29,7 @@ function App() {
 				<Route path="/schools" element={<SchoolPage />} />
 				<Route path="/signup" element={<Inscription />} />
 				<Route path="/login" element={<Connexion />} />
-				<Route path="/student" element={<RequireStudent>{() => <ComingSoonPage />}</RequireStudent>} />
+				<Route path="/student" element={<RequireStudent>{(user) => <MonEspace user={user} />}</RequireStudent>} />
 				<Route path="/offers" element={<OffersPage />} />
 				<Route path="/companies" element={<CompaniesPage />} />
 				<Route path="/recruiter/candidates" element={<RequireRecruiter>{() => <CandidatesPage />}</RequireRecruiter>} />
@@ -41,8 +41,6 @@ function App() {
 				<Route path="/applications/:id/edit" element={<RequireStudent>{() => <ApplicationDraftPage />}</RequireStudent>} />
 				<Route path="/pricing" element={<ComingSoonPage />} />
 				<Route path="/messages/:id?" element={<RequireStudent>{() => <MessagesPage />}</RequireStudent>} />
-				{/* TODO: remove the route /MonEspace when login and sub apis are ready */}
-				<Route path="/MonEspace" element={<MonEspace />} />
 				<Route path="/filters" element={<ComingSoonPage />} />
 				<Route path="/messages" element={<ComingSoonPage />} />
 				<Route path="*" element={<NotFoundPage />} />

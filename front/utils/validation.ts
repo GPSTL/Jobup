@@ -32,7 +32,7 @@ export const REQUEST_ERRORS = {
 	network: MESSAGES.networkError,
 };
 
-// TODO JOB-008: confirm the maximum size of the photo (2 Mo, like the company logo of REC-25)
+// Same limit as the API (JOB-008)
 const PHOTO_MAX_SIZE = 2 * 1024 * 1024;
 const CV_MAX_SIZE = 5 * 1024 * 1024;
 
