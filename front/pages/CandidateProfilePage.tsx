@@ -72,7 +72,7 @@ export function CandidateProfile({ candidate }: { candidate: Candidate }) {
 				</div>
 				<div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
 					{/* TODO JOB-039: open the conversation with this candidate, or start it */}
-					<Link to="/recruiter/messages" className={outlineAction}>
+					<Link to={`/recruiter/messages?candidate=${candidate.id}`} className={outlineAction}>
 						<MessageIcon width={18} height={18} />
 						Message
 					</Link>
@@ -143,7 +143,7 @@ export function CandidateProfile({ candidate }: { candidate: Candidate }) {
 								))}
 							</ol>
 							{/* TODO JOB-039: open the conversation with this candidate */}
-							<Link to="/recruiter/messages" className={outlineAction}>
+							<Link to={`/recruiter/messages?candidate=${candidate.id}`} className={outlineAction}>
 								<MessageIcon width={18} height={18} />
 								Ouvrir la conversation
 							</Link>
