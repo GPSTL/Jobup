@@ -15,8 +15,9 @@ import CompaniesPage from "./pages/CompaniesPage";
 import ApplicationsPage from "./pages/ApplicationsPage";
 import ApplicationDetailPage from "./pages/ApplicationDetailPage";
 import ApplicationDraftPage from "./pages/ApplicationDraftPage";
-
-import EntrepriseCandita from "./pages/CompanieCandita";
+import RequireRecruiter from "./components/RequireRecruiter";
+import CandidatesPage from "./pages/CandidatesPage";
+import CandidateProfilePage from "./pages/CandidateProfilePage";
 
 function App() {
 	return (
@@ -30,8 +31,10 @@ function App() {
 				<Route path="/student" element={<RequireStudent>{() => <ComingSoonPage />}</RequireStudent>} />
 				<Route path="/offers" element={<OffersPage />} />
 				<Route path="/companies" element={<CompaniesPage />} />
-				<Route path="/entreprise/candidats" element={<EntrepriseCandita />} />
-				<Route path="/coming-soon" element={<ComingSoonPage />} />
+				<Route path="/recruiter/candidates" element={<RequireRecruiter>{() => <CandidatesPage />}</RequireRecruiter>} />
+				<Route path="/recruiter/candidates/:id" element={<RequireRecruiter>{() => <CandidateProfilePage />}</RequireRecruiter>} />
+				{/* Recruiter pages not built yet (RecruiterNavbar). The routes above, more specific, take precedence. */}
+				<Route path="/recruiter/*" element={<ComingSoonPage />} />
 				<Route path="/applications" element={<RequireStudent>{() => <ApplicationsPage />}</RequireStudent>} />
 				<Route path="/applications/:id" element={<RequireStudent>{() => <ApplicationDetailPage />}</RequireStudent>} />
 				<Route path="/applications/:id/edit" element={<RequireStudent>{() => <ApplicationDraftPage />}</RequireStudent>} />
