@@ -2,9 +2,10 @@
 # Tri : la conversation la plus récemment active en premier. L'activité est la date du dernier
 # message, ou la date de création pour une conversation sans message. Le résumé est calculé
 # à chaque requête : il reste à jour après un envoi ou une réception (JOB-034).
+import unicodedata
 from typing import Any
 
-from django.db.models import F, OuterRef, Q, QuerySet, Subquery
+from django.db.models import F, OuterRef, QuerySet, Subquery
 from django.db.models.functions import Coalesce
 from rest_framework.decorators import api_view
 from rest_framework.request import Request
@@ -29,20 +30,19 @@ def withLastMessage(conversations: QuerySet[Conversation]) -> QuerySet[Conversat
     )
 
 
-def matchesName(query: str) -> Q:
-    # Chaque mot doit apparaître dans le prénom, le nom, l'entreprise ou l'école de l'interlocuteur :
-    # « léa acme » trouve « Léa Martin – Acme »
-    condition = Q()
-    for word in query.split():
-        condition &= (
-            Q(recruiter__user__first_name__icontains=word)
-            | Q(recruiter__user__last_name__icontains=word)
-            | Q(recruiter__company__name__icontains=word)
-            | Q(school_manager__user__first_name__icontains=word)
-            | Q(school_manager__user__last_name__icontains=word)
-            | Q(school_manager__school__name__icontains=word)
-        )
-    return condition
+def normalize(text: str) -> str:
+    decomposed = unicodedata.normalize("NFKD", text)
+    return "".join(
+        char for char in decomposed if not unicodedata.combining(char)
+    ).casefold()
+
+
+def matchesName(conversation: Conversation, query: str) -> bool:
+    person = interlocutor(conversation)
+    haystack = normalize(
+        f"{person['first_name']} {person['last_name']} {person['organization']}"
+    )
+    return all(normalize(word) in haystack for word in query.split())
 
 
 def interlocutor(conversation: Conversation) -> dict[str, Any]:
@@ -93,8 +93,9 @@ def student_conversations(request: Request) -> Response:
         "school_manager__school",
     )
     query = request.query_params.get("q", "").strip()
+    results = withLastMessage(conversations)
     if query:
-        conversations = conversations.filter(matchesName(query))
-    return Response(
-        [summary(conversation, user) for conversation in withLastMessage(conversations)]
-    )
+        results = [
+            conversation for conversation in results if matchesName(conversation, query)
+        ]
+    return Response([summary(conversation, user) for conversation in results])
