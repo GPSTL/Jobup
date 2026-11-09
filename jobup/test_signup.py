@@ -104,3 +104,15 @@ class SignupLoginTests(APITestCase):
         for extra in ({}, {"email": "pas-un-mail"}):
             self.assertEqual(self.signup(**extra).status_code, 400)
             self.assertEqual(self.client.get("/api/me").status_code, 403)
+
+    def test_login_again_right_after_signup_needs_the_csrf_token(self):
+        # Session ouverte par l'inscription : Django exige alors le jeton CSRF sur /api/login
+        self.assertEqual(self.signup().status_code, 201)
+        credentials = {"email": PAYLOAD["email"], "password": PAYLOAD["password"]}
+        without_token = self.client.post("/api/login", credentials, format="json")
+        self.assertEqual(without_token.status_code, 403)
+        token = self.client.get("/api/csrf").json()["csrfToken"]
+        with_token = self.client.post(
+            "/api/login", credentials, format="json", HTTP_X_CSRFTOKEN=token
+        )
+        self.assertEqual(with_token.status_code, 200)

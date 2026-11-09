@@ -19,12 +19,26 @@ export type LoginResult =
 	| { ok: true; user: User }
 	| { ok: false; reason: "invalidCredentials" | "server" | "network" };
 
+// Django exige ce jeton pour un POST dès qu'une session est ouverte (ex. juste après l'inscription)
+async function getCsrfToken(): Promise<string | null> {
+	const response = await fetch("/api/csrf", { credentials: "same-origin" });
+	if (!response.ok) return null;
+	try {
+		const { csrfToken } = await response.json();
+		return typeof csrfToken === "string" ? csrfToken : null;
+	} catch {
+		return null;
+	}
+}
+
 export async function login(email: string, password: string): Promise<LoginResult> {
 	let response: Response;
 	try {
+		const csrfToken = await getCsrfToken();
+		if (!csrfToken) return { ok: false, reason: "server" };
 		response = await fetch("/api/login", {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
+			headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
 			credentials: "same-origin",
 			body: JSON.stringify({ email, password }),
 		});
