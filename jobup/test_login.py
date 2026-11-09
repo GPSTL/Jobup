@@ -3,8 +3,8 @@ from collections.abc import Iterable
 from typing import Any, Self
 
 from django.core.exceptions import ValidationError
-from rest_framework.exceptions import ValidationError as DRFValidationError
 from django.db import IntegrityError, transaction
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.test import APITestCase
 
 from .models import Role, Student, User, getUser
