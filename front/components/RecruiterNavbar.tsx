@@ -1,7 +1,7 @@
 import AccountNavbar from "./AccountNavbar";
 
 // Pages of the logged-in recruiter, in the order of the mockup.
-// The pages not built yet (JOB-022 for "Vos offres", JOB-036, JOB-041) show "Bientôt disponible": see /recruiter/* in App.tsx.
+// Offer authoring (JOB-022), filters (JOB-036) and messages (JOB-041) remain separate tasks.
 const links = [
 	{ label: "Mon espace", to: "/recruiter/account" },
 	{ label: "Filtrer", to: "/recruiter/filters" },
