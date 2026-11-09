@@ -73,6 +73,7 @@ class CandidateTestCase(APITestCase):
         self.alice = Student.objects.create(
             user=User.objects.create_user(**USERS[0]),
             resume=pdf("CV_Alice.pdf", b"alice resume"),
+            photo="photos/alice.png",
             school=School.objects.create(name="Université Paris Nanterre"),
             description="Étudiante en Master MIAGE",
             skills="Java, Spring Boot, ,SQL",
@@ -126,14 +127,15 @@ class CandidateListTests(CandidateTestCase):
                 "id": self.alice.user.pk,
                 "first_name": "Alice",
                 "last_name": "Plancher",
-                "photo_url": None,
+                "photo_url": "/media/photos/alice.png",
                 "education": None,
                 "school": "Université Paris Nanterre",
                 "description": "Étudiante en Master MIAGE",
                 "cv_url": f"{detail(self.alice)}/cv",
             },
         )
-        # Missing school and CV: null, never a broken link
+        # Missing photo, school and CV: null, never a broken link
+        self.assertIsNone(bob["photo_url"])
         self.assertIsNone(bob["school"])
         self.assertIsNone(bob["cv_url"])
         self.assertEqual(bob["description"], "")
