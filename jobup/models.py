@@ -150,6 +150,7 @@ class User(AbstractBaseUser, PermissionsMixin):  # pyright: ignore[reportIncompa
 
     if TYPE_CHECKING:
         id: int
+        student: Student
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -296,6 +297,9 @@ class Contract(models.Model):
 # ----- MESSAGING ----- #
 
 
+MESSAGE_MAX_LENGTH = 2000
+
+
 # Socle commun de la messagerie (JOB-032), partagé avec le fil (JOB-034) et le côté recruteur (JOB-041).
 # Une conversation relie un étudiant à un seul interlocuteur : un recruteur ou un employé d'école.
 class Conversation(models.Model):
@@ -311,6 +315,11 @@ class Conversation(models.Model):
         related_name="conversations",
     )
     created_at = models.DateTimeField(auto_now_add=True)
+
+    if TYPE_CHECKING:
+        last_at: Any
+        last_body: Any
+        last_sender: Any
 
     class Meta:
         constraints = [
@@ -335,8 +344,11 @@ class Message(models.Model):
         Conversation, models.CASCADE, related_name="messages"
     )
     sender = models.ForeignKey(User, models.CASCADE, related_name="sent_messages")
-    body = models.CharField(max_length=2000)
+    body = models.CharField(max_length=MESSAGE_MAX_LENGTH)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    if TYPE_CHECKING:
+        sender_id: int
 
 
 # Utilities #
@@ -417,3 +429,15 @@ class DraftSerializer(serializers.Serializer):
             application.cover_letter = data["cover_letter"]
         application.save()
         return application, created
+
+
+class MessageSerializer(serializers.Serializer):
+    body = serializers.CharField(max_length=MESSAGE_MAX_LENGTH)
+
+    if TYPE_CHECKING:
+        validated_data: dict[str, Any]  # type: ignore
+
+    def save_message(self, conversation: Conversation, sender: User) -> Message:
+        return Message.objects.create(
+            conversation=conversation, sender=sender, body=self.validated_data["body"]
+        )

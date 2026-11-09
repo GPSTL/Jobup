@@ -8,3 +8,6 @@ node_modules
 /*.xml
 .venv
 .coverage
+*.zip
+media
+.pytest_cache
