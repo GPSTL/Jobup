@@ -2,6 +2,7 @@
 // The backend opens a Django session (cookie) on success.
 
 import { RoleApiName } from "../utils/roles"
+import { MESSAGES } from "../utils/validation";
 
 // Aligné sur User.to_dict() côté Django : le rôle est un entier (Role)
 export type User = {
@@ -74,6 +75,39 @@ type SignupResult =
 	| { ok: false; reason: "validation"; errors: Partial<Record<"first_name" | "last_name" | "email" | "password" | "role", string>> }
 	| { ok: false; reason: "server" | "network" };
 
+type SignupField = "first_name" | "last_name" | "email" | "password";
+const SIGNUP_FIELDS: SignupField[] = ["first_name", "last_name", "email", "password"];
+const REQUIRED: Record<SignupField, string> = {
+	first_name: MESSAGES.prenomRequired,
+	last_name: MESSAGES.nomRequired,
+	email: MESSAGES.emailRequired,
+	password: MESSAGES.passwordRequired,
+};
+
+// Messages anglais de l'API Django (JOB-003) traduits pour le formulaire ; un message inconnu est gardé tel quel
+function translateSignupError(field: SignupField, message: string) {
+	if (/already exists|déjà utilisée/i.test(message)) return MESSAGES.emailTaken;
+	if (/may not be blank|is required/i.test(message)) return REQUIRED[field];
+	if (field === "email" && /valid email/i.test(message)) return MESSAGES.emailInvalid;
+	const max = message.match(/no more than (\d+) characters/i);
+	if (max) return `${max[1]} caractères maximum.`;
+	return message;
+}
+
+// JOB-003 renvoie les erreurs à la racine, en listes : { "email": ["user with this email already exists."] }.
+// L'ancien format { "errors": { "email": "…" } } reste accepté.
+function toSignupErrors(data: unknown): Partial<Record<SignupField, string>> {
+	if (!data || typeof data !== "object") return {};
+	const source = ("errors" in data && data.errors && typeof data.errors === "object" ? data.errors : data) as Record<string, unknown>;
+	const errors: Partial<Record<SignupField, string>> = {};
+	for (const field of SIGNUP_FIELDS) {
+		const value = source[field];
+		const message = Array.isArray(value) ? value[0] : value;
+		if (typeof message === "string" && message) errors[field] = translateSignupError(field, message);
+	}
+	return errors;
+}
+
 export async function signup(payload: SignupPayload): Promise<SignupResult> {
 	try {
 		const csrf = await fetch("/api/csrf", { credentials: "same-origin" });
@@ -87,8 +121,9 @@ export async function signup(payload: SignupPayload): Promise<SignupResult> {
 		});
 		if (response.status === 201) return { ok: true };
 		if (response.status === 400 || response.status === 409) {
-			const data = await response.json();
-			if (data.errors && typeof data.errors === "object") return { ok: false, reason: "validation", errors: data.errors };
+			const errors = toSignupErrors(await response.json());
+			// Sans erreur sur un champ du formulaire (ex. rôle refusé), message générique
+			if (Object.keys(errors).length > 0) return { ok: false, reason: "validation", errors };
 		}
 		return { ok: false, reason: "server" };
 	} catch (error) {
