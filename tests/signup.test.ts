@@ -24,7 +24,8 @@ test("signup sends CSRF and handles success, duplicate, invalid, server, malform
 	// Réponses réelles de l'API JOB-003 (erreurs à la racine, en listes) et ancien format { errors }
 	const cases: [number, unknown, unknown][] = [
 		// Succès : l'API renvoie le compte créé et ouvre la session
-		[201, { id: 1, email: "test@example.fr", first_name: "Élodie", last_name: "D'Angelo", role: 1 }, { ok: true }],
+		[201, { id: 1, email: "test@example.fr", first_name: "Élodie", last_name: "D'Angelo", role: 1 },
+			{ ok: true, user: { id: 1, email: "test@example.fr", first_name: "Élodie", last_name: "D'Angelo", role: 1 } }],
 		[400, { email: ["user with this email already exists."] }, { ok: false, reason: "validation", errors: { email: "Cette adresse e-mail est déjà utilisée." } }],
 		[409, { errors: { email: "Cette adresse e-mail est déjà utilisée." } }, { ok: false, reason: "validation", errors: { email: "Cette adresse e-mail est déjà utilisée." } }],
 		[400, { email: ["Enter a valid email address."], first_name: ["This field may not be blank."], last_name: ["Ensure this field has no more than 32 characters."] },
