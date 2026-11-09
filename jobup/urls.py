@@ -7,6 +7,7 @@ from django.urls import path, re_path
 from jobup import api, candidates
 from jobup.conversations import conversation_messages, student_conversations
 from jobup.profile import student, student_photo
+from jobup.recruiter_offers import offer_applicants, recruiter_offers
 
 
 urlpatterns = [
@@ -28,6 +29,8 @@ urlpatterns = [
     path("api/recruiter/candidates", candidates.candidate_list),
     path("api/recruiter/candidates/<int:id>", candidates.candidate_detail),
     path("api/recruiter/candidates/<int:id>/cv", candidates.candidate_cv),
+    path("api/recruiter/offers", recruiter_offers),
+    path("api/recruiter/offers/<int:id>/applicants", offer_applicants),
     re_path(r"^(?!api)[^.]*$", serve, kwargs={"path": "index.html"}),
     path("favicon.ico", serve, kwargs={"path": "favicon.ico"}),
 ]
