@@ -5,7 +5,7 @@ import { MemoryRouter } from "react-router-dom";
 import CandidateCard from "../front/components/CandidateCard";
 import { CandidateDeck } from "../front/pages/CandidatesPage";
 import { ShortlistView } from "../front/pages/ShortlistPage";
-import { getShortlist, keepCandidate, removeFromShortlist, type CandidateSummary, type ShortlistedCandidate } from "../front/services/candidates";
+import { excludeCandidate, getShortlist, keepCandidate, removeFromShortlist, type CandidateSummary, type ShortlistedCandidate } from "../front/services/candidates";
 
 const lucas: CandidateSummary = {
 	id: 7,
@@ -108,4 +108,48 @@ test("API : session expirée, candidat indisponible, erreurs du serveur et du r�
 	}) as typeof fetch;
 	assert.deepEqual(await keepCandidate(7), { ok: false, reason: "network" });
 	assert.deepEqual(await getShortlist(), { ok: false, reason: "network" });
+});
+
+test("carte : bouton 🚫 accessible seulement quand l'action est fournie, à gauche du ♥", () => {
+	assert.doesNotMatch(render(<CandidateCard candidate={lucas} onKeep={noop} />), /Écarter Lucas Martin/);
+	const html = render(<CandidateCard candidate={lucas} onExclude={noop} onKeep={noop} />);
+	assert.match(html, /<button type="button" aria-label="Écarter Lucas Martin" aria-disabled="false"/);
+	assert.ok(html.indexOf("Écarter Lucas Martin") < html.indexOf("Retenir Lucas Martin"));
+	// Seul 🚫 fourni : la barre d'actions s'affiche quand même
+	assert.match(render(<CandidateCard candidate={lucas} onExclude={noop} />), /Écarter Lucas Martin/);
+});
+
+test("carte : pendant une exclusion, 🚫 et ♥ sont inactifs mais restent des boutons focalisables", () => {
+	const html = render(<CandidateCard candidate={lucas} onExclude={noop} onKeep={noop} excluding />);
+	assert.equal(html.match(/aria-disabled="true"/g)?.length, 2);
+	assert.doesNotMatch(html, / disabled=/);
+});
+
+test("cartes : le 🚫 porte sur la carte affichée", () => {
+	const html = render(<CandidateDeck candidates={[lucas, sarah]} index={1} onSelect={noop} onExclude={noop} />);
+	assert.match(html, /aria-label="Écarter Sarah Benali"/);
+	assert.doesNotMatch(html, /Écarter Lucas Martin/);
+});
+
+test("API : 🚫 envoie le jeton CSRF ; un nouvel essai ou un candidat déjà écarté reste un succès", async () => {
+	const calls = mockFetch(() => Response.json({ id: 7, excluded: true }, { status: 201 }));
+	assert.deepEqual(await excludeCandidate(7), { ok: true });
+	assert.deepEqual(calls.map((call) => call.url), ["/api/csrf", "/api/recruiter/candidates/7/exclusion"]);
+	assert.equal(calls[1].init?.method, "POST");
+	assert.equal((calls[1].init?.headers as Record<string, string>)["X-CSRFToken"], "test-token");
+	mockFetch(() => Response.json({ id: 7, excluded: true }, { status: 200 }));
+	assert.deepEqual(await excludeCandidate(7), { ok: true });
+});
+
+test("API : 🚫 avec session expirée, candidat indisponible, erreurs du serveur et du réseau", async () => {
+	mockFetch(() => Response.json({ detail: "Not authenticated" }, { status: 403 }));
+	assert.deepEqual(await excludeCandidate(7), { ok: false, reason: "unauthenticated" });
+	mockFetch(() => Response.json({ error: "Candidate not found" }, { status: 404 }));
+	assert.deepEqual(await excludeCandidate(7), { ok: false, reason: "notFound" });
+	mockFetch(() => new Response("oops", { status: 500 }));
+	assert.deepEqual(await excludeCandidate(7), { ok: false, reason: "server" });
+	globalThis.fetch = (async () => {
+		throw new TypeError("offline");
+	}) as typeof fetch;
+	assert.deepEqual(await excludeCandidate(7), { ok: false, reason: "network" });
 });

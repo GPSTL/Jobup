@@ -106,14 +106,14 @@ export async function getShortlist(): Promise<ShortlistResult> {
 	return { ok: false, reason: answer.reason === "notFound" ? "server" : answer.reason };
 }
 
-// ♥ (POST) ou « Retirer » (DELETE) : écritures, donc avec le jeton CSRF de /api/csrf
-async function changeShortlist(id: number, method: "POST" | "DELETE"): Promise<ShortlistActionResult> {
+// Écritures sur un candidat (♥, « Retirer », 🚫) : avec le jeton CSRF de /api/csrf
+async function writeCandidate(path: string, method: "POST" | "DELETE"): Promise<ShortlistActionResult> {
 	let response: Response;
 	try {
 		const csrf = await fetch("/api/csrf", { credentials: "same-origin" });
 		if (!csrf.ok) return { ok: false, reason: "server" };
 		const { csrfToken } = await csrf.json();
-		response = await fetch(`/api/recruiter/candidates/${id}/shortlist`, {
+		response = await fetch(`/api/recruiter/candidates/${path}`, {
 			method,
 			credentials: "same-origin",
 			headers: { "X-CSRFToken": csrfToken },
@@ -129,6 +129,11 @@ async function changeShortlist(id: number, method: "POST" | "DELETE"): Promise<S
 	return response.ok ? { ok: true } : { ok: false, reason: "server" };
 }
 
-export const keepCandidate = (id: number) => changeShortlist(id, "POST");
+export const keepCandidate = (id: number) => writeCandidate(`${id}/shortlist`, "POST");
 
-export const removeFromShortlist = (id: number) => changeShortlist(id, "DELETE");
+export const removeFromShortlist = (id: number) => writeCandidate(`${id}/shortlist`, "DELETE");
+
+// ----- Exclusion (JOB-038, REC-04) -----
+
+// 🚫 : le candidat quitte les cartes de ce recruteur. Répéter l'appel est sans effet : un nouvel essai est toujours permis
+export const excludeCandidate = (id: number) => writeCandidate(`${id}/exclusion`, "POST");
