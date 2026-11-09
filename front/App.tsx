@@ -12,6 +12,7 @@ import RequireStudent from "./components/RequireStudent";
 import SchoolPage from "./pages/SchoolPage";
 import OffersPage from "./pages/OffersPage";
 import CompaniesPage from "./pages/CompaniesPage";
+import MessagesPage from "./pages/MessagesPage";
 import ApplicationsPage from "./pages/ApplicationsPage";
 import ApplicationDetailPage from "./pages/ApplicationDetailPage";
 import ApplicationDraftPage from "./pages/ApplicationDraftPage";
@@ -39,6 +40,7 @@ function App() {
 				<Route path="/applications/:id" element={<RequireStudent>{() => <ApplicationDetailPage />}</RequireStudent>} />
 				<Route path="/applications/:id/edit" element={<RequireStudent>{() => <ApplicationDraftPage />}</RequireStudent>} />
 				<Route path="/pricing" element={<ComingSoonPage />} />
+				<Route path="/messages/:id?" element={<RequireStudent>{() => <MessagesPage />}</RequireStudent>} />
 				{/* TODO: remove the route /MonEspace when login and sub apis are ready */}
 				<Route path="/MonEspace" element={<MonEspace />} />
 				<Route path="/filters" element={<ComingSoonPage />} />

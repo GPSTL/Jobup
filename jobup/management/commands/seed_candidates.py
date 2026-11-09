@@ -1,5 +1,5 @@
-# Demo data of the "Candidats" tab (JOB-035), for local use: signup creates no
-# Student row, so without it a recruiter sees no candidate.
+# Demo data of the "Candidats" tab (JOB-035), for local use: a new database has
+# no student, so without it a recruiter sees no candidate.
 from typing import Any
 
 from django.core.files.base import ContentFile
@@ -132,7 +132,8 @@ class Command(BaseCommand):
         lucas = students[-1]
 
         # Exchange history of Lucas Martin: an application sent to an offer of this
-        # recruiter. Signup creates no Recruiter row, so a demo company is used then.
+        # recruiter. Accounts created by shell, or before signup made the Recruiter
+        # row, have none: one is created then, with a demo company.
         recruiter = Recruiter.objects.filter(user=user).first()
         if recruiter is None:
             company, _ = Company.objects.get_or_create(

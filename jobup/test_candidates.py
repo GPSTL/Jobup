@@ -250,7 +250,7 @@ class SeedCandidatesTests(CandidateTestCase):
         self.assertFalse(User.objects.get(pk=lucas["id"]).has_usable_password())
 
     def test_recruiter_without_recruiter_row(self):
-        # Signup creates the account only
+        # Account created by shell (create_user makes no Recruiter row)
         user = User.objects.create_user(**COLLEAGUE.fork(email="new@corp.fr"))
         call_command("seed_candidates", user.email, stdout=io.StringIO())
         self.assertEqual(

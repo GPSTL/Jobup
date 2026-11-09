@@ -72,7 +72,7 @@ To be validated by the team (open question of JOB-035): ETU-02 presents the CV o
 | `experiences` | array | Always empty for now: `Student` only stores `experience_level`, a number of months. Items will be `{ "title": string, "details": string }`. |
 | `exchanges` | array | History of the exchanges with the logged-in recruiter, oldest first. |
 
-The exchanges are the applications sent by the student to the offers of the logged-in recruiter (`kind: "application"`, date of sending, title of the offer). Drafts are left out, since the recruiter never received them. The applications to the offers of other recruiters, colleagues of the same company included, are never sent. The messages of the conversation (`kind: "message"`, with `from_me` and `body`) will be added by JOB-039, once the models of JOB-032 are on main.
+The exchanges are the applications sent by the student to the offers of the logged-in recruiter (`kind: "application"`, date of sending, title of the offer). Drafts are left out, since the recruiter never received them. The applications to the offers of other recruiters, colleagues of the same company included, are never sent. The messages of the conversation (`kind: "message"`, with `from_me` and `body`) will be added by JOB-039, from the `Conversation` and `Message` models of JOB-032.
 
 ## The CV
 
@@ -92,4 +92,4 @@ Since the front end only reaches these routes once `RequireRecruiter` has checke
 
 ## Demo data
 
-Signup creates no `Student` row, so a recruiter sees no candidate on a new database. `python manage.py seed_candidates <email of a recruiter>` creates the students of the mockups (Lucas Martin and Sarah Benali, with a CV) and Inès Diallo (without school nor CV), and an application of Lucas Martin to an offer of this recruiter, for the history. Running it again creates nothing new. Nobody can log in with these accounts.
+A new database has no student, so a recruiter sees no candidate until students sign up. `python manage.py seed_candidates <email of a recruiter>` creates the students of the mockups (Lucas Martin and Sarah Benali, with a CV) and Inès Diallo (without school nor CV), and an application of Lucas Martin to an offer of this recruiter, for the history. Running it again creates nothing new. Nobody can log in with these accounts.
