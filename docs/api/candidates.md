@@ -10,7 +10,7 @@ Contract between the candidates API (JOB-035, REC-01) and the “Candidats” ta
 
 ## Who a recruiter sees
 
-Every recruiter sees every active student, whether or not they filled in a school, a photo or a CV, newest accounts first. The filters (JOB-036) and the candidates already kept or dismissed (JOB-037, JOB-038) will narrow this list down; the rule is in `visibleStudents()` (`jobup/candidates.py`).
+Every recruiter sees every active student, whether or not they filled in a school, a photo or a CV, newest accounts first, except the candidates they already kept with ♥ (JOB-037, see “The shortlist” below). The filters (JOB-036) and the dismissed candidates (JOB-038) will narrow this list down further; the rule is in `visibleStudents()` and `candidate_list()` (`jobup/candidates.py`).
 
 To be validated by the team (open question of JOB-035): ETU-02 presents the CV of the profile as a way to apply without typing again, and this API lets every recruiter download it. Students should at least be told so on their profile.
 
@@ -77,6 +77,32 @@ The exchanges are the applications sent by the student to the offers of the logg
 ## The CV
 
 `GET /api/recruiter/candidates/<id>/cv` responds with the file of the CV, as an attachment under its stored name (`Content-Disposition: attachment; filename="CV_Lucas_Martin.pdf"`). This is `Student.resume`, the CV of the profile (JOB-018), not the copy sent with an application (JOB-033).
+
+## The shortlist
+
+The shortlist (JOB-037, REC-03) holds the candidates a recruiter kept with ♥. It belongs to the recruiter, not to their company: colleagues never see it, and a candidate appears at most once in it. A kept candidate leaves the cards of `GET /api/recruiter/candidates`, but their profile and CV stay reachable from the shortlist.
+
+| Route | Effect | Success |
+| --- | --- | --- |
+| `POST /api/recruiter/candidates/<id>/shortlist` | Keeps the candidate (♥). Keeping them again creates no duplicate. | `201` with the item, `200` if already kept |
+| `DELETE /api/recruiter/candidates/<id>/shortlist` | Removes the candidate (“Retirer”). No effect if they were not kept. | `204` |
+| `GET /api/recruiter/shortlist` | The kept candidates, most recently kept first. Deactivated students are left out. | `200` with an array of items |
+
+An item is a card, plus:
+
+```json
+{
+  "shortlisted_at": "2026-11-09T14:02:11.123456Z",
+  "offer": null
+}
+```
+
+| Field | Type | Content |
+| --- | --- | --- |
+| `shortlisted_at` | string | Date and time of the ♥, ISO 8601. |
+| `offer` | object or `null` | `{ "id": number, "title": string }`: the offer the candidate was kept for (“Pour : …” in the mockup). Always `null` for now: no screen lets the recruiter pick the offer yet (JOB-036). |
+
+`POST` and `DELETE` change data: like every write, they need the `X-CSRFToken` header, with the token of `GET /api/csrf`. On `POST`, an unknown `<id>`, an inactive student or an account that is not a student responds `404` `{"error": "Candidate not found"}`.
 
 ## Status codes
 

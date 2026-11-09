@@ -291,6 +291,26 @@ class JobApplication(models.Model):
         }
 
 
+# Présélection du recruteur (JOB-037, REC-03) : les candidats retenus avec ♥.
+# Elle appartient au recruteur, pas à son entreprise ; un candidat n'y figure qu'une fois.
+class Shortlist(models.Model):
+    recruiter = models.ForeignKey(Recruiter, models.CASCADE, related_name="shortlist")
+    student = models.ForeignKey(Student, models.CASCADE, related_name="shortlisted_by")
+    # Offre pour laquelle le candidat est retenu (« Pour : … » de la maquette) :
+    # prévue pour les filtres de JOB-036, vide tant qu'aucun écran ne permet de la choisir
+    offer = models.ForeignKey(
+        Offer, models.SET_NULL, null=True, blank=True, related_name="shortlisted"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["recruiter", "student"], name="unique_recruiter_shortlist"
+            )
+        ]
+
+
 class Contract(models.Model):
     school = models.ForeignKey(School, models.PROTECT)
     company = models.ForeignKey(Company, models.PROTECT)

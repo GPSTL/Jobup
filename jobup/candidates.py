@@ -96,7 +96,10 @@ def candidate_list(request: Request) -> Response:
     user: User = request.user
     if not isRecruiter(user):
         return Response({"error": "Forbidden"}, status=403)
-    return Response([candidateCard(student) for student in visibleStudents()])
+    # Les candidats déjà retenus par ce recruteur (JOB-037) quittent la pile de cartes ;
+    # leur profil reste accessible depuis « Candidats retenus »
+    deck = visibleStudents().exclude(shortlisted_by__recruiter__user=user)
+    return Response([candidateCard(student) for student in deck])
 
 
 @api_view(["GET"])
