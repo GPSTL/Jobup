@@ -170,6 +170,19 @@ class ConversationsTests(APITestCase):
             self.ids(self.client.get(URL, {"q": "université"})), [self.with_school.pk]
         )
 
+    def test_search_ignores_case_and_accents(self):
+        self.login()
+        for query in ("lea", "LÉA", "léa", "LEA ACME"):
+            self.assertEqual(
+                self.ids(self.client.get(URL, {"q": query})), [self.with_lea.pk], query
+            )
+        self.assertEqual(
+            self.ids(self.client.get(URL, {"q": "ines"})), [self.with_school.pk]
+        )
+        self.assertEqual(
+            self.ids(self.client.get(URL, {"q": "UNIVERSITE"})), [self.with_school.pk]
+        )
+
     def test_search_without_result_and_empty_search(self):
         self.login()
         self.assertEqual(self.client.get(URL, {"q": "introuvable"}).json(), [])

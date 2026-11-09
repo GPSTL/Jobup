@@ -7,7 +7,7 @@ from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
 from django.core.files import File
 from django.core.validators import RegexValidator
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -208,14 +208,18 @@ class Recruiter(models.Model):
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="recruiter"
     )
-    company = models.ForeignKey(Company, models.PROTECT, related_name="recruiters")
+    company = models.ForeignKey(
+        Company, models.PROTECT, null=True, blank=True, related_name="recruiters"
+    )
 
 
 class SchoolManager(models.Model):
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="school_manager"
     )
-    school = models.ForeignKey(School, models.PROTECT, related_name="managers")
+    school = models.ForeignKey(
+        School, models.PROTECT, null=True, blank=True, related_name="managers"
+    )
 
 
 # ----- JOB SEARCH ----- #
@@ -387,9 +391,17 @@ class SignupSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         password = validated_data.pop("password")
-        user = super().create(validated_data)
-        user.set_password(password)
-        user.save()
+        with transaction.atomic():
+            user = super().create(validated_data)
+            user.set_password(password)
+            user.save()
+            match user.role:
+                case Role.STUDENT:
+                    Student.objects.create(user=user)
+                case Role.RECRUITER:
+                    Recruiter.objects.create(user=user)
+                case Role.MANAGER:
+                    SchoolManager.objects.create(user=user)
         return user
 
     def save(self, **kwargs):
