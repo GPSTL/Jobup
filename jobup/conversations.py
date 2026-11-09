@@ -15,12 +15,18 @@ from .models import Conversation, Message, Role, User
 
 def withLastMessage(conversations: QuerySet[Conversation]) -> QuerySet[Conversation]:
     # Dernier message de chaque conversation ; à réutiliser côté recruteur (JOB-041)
-    last = Message.objects.filter(conversation=OuterRef("pk")).order_by("-created_at", "-pk")
-    return conversations.annotate(
-        last_body=Subquery(last.values("body")[:1]),
-        last_sender=Subquery(last.values("sender")[:1]),
-        last_at=Subquery(last.values("created_at")[:1]),
-    ).annotate(activity=Coalesce(F("last_at"), F("created_at"))).order_by("-activity", "-pk")
+    last = Message.objects.filter(conversation=OuterRef("pk")).order_by(
+        "-created_at", "-pk"
+    )
+    return (
+        conversations.annotate(
+            last_body=Subquery(last.values("body")[:1]),
+            last_sender=Subquery(last.values("sender")[:1]),
+            last_at=Subquery(last.values("created_at")[:1]),
+        )
+        .annotate(activity=Coalesce(F("last_at"), F("created_at")))
+        .order_by("-activity", "-pk")
+    )
 
 
 def matchesName(query: str) -> Q:
@@ -41,11 +47,20 @@ def matchesName(query: str) -> Q:
 
 def interlocutor(conversation: Conversation) -> dict[str, Any]:
     if conversation.recruiter is not None:
-        person, kind, organization = conversation.recruiter.user, "recruiter", conversation.recruiter.company.name
+        person, kind, organization = (
+            conversation.recruiter.user,
+            "recruiter",
+            conversation.recruiter.company.name,
+        )
     else:
         manager = conversation.school_manager
         person, kind, organization = manager.user, "school", manager.school.name
-    return {"kind": kind, "first_name": person.first_name, "last_name": person.last_name, "organization": organization}
+    return {
+        "kind": kind,
+        "first_name": person.first_name,
+        "last_name": person.last_name,
+        "organization": organization,
+    }
 
 
 def summary(conversation: Conversation, viewer: User) -> dict[str, Any]:
@@ -72,9 +87,14 @@ def student_conversations(request: Request) -> Response:
         return Response({"error": "Forbidden"}, status=403)
 
     conversations = Conversation.objects.filter(student=user.student).select_related(
-        "recruiter__user", "recruiter__company", "school_manager__user", "school_manager__school"
+        "recruiter__user",
+        "recruiter__company",
+        "school_manager__user",
+        "school_manager__school",
     )
     query = request.query_params.get("q", "").strip()
     if query:
         conversations = conversations.filter(matchesName(query))
-    return Response([summary(conversation, user) for conversation in withLastMessage(conversations)])
+    return Response(
+        [summary(conversation, user) for conversation in withLastMessage(conversations)]
+    )
