@@ -8,6 +8,7 @@ import Button from "../components/Button";
 import { signup } from "../services/auth";
 import { signupSchema, toSignupPayload, type SignupForm } from "../utils/signup";
 import { MESSAGES } from "../utils/validation";
+import { accountHome } from "../utils/accountHome";
 import { ROLES, getRole, type Role, getRoleApiName, type RoleApiName } from "../utils/roles";
 
 export { toSignupPayload } from "../utils/signup";
@@ -26,7 +27,7 @@ function GenericSignupForm({ role }: { role: RoleApiName }) {
 			const result = await signup(toSignupPayload(form, role));
 			if (result.ok) {
 				// Compte créé et session ouverte par l'API : même destination qu'après la connexion
-				navigate("/student", { replace: true });
+				navigate(accountHome(result.user.role), { replace: true });
 			} else if (result.reason === "validation") {
 				const fields = ["first_name", "last_name", "email", "password"] as const;
 				let focused = false;
