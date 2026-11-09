@@ -9,7 +9,9 @@ node_modules
 /*.xml
 .venv
 .coverage
-.pytest_cache/
+*.zip
+media
+.pytest_cache
 .ruff_cache/
 htmlcov/
 coverage.xml

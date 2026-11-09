@@ -3,7 +3,8 @@ from django.contrib.staticfiles.views import serve
 from django.urls import path, re_path
 
 from jobup import api, candidates
-from jobup.conversations import student_conversations
+from jobup.conversations import conversation_messages, student_conversations
+
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -19,9 +20,11 @@ urlpatterns = [
     path("api/applications/<int:id>", api.application),
     path("api/applications/<int:id>/submit", api.application_submit),
     path("api/applications/<int:id>/documents/<slug:kind>", api.application_document),
+    path("api/conversations/<int:id>/messages", conversation_messages),
     path("api/recruiter/candidates", candidates.candidate_list),
     path("api/recruiter/candidates/<int:id>", candidates.candidate_detail),
     path("api/recruiter/candidates/<int:id>/cv", candidates.candidate_cv),
+
     re_path(r"^(?!api)[^.]*$", serve, kwargs={"path": "index.html"}),
     path("favicon.ico", serve, kwargs={"path": "favicon.ico"}),
 ]
