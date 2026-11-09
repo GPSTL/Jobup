@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
+from django.core.files import File
 from django.core.validators import RegexValidator
 from django.db import models
-from django.forms import ValidationError
+from django.utils import timezone
+from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from .settings import DEBUG
 
@@ -22,6 +26,13 @@ class StrictCharField(models.CharField):
 
 
 # ----- ENUMS ----- #
+
+
+def choice_from_frontend(derived_class: Any, frontend_choice: int | str) -> int | None:
+    for choice_tuple in derived_class.choices:
+        if frontend_choice in choice_tuple:
+            return choice_tuple[0]
+    return None
 
 
 class Role(models.IntegerChoices):
@@ -78,6 +89,18 @@ class StudyDegree(models.IntegerChoices):
     MASTER2 = 5, "BAC+5"
 
 
+class ApplicationStatus(models.IntegerChoices):
+    DRAFT = 0, "Draft"
+    SUBMITTED = 1, "Submitted"
+    READ = 2, "Read"
+    IN_REVIEW = 3, "In review"
+    ACCEPTED = 4, "Accepted"
+    REFUSED = 5, "Refused"
+
+
+FINAL_STATUSES = frozenset({ApplicationStatus.ACCEPTED, ApplicationStatus.REFUSED})
+
+
 # ----- GROUPS ----- #
 
 
@@ -113,14 +136,15 @@ class UserManager(BaseUserManager["User"]):
 
 class User(AbstractBaseUser, PermissionsMixin):  # pyright: ignore[reportIncompatibleVariableOverride]
     email = models.EmailField(unique=True)
-    name = StrictCharField(max_length=32)
+    last_name = StrictCharField(max_length=32)
     first_name = StrictCharField(max_length=32)
     role = models.SmallIntegerField(choices=Role.choices)
     is_active = models.BooleanField(default=True)
+    email_confirmed = models.BooleanField(default=True)
     date_joined = models.DateTimeField(auto_now_add=True)
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS: ClassVar = ["first_name", "name"]
+    REQUIRED_FIELDS: ClassVar = ["first_name", "last_name", "role"]
 
     objects = UserManager()
 
@@ -131,7 +155,7 @@ class User(AbstractBaseUser, PermissionsMixin):  # pyright: ignore[reportIncompa
         return {
             "email": self.email,
             "id": self.pk,
-            "name": self.name,
+            "last_name": self.last_name,
             "first_name": self.first_name,
             "role": self.role,
         }
@@ -145,11 +169,15 @@ class Student(models.Model):
     )
     resume = models.FileField(upload_to="CVs", blank=True)
     description = models.CharField(max_length=512, blank=True)
-    category = models.SmallIntegerField(choices=JobCategory.choices, null=True, blank=True)
+    category = models.SmallIntegerField(
+        choices=JobCategory.choices, null=True, blank=True
+    )
     experience_level = models.PositiveSmallIntegerField(default=0)  # months
     skills = models.CharField(max_length=256, blank=True)  # Comma separated skills
     region = models.CharField(max_length=64, default="Île-de-France")
-    study_degree = models.SmallIntegerField(choices=StudyDegree.choices, null=True, blank=True)
+    study_degree = models.SmallIntegerField(
+        choices=StudyDegree.choices, null=True, blank=True
+    )
     rhythm = models.CharField(
         max_length=64, blank=True
     )  # years\d{1} (weeks(\d{1}){2-48} | days(\d{1}){2-7})
@@ -168,7 +196,6 @@ class Student(models.Model):
             "experience_level": self.experience_level,
             "skills": self.skills,
             "region": self.region,
-            "age": self.age,
             "rhythm": self.rhythm,
             "available_from": self.available_from,
             "available_to": self.available_to,
@@ -206,9 +233,58 @@ class Offer(models.Model):
 class JobApplication(models.Model):
     student = models.ForeignKey(Student, models.CASCADE, related_name="applications")
     offer = models.ForeignKey(Offer, models.CASCADE, "applications")
+    status = models.SmallIntegerField(
+        choices=ApplicationStatus.choices, default=ApplicationStatus.DRAFT
+    )
     message = models.CharField(max_length=1024, blank=True)
     cover_letter = models.FileField(upload_to="covers", blank=True)
+    sent_resume = models.FileField(upload_to="sent_resumes", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints: ClassVar = [
+            models.UniqueConstraint(
+                fields=["student", "offer"], name="unique_application_per_offer"
+            )
+        ]
+
+    @property
+    def is_draft(self) -> bool:
+        return self.status == ApplicationStatus.DRAFT
+
+    def submit(self) -> None:
+        resume = self.student.resume
+        with resume.open("rb") as source:
+            self.sent_resume.save(
+                os.path.basename(resume.name), File(source), save=False
+            )
+        self.status = ApplicationStatus.SUBMITTED
+        self.submitted_at = timezone.now()
+        self.save()
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.pk,
+            "offer": {"id": self.offer.pk, "title": self.offer.title},
+            "company": self.offer.recruiter.company.name,
+            "status": self.status,
+            "status_label": ApplicationStatus(self.status).label,
+            "submitted_at": self.submitted_at,
+            "updated_at": self.updated_at,
+        }
+
+    def to_detail_dict(self) -> dict[str, Any]:
+        base = f"/api/applications/{self.pk}/documents"
+        return {
+            **self.to_dict(),
+            "message": self.message,
+            "documents": {
+                "resume": f"{base}/resume" if self.sent_resume else None,
+                "cover_letter": f"{base}/cover_letter" if self.cover_letter else None,
+            },
+        }
 
 
 class Contract(models.Model):
@@ -225,3 +301,73 @@ def getUser(_id: int) -> User | None:
         return User.objects.get(id=_id)
     except User.DoesNotExist:
         return None
+
+
+# class TokenGenerator(PasswordResetTokenGenerator):
+#     def _make_hash_value(self, user, timestamp):
+#         return f"{user['password']}{timestamp}{user['email']}"
+
+
+# token_generator = TokenGenerator()
+
+
+class SignupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("email", "password", "last_name", "first_name", "role")
+
+    def to_internal_value(self, data: dict[str, str | int | None | bool], **kwargs):
+        if "role" not in data:
+            raise ValidationError({"role": "This field is required."})
+        if not isinstance(data["role"], (str, int)):
+            raise ValidationError({"role": "This field is invalid."})
+        role = choice_from_frontend(Role, data["role"])
+        if role is None:
+            raise ValidationError({"role": "This field is invalid."})
+        data["role"] = role
+        return super().to_internal_value(data)
+
+    def create(self, validated_data):
+        password = validated_data.pop("password")
+        user = super().create(validated_data)
+        user.set_password(password)
+        user.save()
+        return user
+
+    def save(self, **kwargs):
+        # token = token_generator.make_token(self.validated_data)
+        # link = f"http://localhost:8000/api/confirm_email/{token}"
+        # send_mail(
+        #     "Confirmez votre adresse mail",
+        #     (
+        #         f"Lien de vérification: {link}\n\n"
+        #         + "Si vous n'avez pas créé de compte Jobup, "
+        #         + "veuillez ignorer ce message."
+        #     ),
+        #     "xx.yy@gmail.com",
+        #     [self.validated_data["email"]],
+        # )
+        super().save()
+
+
+class DraftSerializer(serializers.Serializer):
+    offer = serializers.PrimaryKeyRelatedField(
+        queryset=Offer.objects.filter(is_active=True)
+    )
+    message = serializers.CharField(max_length=1024, required=False, allow_blank=True)
+    cover_letter = serializers.FileField(required=False)
+
+    if TYPE_CHECKING:
+        validated_data: dict[str, Any]  # type: ignore
+
+    def save_draft(self, student: Student) -> tuple[JobApplication, bool]:
+        data = self.validated_data
+        application, created = JobApplication.objects.get_or_create(
+            student=student, offer=data["offer"]
+        )
+        if "message" in data:
+            application.message = data["message"]
+        if "cover_letter" in data:
+            application.cover_letter = data["cover_letter"]
+        application.save()
+        return application, created

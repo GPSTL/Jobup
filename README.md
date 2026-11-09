@@ -4,7 +4,8 @@ A "setup" application built with Django (Python) on the backend and React with T
 
 ## Prerequisites
 
-- **Python** 3.10+
+- **Python** 3.14 (used in CI)
+- **Node.js** 24 (used in CI)
 - **npm** 10.+
 - **make** and a Unix shell (Linux, macOS or WSL)
 
@@ -25,7 +26,48 @@ make init
 
 Run `make init` again whenever `requirements.txt` or `package.json` changes.
 
-## Development
+## Continuous integration
+
+GitHub Actions runs [CI](.github/workflows/ci.yml) for every pull request,
+push to `main`, and manual run from the Actions tab. Two jobs run in parallel:
+
+- **Frontend**: ESLint (including React Hooks rules), strict TypeScript checking
+  of application and test code, all `tests/*.test.ts` and `tests/*.test.tsx`
+  tests, and the minified JS/CSS build.
+- **Backend**: Ruff lint and format checks, Django system checks, and pytest
+  with the existing 90% minimum coverage requirement.
+
+Install the development tools once, then run the same checks locally:
+
+```bash
+source .venv/bin/activate
+python -m pip install -r requirements-dev.txt
+npm ci
+
+npm run lint
+npm run typecheck
+npm test
+npm run build
+ruff check jobup manage.py
+ruff format --check jobup manage.py
+python manage.py check
+python -m pytest -v
+```
+
+The workflow generates Django migrations in its disposable checkout because
+this repository currently ignores migration files. No production secrets or
+external database are needed. Tracking migrations and checking for missing
+migrations is a recommended follow-up.
+
+After pushing this workflow and getting a successful run, configure a branch
+ruleset in GitHub **Settings → Rules → Rulesets** for `main`: require pull
+requests and require the **Frontend** and **Backend** status checks before
+merging. This repository change does not configure those GitHub settings.
+
+This workflow provides CI. Automatic deployment can be added separately once
+the hosting environment is chosen.
+
+## Running the development server
 
 To start the Django development server and rebuild the frontend automatically:
 
