@@ -5,15 +5,19 @@ import { getSession, login } from "../front/services/auth";
 const realFetch = globalThis.fetch;
 const student = { id: 1, name: "Durand", first_name: "Élodie", role: 1 };
 
-// Remplace fetch par une réponse simulée et garde la trace de la requête envoyée
-function mockFetch(respond: () => Response | Promise<Response>) {
+// Remplace fetch par une réponse simulée et garde la trace de la requête envoyée.
+// /api/csrf renvoie un jeton, sauf si le test le simule lui-même (csrf: true).
+function mockFetch(respond: (url: string) => Response | Promise<Response>, { csrf = false } = {}) {
 	const calls: { url: string; init?: RequestInit }[] = [];
 	globalThis.fetch = (async (url: string, init?: RequestInit) => {
 		calls.push({ url, init });
-		return respond();
+		if (url === "/api/csrf" && !csrf) return Response.json({ csrfToken: "test-token" });
+		return respond(url);
 	}) as typeof fetch;
 	return calls;
 }
+
+const loginCall = (calls: { url: string; init?: RequestInit }[]) => calls.find((call) => call.url === "/api/login");
 
 afterEach(() => {
 	globalThis.fetch = realFetch;
@@ -24,10 +28,27 @@ test("connexion réussie : renvoie l'utilisateur et envoie les identifiants avec
 	const result = await login("test@example.fr", "Example123");
 
 	assert.deepEqual(result, { ok: true, user: student });
-	assert.equal(calls[0].url, "/api/login");
-	assert.equal(calls[0].init?.method, "POST");
-	assert.equal(calls[0].init?.credentials, "same-origin");
-	assert.deepEqual(JSON.parse(calls[0].init?.body as string), { email: "test@example.fr", password: "Example123" });
+	const call = loginCall(calls);
+	assert.equal(call?.init?.method, "POST");
+	assert.equal(call?.init?.credentials, "same-origin");
+	assert.deepEqual(JSON.parse(call?.init?.body as string), { email: "test@example.fr", password: "Example123" });
+});
+
+test("connexion : le jeton CSRF est demandé puis envoyé (exigé quand une session est déjà ouverte)", async () => {
+	const calls = mockFetch(() => Response.json(student));
+	await login("test@example.fr", "Example123");
+	assert.deepEqual(calls.map((call) => call.url), ["/api/csrf", "/api/login"]);
+	assert.equal((loginCall(calls)?.init?.headers as Record<string, string>)["X-CSRFToken"], "test-token");
+});
+
+test("connexion : jeton CSRF indisponible donne server, sans envoyer les identifiants", async () => {
+	for (const respond of [() => new Response("oops", { status: 500 }), () => new Response("<!doctype html>")]) {
+		const calls = mockFetch(respond, { csrf: true });
+		assert.deepEqual(await login("test@example.fr", "Example123"), { ok: false, reason: "server" });
+		assert.equal(loginCall(calls), undefined);
+	}
+	mockFetch(() => Promise.reject(new TypeError("Failed to fetch")), { csrf: true });
+	assert.deepEqual(await login("test@example.fr", "Example123"), { ok: false, reason: "network" });
 });
 
 test("identifiants incorrects : 401 donne invalidCredentials", async () => {

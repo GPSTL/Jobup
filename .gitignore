@@ -1,4 +1,4 @@
-*/__pycache__
+**/__pycache__/
 .vscode
 */migrations
 **/dist
@@ -9,3 +9,9 @@ node_modules
 /*.xml
 .venv
 .coverage
+*.zip
+media
+.pytest_cache
+.ruff_cache/
+htmlcov/
+coverage.xml
