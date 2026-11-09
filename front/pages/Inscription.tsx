@@ -1,12 +1,12 @@
-import { useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useRef } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Logo from "../components/Logo";
 import Field from "../components/Field";
 import Button from "../components/Button";
 import { signup } from "../services/auth";
-import { signupSchema, toSignupPayload, type SignupForm, organizationSignupSchema, type OrganizationSignupForm } from "../utils/signup";
+import { signupSchema, toSignupPayload, type SignupForm } from "../utils/signup";
 import { MESSAGES } from "../utils/validation";
 import { ROLES, getRole, type Role, getRoleApiName, type RoleApiName } from "../utils/roles";
 
@@ -17,7 +17,7 @@ function GenericSignupForm({ role }: { role: RoleApiName }) {
 		resolver: zodResolver(signupSchema),
 		defaultValues: { first_name: "", last_name: "", email: "", password: "" },
 	});
-	const [created, setCreated] = useState(false);
+	const navigate = useNavigate();
 	const pending = useRef(false);
 	const onSubmit = handleSubmit(async (form) => {
 		if (pending.current) return;
@@ -25,7 +25,8 @@ function GenericSignupForm({ role }: { role: RoleApiName }) {
 		try {
 			const result = await signup(toSignupPayload(form, role));
 			if (result.ok) {
-				setCreated(true);
+				// Compte créé et session ouverte par l'API : même destination qu'après la connexion
+				navigate("/student", { replace: true });
 			} else if (result.reason === "validation") {
 				const fields = ["first_name", "last_name", "email", "password"] as const;
 				let focused = false;
@@ -43,10 +44,6 @@ function GenericSignupForm({ role }: { role: RoleApiName }) {
 			pending.current = false;
 		}
 	});
-
-	if (created) {
-		return <p role="status" className="mt-8 text-center">Votre compte a été créé. Vous pouvez maintenant vous connecter.</p>;
-	}
 
 	return (
 		<form aria-busy={isSubmitting} className="flex w-full max-w-73 flex-col [&_label]:text-sm [&_label]:leading-4.5" onSubmit={onSubmit} noValidate>

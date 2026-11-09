@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
+from django.core.files import File
 from django.core.validators import RegexValidator
-from django.db import models
+from django.db import models, transaction
+from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -86,6 +89,18 @@ class StudyDegree(models.IntegerChoices):
     MASTER2 = 5, "BAC+5"
 
 
+class ApplicationStatus(models.IntegerChoices):
+    DRAFT = 0, "Draft"
+    SUBMITTED = 1, "Submitted"
+    READ = 2, "Read"
+    IN_REVIEW = 3, "In review"
+    ACCEPTED = 4, "Accepted"
+    REFUSED = 5, "Refused"
+
+
+FINAL_STATUSES = frozenset({ApplicationStatus.ACCEPTED, ApplicationStatus.REFUSED})
+
+
 # ----- GROUPS ----- #
 
 
@@ -135,6 +150,7 @@ class User(AbstractBaseUser, PermissionsMixin):  # pyright: ignore[reportIncompa
 
     if TYPE_CHECKING:
         id: int
+        student: Student
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -196,14 +212,18 @@ class Recruiter(models.Model):
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="recruiter"
     )
-    company = models.ForeignKey(Company, models.PROTECT, related_name="recruiters")
+    company = models.ForeignKey(
+        Company, models.PROTECT, null=True, blank=True, related_name="recruiters"
+    )
 
 
 class SchoolManager(models.Model):
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="school_manager"
     )
-    school = models.ForeignKey(School, models.PROTECT, related_name="managers")
+    school = models.ForeignKey(
+        School, models.PROTECT, null=True, blank=True, related_name="managers"
+    )
 
 
 # ----- JOB SEARCH ----- #
@@ -222,15 +242,121 @@ class Offer(models.Model):
 class JobApplication(models.Model):
     student = models.ForeignKey(Student, models.CASCADE, related_name="applications")
     offer = models.ForeignKey(Offer, models.CASCADE, "applications")
+    status = models.SmallIntegerField(
+        choices=ApplicationStatus.choices, default=ApplicationStatus.DRAFT
+    )
     message = models.CharField(max_length=1024, blank=True)
     cover_letter = models.FileField(upload_to="covers", blank=True)
+    sent_resume = models.FileField(upload_to="sent_resumes", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints: ClassVar = [
+            models.UniqueConstraint(
+                fields=["student", "offer"], name="unique_application_per_offer"
+            )
+        ]
+
+    @property
+    def is_draft(self) -> bool:
+        return self.status == ApplicationStatus.DRAFT
+
+    def submit(self) -> None:
+        resume = self.student.resume
+        with resume.open("rb") as source:
+            self.sent_resume.save(
+                os.path.basename(resume.name), File(source), save=False
+            )
+        self.status = ApplicationStatus.SUBMITTED
+        self.submitted_at = timezone.now()
+        self.save()
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.pk,
+            "offer": {"id": self.offer.pk, "title": self.offer.title},
+            "company": self.offer.recruiter.company.name,
+            "status": self.status,
+            "status_label": ApplicationStatus(self.status).label,
+            "submitted_at": self.submitted_at,
+            "updated_at": self.updated_at,
+        }
+
+    def to_detail_dict(self) -> dict[str, Any]:
+        base = f"/api/applications/{self.pk}/documents"
+        return {
+            **self.to_dict(),
+            "message": self.message,
+            "documents": {
+                "resume": f"{base}/resume" if self.sent_resume else None,
+                "cover_letter": f"{base}/cover_letter" if self.cover_letter else None,
+            },
+        }
 
 
 class Contract(models.Model):
     school = models.ForeignKey(School, models.PROTECT)
     company = models.ForeignKey(Company, models.PROTECT)
     student = models.ForeignKey(Student, models.PROTECT)
+
+
+# ----- MESSAGING ----- #
+
+
+MESSAGE_MAX_LENGTH = 2000
+
+
+# Socle commun de la messagerie (JOB-032), partagé avec le fil (JOB-034) et le côté recruteur (JOB-041).
+# Une conversation relie un étudiant à un seul interlocuteur : un recruteur ou un employé d'école.
+class Conversation(models.Model):
+    student = models.ForeignKey(Student, models.CASCADE, related_name="conversations")
+    recruiter = models.ForeignKey(
+        Recruiter, models.CASCADE, null=True, blank=True, related_name="conversations"
+    )
+    school_manager = models.ForeignKey(
+        SchoolManager,
+        models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="conversations",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    if TYPE_CHECKING:
+        last_at: Any
+        last_body: Any
+        last_sender: Any
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(recruiter__isnull=False, school_manager__isnull=True)
+                | models.Q(recruiter__isnull=True, school_manager__isnull=False),
+                name="conversation_has_one_interlocutor",
+            ),
+            # Une seule conversation par paire étudiant / interlocuteur
+            models.UniqueConstraint(
+                fields=["student", "recruiter"], name="unique_student_recruiter"
+            ),
+            models.UniqueConstraint(
+                fields=["student", "school_manager"],
+                name="unique_student_school_manager",
+            ),
+        ]
+
+
+class Message(models.Model):
+    conversation = models.ForeignKey(
+        Conversation, models.CASCADE, related_name="messages"
+    )
+    sender = models.ForeignKey(User, models.CASCADE, related_name="sent_messages")
+    body = models.CharField(max_length=MESSAGE_MAX_LENGTH)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    if TYPE_CHECKING:
+        sender_id: int
 
 
 # Utilities #
@@ -268,10 +394,18 @@ class SignupSerializer(serializers.ModelSerializer):
         return super().to_internal_value(data)
 
     def create(self, validated_data):
-        password = validated_data.pop('password')
-        user = super().create(validated_data)
-        user.set_password(password)
-        user.save()
+        password = validated_data.pop("password")
+        with transaction.atomic():
+            user = super().create(validated_data)
+            user.set_password(password)
+            user.save()
+            match user.role:
+                case Role.STUDENT:
+                    Student.objects.create(user=user)
+                case Role.RECRUITER:
+                    Recruiter.objects.create(user=user)
+                case Role.MANAGER:
+                    SchoolManager.objects.create(user=user)
         return user
 
     def save(self, **kwargs):
@@ -288,3 +422,38 @@ class SignupSerializer(serializers.ModelSerializer):
         #     [self.validated_data["email"]],
         # )
         super().save()
+
+
+class DraftSerializer(serializers.Serializer):
+    offer = serializers.PrimaryKeyRelatedField(
+        queryset=Offer.objects.filter(is_active=True)
+    )
+    message = serializers.CharField(max_length=1024, required=False, allow_blank=True)
+    cover_letter = serializers.FileField(required=False)
+
+    if TYPE_CHECKING:
+        validated_data: dict[str, Any]  # type: ignore
+
+    def save_draft(self, student: Student) -> tuple[JobApplication, bool]:
+        data = self.validated_data
+        application, created = JobApplication.objects.get_or_create(
+            student=student, offer=data["offer"]
+        )
+        if "message" in data:
+            application.message = data["message"]
+        if "cover_letter" in data:
+            application.cover_letter = data["cover_letter"]
+        application.save()
+        return application, created
+
+
+class MessageSerializer(serializers.Serializer):
+    body = serializers.CharField(max_length=MESSAGE_MAX_LENGTH)
+
+    if TYPE_CHECKING:
+        validated_data: dict[str, Any]  # type: ignore
+
+    def save_message(self, conversation: Conversation, sender: User) -> Message:
+        return Message.objects.create(
+            conversation=conversation, sender=sender, body=self.validated_data["body"]
+        )

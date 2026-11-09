@@ -1,4 +1,4 @@
-// Error messages and validators for the Connexion and Inscription forms.
+// Error messages and validators for the forms (Connexion, Inscription, Mon espace).
 // Each validator returns the error message, or "" when the value is valid.
 
 export const MESSAGES = {
@@ -16,7 +16,25 @@ export const MESSAGES = {
 	emailTaken: "Cette adresse e-mail est déjà utilisée.",
 	serverError: "Une erreur est survenue, veuillez réessayer plus tard.",
 	networkError: "Impossible de joindre le serveur. Vérifiez votre connexion internet et réessayez.",
+	sessionExpired: "Votre session a expiré. Reconnectez-vous pour continuer.",
+
+	// Mon espace
+	photoFormat: "La photo doit être au format JPG ou PNG.",
+	photoTooBig: "La photo ne doit pas dépasser 2 Mo.",
+	cvFormat: "Le CV doit être au format PDF, DOCX ou DOC.",
+	cvTooBig: "Le CV ne doit pas dépasser 5 Mo.",
 };
+
+// Message of a failed API call, by reason (see the services)
+export const REQUEST_ERRORS = {
+	unauthenticated: MESSAGES.sessionExpired,
+	server: MESSAGES.serverError,
+	network: MESSAGES.networkError,
+};
+
+// TODO JOB-008: confirm the maximum size of the photo (2 Mo, like the company logo of REC-25)
+const PHOTO_MAX_SIZE = 2 * 1024 * 1024;
+const CV_MAX_SIZE = 5 * 1024 * 1024;
 
 const NAME_RE = /^[A-Za-zÀ-ÖØ-öø-ÿ]+(?:[ '’-][A-Za-zÀ-ÖØ-öø-ÿ]+)*$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -48,3 +66,20 @@ export const validateNewPassword = (value: string) => {
 
 // Login: only checks that a password was typed
 export const validatePassword = (value: string) => (value ? "" : MESSAGES.passwordRequired);
+
+export const validateMaxLength = (value: string, max: number) =>
+	value.length > max ? `${max} caractères maximum (${value.length} actuellement).` : "";
+
+export const validatePhoto = (file: File) => {
+	if (file.type !== "image/jpeg" && file.type !== "image/png") return MESSAGES.photoFormat;
+	if (file.size > PHOTO_MAX_SIZE) return MESSAGES.photoTooBig;
+	return "";
+};
+
+// The extension is checked rather than the type: browsers do not always know the type of a .doc file
+export const validateCv = (file: File) => {
+	const extension = file.name.split(".").pop()?.toLowerCase();
+	if (extension !== "pdf" && extension !== "docx" && extension !== "doc") return MESSAGES.cvFormat;
+	if (file.size > CV_MAX_SIZE) return MESSAGES.cvTooBig;
+	return "";
+};
