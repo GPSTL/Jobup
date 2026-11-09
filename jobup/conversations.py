@@ -2,16 +2,38 @@
 # Tri : la conversation la plus récemment active en premier. L'activité est la date du dernier
 # message, ou la date de création pour une conversation sans message. Le résumé est calculé
 # à chaque requête : il reste à jour après un envoi ou une réception (JOB-034).
+# Fil de messages et envoi (JOB-034, ETU-15), communs à tous les participants ; contrat réutilisé par JOB-039.
 import unicodedata
-from typing import Any
+from typing import Any, Self
 
-from django.db.models import F, OuterRef, QuerySet, Subquery
+from django.db.models import F, OuterRef, Q, QuerySet, Subquery
 from django.db.models.functions import Coalesce
+from pydantic import BaseModel, Field, ValidationError, model_validator
 from rest_framework.decorators import api_view
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from .models import Conversation, Message, Role, User
+from .models import Conversation, Message, MessageSerializer, Role, User
+
+
+class MessagePage(BaseModel):
+    before: int | None = None
+    after: int | None = None
+    limit: int = Field(default=50, ge=1, le=100)
+
+    @model_validator(mode="after")
+    def exclusive_cursors(self) -> Self:
+        if self.before is not None and self.after is not None:
+            raise ValueError("before and after are exclusive")
+        return self
+
+
+def getConversation(user: User, id: int) -> Conversation | None:
+    # Seuls l'étudiant, le recruteur ou l'employé d'école de la conversation y ont accès
+    participant = (
+        Q(student__user=user) | Q(recruiter__user=user) | Q(school_manager__user=user)
+    )
+    return Conversation.objects.filter(participant, pk=id).first()
 
 
 def withLastMessage(conversations: QuerySet[Conversation]) -> QuerySet[Conversation]:
@@ -99,3 +121,51 @@ def student_conversations(request: Request) -> Response:
             conversation for conversation in results if matchesName(conversation, query)
         ]
     return Response([summary(conversation, user) for conversation in results])
+
+
+def messageDict(message: Message, viewer: User) -> dict[str, Any]:
+    return {
+        "id": message.pk,
+        "body": message.body,
+        "created_at": message.created_at,
+        "from_me": message.sender_id == viewer.pk,
+    }
+
+
+def messagesPage(
+    conversation: Conversation, page: MessagePage
+) -> tuple[list[Message], bool]:
+    messages = Message.objects.filter(conversation=conversation)
+    if page.after is not None:
+        found = list(
+            messages.filter(pk__gt=page.after).order_by("pk")[: page.limit + 1]
+        )
+        return found[: page.limit], len(found) > page.limit
+    if page.before is not None:
+        messages = messages.filter(pk__lt=page.before)
+    found = list(messages.order_by("-pk")[: page.limit + 1])
+    return found[: page.limit][::-1], len(found) > page.limit
+
+
+@api_view(["GET", "POST"])
+def conversation_messages(request: Request, id: int) -> Response:
+    user: User = request.user
+    conversation = getConversation(user, id)
+    if conversation is None:
+        return Response({"error": "Conversation not found"}, status=404)
+
+    if request.method == "POST":
+        serializer: MessageSerializer = MessageSerializer(data=request.data)  # type: ignore
+        serializer.is_valid(raise_exception=True)
+        return Response(
+            messageDict(serializer.save_message(conversation, user), user), status=201
+        )
+
+    try:
+        page = MessagePage.model_validate(request.query_params.dict())
+    except ValidationError:
+        return Response({"error": "Invalid query"}, status=400)
+    messages, has_more = messagesPage(conversation, page)
+    return Response(
+        {"messages": [messageDict(m, user) for m in messages], "has_more": has_more}
+    )

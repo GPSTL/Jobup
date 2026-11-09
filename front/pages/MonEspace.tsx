@@ -5,14 +5,20 @@ import CvSection from "../components/CvSection";
 import PhotoSection from "../components/PhotoSection";
 import StudentNavbar from "../components/StudentNavbar";
 import TextSection from "../components/TextSection";
+import type { User } from "../services/auth";
 import { getProfile, updatePhoto, updateProfile, type Profile, type ProfileError, type ProfileResult } from "../services/profile";
 import { MESSAGES, REQUEST_ERRORS } from "../utils/validation";
 
-// TODO JOB-008: align the maximum lengths with the API
+// Same limits as the API (JOB-008)
 const DESCRIPTION_MAX_LENGTH = 500;
 const POSITION_MAX_LENGTH = 100;
 
-export default function MonEspace() {
+type MonEspaceProps = {
+	/** Logged-in student, given by RequireStudent */
+	user: User;
+};
+
+export default function MonEspace({ user }: MonEspaceProps) {
 	// null while the profile loads
 	const [profile, setProfile] = useState<Profile | null>(null);
 	const [loadError, setLoadError] = useState<ProfileError | null>(null);
@@ -22,7 +28,7 @@ export default function MonEspace() {
 	useEffect(() => {
 		// Ignores the answer if the page was left in the meantime
 		let ignore = false;
-		getProfile().then((result) => {
+		getProfile(user.id).then((result) => {
 			if (ignore) return;
 			if (result.ok) setProfile(result.profile);
 			else setLoadError(result.reason === "invalid" ? "server" : result.reason);
@@ -30,7 +36,7 @@ export default function MonEspace() {
 		return () => {
 			ignore = true;
 		};
-	}, [attempt]);
+	}, [user.id, attempt]);
 
 	const retry = () => {
 		setLoadError(null);
@@ -82,7 +88,7 @@ export default function MonEspace() {
 
 					{profile && (
 						<>
-							<PhotoSection photoUrl={profile.photoUrl} onUpload={async (file) => applyResult(await updatePhoto(file))} />
+							<PhotoSection photoUrl={profile.photoUrl} onUpload={async (file) => applyResult(await updatePhoto(user.id, file))} />
 							<TextSection
 								title="Présentation personnelle"
 								value={profile.description}
@@ -91,7 +97,7 @@ export default function MonEspace() {
 								placeholder="Ex. : Étudiant en M2 informatique, je recherche une alternance de 12 mois en développement web."
 								maxLength={DESCRIPTION_MAX_LENGTH}
 								multiline
-								onSave={async (description) => applyResult(await updateProfile({ description }))}
+								onSave={async (description) => applyResult(await updateProfile(user.id, { description }))}
 							/>
 							<TextSection
 								title="Poste recherché"
@@ -100,7 +106,7 @@ export default function MonEspace() {
 								hint="Votre objectif principal : il sert aux suggestions d’offres et aide les entreprises à comprendre votre recherche."
 								placeholder="Ex. : Développeur web"
 								maxLength={POSITION_MAX_LENGTH}
-								onSave={async (desiredPosition) => applyResult(await updateProfile({ desiredPosition }))}
+								onSave={async (desiredPosition) => applyResult(await updateProfile(user.id, { desiredPosition }))}
 							/>
 						</>
 					)}

@@ -86,7 +86,7 @@ export async function getSession(): Promise<SessionResult> {
 
 export type SignupPayload = { first_name: string; last_name: string; email: string; password: string; role: RoleApiName };
 type SignupResult =
-	| { ok: true }
+	| { ok: true; user: User }
 	| { ok: false; reason: "validation"; errors: Partial<Record<"first_name" | "last_name" | "email" | "password" | "role", string>> }
 	| { ok: false; reason: "server" | "network" };
 
@@ -134,7 +134,8 @@ export async function signup(payload: SignupPayload): Promise<SignupResult> {
 			headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
 			body: JSON.stringify(payload),
 		});
-		if (response.status === 201) return { ok: true };
+		// Le compte créé (avec son rôle) sert à choisir la page d'arrivée
+		if (response.status === 201) return { ok: true, user: (await response.json()) as User };
 		if (response.status === 400 || response.status === 409) {
 			const errors = toSignupErrors(await response.json());
 			// Sans erreur sur un champ du formulaire (ex. rôle refusé), message générique

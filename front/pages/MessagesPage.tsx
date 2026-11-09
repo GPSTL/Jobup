@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
-import { Link, Navigate, useParams } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { Navigate, useParams } from "react-router-dom";
 
-import ArrowLeftIcon from "../components/ArrowLeftIcon";
 import ConversationList, { type ConversationItem } from "../components/ConversationList";
+import MessageThread from "../components/MessageThread";
 import Navbar, { NavbarLink } from "../components/Navbar";
 import { getStudentConversations, type ConversationSummary } from "../services/conversations";
 import { avatarColor, conversationDate, interlocutorInitials, interlocutorName, lastMessagePreview } from "../utils/conversations";
@@ -21,8 +21,8 @@ const toItem = (conversation: ConversationSummary): ConversationItem => ({
 	date: conversationDate(conversation),
 });
 
-// Messagerie de l'étudiant (JOB-032, ETU-07) : liste et recherche des conversations.
-// Le fil de la conversation sélectionnée est traité par JOB-034.
+// Messagerie de l'étudiant : liste et recherche des conversations (JOB-032, ETU-07),
+// fil de la conversation sélectionnée et envoi (JOB-034, ETU-15).
 export default function MessagesPage() {
 	const { id } = useParams();
 	const selectedId = id === undefined ? undefined : Number(id);
@@ -51,6 +51,13 @@ export default function MessagesPage() {
 			clearTimeout(timer);
 		};
 	}, [query, attempt]);
+
+	// Après un envoi ou une réception : met à jour l'aperçu et l'ordre de la liste sans afficher son chargement
+	const refreshList = useCallback(() => {
+		getStudentConversations(query).then((result) => {
+			if (result.ok) setConversations(result.conversations);
+		});
+	}, [query]);
 
 	// Session expirée pendant la consultation : retour à la connexion
 	if (noSession) return <Navigate to="/login" replace />;
@@ -90,19 +97,15 @@ export default function MessagesPage() {
 					{selectedId === undefined ? (
 						<p className="m-auto px-6 text-center text-[15px] text-[#6b7280]">Sélectionnez une conversation pour l’afficher.</p>
 					) : (
-						<>
-							<div className="flex items-center gap-3 border-b border-[#e5e7eb] bg-white px-5 py-4">
-								<Link to="/messages" className="rounded-sm text-primary focus-visible:outline-2 focus-visible:outline-primary md:hidden">
-									<ArrowLeftIcon width={20} height={20} />
-									<span className="sr-only">Retour aux conversations</span>
-								</Link>
-								<h2 className="truncate text-[17px] font-semibold">
-									{selected ? interlocutorName(selected) : "Conversation"}
-								</h2>
-							</div>
-							{/* TODO JOB-034 : afficher le fil de messages et le champ d'envoi */}
-							<p className="m-auto px-6 text-center text-[15px] text-[#6b7280]">Le fil de discussion sera bientôt disponible.</p>
-						</>
+						<MessageThread
+							key={selectedId}
+							conversationId={selectedId}
+							name={selected ? interlocutorName(selected) : "Conversation"}
+							initials={selected ? interlocutorInitials(selected) : ""}
+							color={avatarColor(selectedId)}
+							backTo="/messages"
+							onActivity={refreshList}
+						/>
 					)}
 				</section>
 			</main>

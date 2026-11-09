@@ -77,18 +77,6 @@ def me(request: Request) -> Response:
 
 
 @api_view(["GET"])
-def student(request: Request, id: int) -> Response:
-    user: User = request.user
-    if not canViewStudent(user, id):
-        return Response({"error": "Forbidden"}, status=403)
-
-    target = getStudent(id)
-    if target is None:
-        return Response({"error": "Student not found"}, status=404)
-    return Response(target.to_dict())
-
-
-@api_view(["GET"])
 def applications(request: Request) -> Response:
     student = getOwnStudent(request.user)
     if student is None:
