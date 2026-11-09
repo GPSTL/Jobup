@@ -193,7 +193,10 @@ def signup(request: Request):
     serializer = SignupSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     serializer.save()
-    return Response({"message": "User successfully registered"}, status=201)
+    user = serializer.instance
+    # Connexion directe après l'inscription : la session est ouverte comme après /api/login
+    login(request._request, user)
+    return Response(user.to_dict(), status=201)
 
 
 # @api_view(["POST"])
