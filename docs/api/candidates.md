@@ -10,7 +10,7 @@ Contract between the candidates API (JOB-035, REC-01) and the “Candidats” ta
 
 ## Who a recruiter sees
 
-Every recruiter sees every active student, whether or not they filled in a school, a photo or a CV, newest accounts first, except the candidates they already kept with ♥ (JOB-037, see “The shortlist” below). The filters (JOB-036) and the dismissed candidates (JOB-038) will narrow this list down further; the rule is in `visibleStudents()` and `candidate_list()` (`jobup/candidates.py`).
+Every recruiter sees every active student, whether or not they filled in a school, a photo or a CV, newest accounts first, except the candidates they already kept with ♥ (JOB-037, see “The shortlist” below) and those they excluded with 🚫 (JOB-038, see “The exclusion” below). The filters (JOB-036) will narrow this list down further; the rule is in `visibleStudents()` and `candidate_list()` (`jobup/candidates.py`).
 
 To be validated by the team (open question of JOB-035): ETU-02 presents the CV of the profile as a way to apply without typing again, and this API lets every recruiter download it. Students should at least be told so on their profile.
 
@@ -103,6 +103,20 @@ An item is a card, plus:
 | `offer` | object or `null` | `{ "id": number, "title": string }`: the offer the candidate was kept for (“Pour : …” in the mockup). Always `null` for now: no screen lets the recruiter pick the offer yet (JOB-036). |
 
 `POST` and `DELETE` change data: like every write, they need the `X-CSRFToken` header, with the token of `GET /api/csrf`. On `POST`, an unknown `<id>`, an inactive student or an account that is not a student responds `404` `{"error": "Candidate not found"}`.
+
+## The exclusion
+
+The exclusion (JOB-038, REC-04) is the 🚫 button of a card: the candidate leaves the cards of the logged-in recruiter, and the next card is shown.
+
+**Scope (to be validated, open question of REC-04):** for now an exclusion belongs to the recruiter alone, has no expiry, and applies to all their searches. It is never shared with colleagues of the same company, and one recruiter's exclusion changes nothing for another. Widening it to the company, an offer or a search means changing the `Exclusion` model and the `exclude()` of `candidate_list()`.
+
+| Route | Effect | Success |
+| --- | --- | --- |
+| `POST /api/recruiter/candidates/<id>/exclusion` | Excludes the candidate. Idempotent: excluding them again creates no duplicate, so a retry after a network error is always safe. | `201` `{"id": 12, "excluded": true}`, `200` with the same body if already excluded |
+
+- The check is done on the server: an account that is not a recruiter gets `403`, and an unknown `<id>`, an inactive student or an account that is not a student gets `404` `{"error": "Candidate not found"}`. Like every write, the route needs the `X-CSRFToken` header.
+- Only the `Exclusion` row is written. The applications of the candidate keep their status (formally refusing one is REC-24), the profile and CV stay reachable by their direct URL, and the shortlist is not modified.
+- A candidate who is already on the shortlist is already out of the cards; excluding them leaves them on the shortlist. What an exclusion should do to a shortlisted candidate, and a way to restore an excluded one, are still to be decided: there is no `DELETE` route yet.
 
 ## Status codes
 

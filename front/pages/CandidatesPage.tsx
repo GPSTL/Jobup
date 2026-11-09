@@ -6,7 +6,7 @@ import CandidateCard from "../components/CandidateCard";
 import ChevronDownIcon from "../components/ChevronDownIcon";
 import HeartIcon from "../components/HeartIcon";
 import RecruiterNavbar from "../components/RecruiterNavbar";
-import { getCandidates, keepCandidate, type CandidateSummary, type CandidatesResult } from "../services/candidates";
+import { excludeCandidate, getCandidates, keepCandidate, type CandidateSummary, type CandidatesResult } from "../services/candidates";
 import { cardIndex, fullName } from "../utils/candidates";
 import { focus } from "../utils/searchPageStyles";
 import { REQUEST_ERRORS } from "../utils/validation";
@@ -30,11 +30,14 @@ type CandidateDeckProps = {
 	/** ♥ sur la carte affichée (JOB-037) */
 	onKeep?: () => void;
 	keeping?: boolean;
+	/** 🚫 sur la carte affichée (JOB-038) */
+	onExclude?: () => void;
+	excluding?: boolean;
 };
 
 // Cards shown one at a time, the next one peeking out underneath (mockup "Swipe – carte 2").
-// TODO JOB-037, JOB-038: ♥ and 🚫 will show the next card; until then, the arrows browse the cards.
-export function CandidateDeck({ candidates, index, onSelect, onKeep, keeping }: CandidateDeckProps) {
+// ♥ and 🚫 (JOB-037, JOB-038) take the card out of the deck and show the next one; the arrows only browse.
+export function CandidateDeck({ candidates, index, onSelect, onKeep, keeping, onExclude, excluding }: CandidateDeckProps) {
 	const candidate = candidates[index];
 	const hasPrevious = index > 0;
 	const hasNext = index < candidates.length - 1;
@@ -67,7 +70,7 @@ export function CandidateDeck({ candidates, index, onSelect, onKeep, keeping }: 
 
 			<div className={`relative isolate col-span-3 row-start-2 sm:col-span-1 sm:col-start-2 sm:row-start-1 ${hasNext ? "mb-10" : ""}`}>
 				{hasNext && <div aria-hidden="true" className={`absolute inset-x-0 top-10 -bottom-10 -z-10 rounded-[20px] bg-surface ${shadow}`} />}
-				<CandidateCard candidate={candidate} onKeep={onKeep} keeping={keeping} />
+				<CandidateCard candidate={candidate} onKeep={onKeep} keeping={keeping} onExclude={onExclude} excluding={excluding} />
 			</div>
 		</div>
 	);
@@ -81,12 +84,12 @@ export default function CandidatesPage() {
 	const [attempt, setAttempt] = useState(0);
 	// The card shown is kept in the URL, so that "Retour aux candidats" on the profile comes back to it
 	const [params, setParams] = useSearchParams();
-	// ♥ en cours d'envoi, message d'échec et annonce du succès (JOB-037)
-	const [keeping, setKeeping] = useState(false);
-	const [keepError, setKeepError] = useState("");
-	const [kept, setKept] = useState("");
-	// Toutes les cartes ont été retenues : un message différent de « aucun candidat »
-	const [allKept, setAllKept] = useState(false);
+	// ♥ ou 🚫 en cours d'envoi, message d'échec et annonce du succès (JOB-037, JOB-038)
+	const [pending, setPending] = useState<"keep" | "exclude" | null>(null);
+	const [actionError, setActionError] = useState("");
+	const [announcement, setAnnouncement] = useState("");
+	// Toutes les cartes ont été retenues ou écartées : un message différent de « aucun candidat »
+	const [allDone, setAllDone] = useState(false);
 
 	useEffect(() => {
 		// Ignores the answer if the page was left in the meantime
@@ -104,33 +107,42 @@ export default function CandidatesPage() {
 		setAttempt(attempt + 1);
 	};
 
-	const keep = async (candidates: CandidateSummary[], index: number) => {
-		if (keeping) return;
+	// ♥ (retenir) ou 🚫 (écarter) sur la carte affichée : la carte quitte la pile et la suivante s'affiche
+	const dismiss = async (kind: "keep" | "exclude", candidates: CandidateSummary[], index: number) => {
+		if (pending) return;
 		const candidate = candidates[index];
-		setKeeping(true);
-		setKeepError("");
-		setKept("");
-		const response = await keepCandidate(candidate.id);
-		setKeeping(false);
+		setPending(kind);
+		setActionError("");
+		setAnnouncement("");
+		const response = await (kind === "keep" ? keepCandidate : excludeCandidate)(candidate.id);
+		setPending(null);
 		if (!response.ok) {
 			if (response.reason === "unauthenticated") {
 				// Session expirée : retour à la connexion, comme au chargement des cartes
 				setResult({ ok: false, reason: "unauthenticated" });
 				return;
 			}
-			// La carte reste affichée : le recruteur peut réessayer avec ♥
-			setKeepError(
-				response.reason === "notFound"
-					? `${fullName(candidate)} n’est plus disponible.`
-					: `${fullName(candidate)} n’a pas pu être retenu. ${REQUEST_ERRORS[response.reason]}`,
-			);
-			return;
+			// Un candidat devenu indisponible n'a plus rien à faire dans la pile quand on voulait l'écarter
+			if (!(kind === "exclude" && response.reason === "notFound")) {
+				// La carte reste affichée : le recruteur peut réessayer avec le même bouton
+				const failed = kind === "keep" ? "retenu" : "écarté";
+				setActionError(
+					response.reason === "notFound"
+						? `${fullName(candidate)} n’est plus disponible.`
+						: `${fullName(candidate)} n’a pas pu être ${failed}. ${REQUEST_ERRORS[response.reason]}`,
+				);
+				return;
+			}
 		}
-		// Carte suivante : celle qui prend la place de la carte retenue, ou la précédente s'il s'agissait de la dernière
+		// Carte suivante : celle qui prend la place de la carte retirée, ou la précédente s'il s'agissait de la dernière
 		const rest = candidates.filter((other) => other.id !== candidate.id);
 		setResult({ ok: true, candidates: rest });
-		setKept(`${fullName(candidate)} a été ajouté à vos candidats retenus.`);
-		if (rest.length === 0) setAllKept(true);
+		setAnnouncement(
+			kind === "keep"
+				? `${fullName(candidate)} a été ajouté à vos candidats retenus.`
+				: `${fullName(candidate)} a été écarté de vos candidats.`,
+		);
+		if (rest.length === 0) setAllDone(true);
 		else setParams({ candidate: String(rest[Math.min(index, rest.length - 1)].id) }, { replace: true });
 	};
 
@@ -151,13 +163,13 @@ export default function CandidatesPage() {
 						Candidats retenus
 					</Link>
 				</div>
-				{/* Succès et échec du ♥ annoncés aux lecteurs d'écran */}
+				{/* Succès du ♥ ou du 🚫 annoncé aux lecteurs d'écran */}
 				<p role="status" className="sr-only">
-					{kept}
+					{announcement}
 				</p>
-				{keepError && (
+				{actionError && (
 					<p role="alert" className="mx-auto mb-4 max-w-[464px] rounded-[12px] bg-[#fef2f2] px-4 py-3 text-center text-[#b91c1c]">
-						{keepError}
+						{actionError}
 					</p>
 				)}
 
@@ -178,17 +190,20 @@ export default function CandidatesPage() {
 					</div>
 				)}
 
-				{result?.ok && result.candidates.length === 0 && !allKept && (
+				{result?.ok && result.candidates.length === 0 && !allDone && (
 					<div className={statePanel}>
 						<h2 className="text-2xl font-semibold">Aucun candidat pour le moment</h2>
 						<p className="text-[#6b7280]">Les profils des étudiants apparaîtront ici.</p>
 					</div>
 				)}
 
-				{result?.ok && result.candidates.length === 0 && allKept && (
+				{result?.ok && result.candidates.length === 0 && allDone && (
 					<div className={statePanel}>
-						<h2 className="text-2xl font-semibold">Vous avez parcouru tous les candidats</h2>
-						<p className="text-[#6b7280]">Retrouvez les profils que vous avez retenus dans votre présélection.</p>
+						{/* Le bouton de la dernière carte vient de disparaître : le focus clavier se pose ici */}
+						<h2 ref={(heading) => heading?.focus()} tabIndex={-1} className="text-2xl font-semibold outline-none">
+							Vous avez parcouru tous les candidats
+						</h2>
+						<p className="text-[#6b7280]">Retrouvez les profils que vous avez retenus dans votre présélection. Ceux que vous avez écartés n’apparaîtront plus.</p>
 						<Button to="/recruiter/shortlist">Voir les candidats retenus</Button>
 					</div>
 				)}
@@ -198,11 +213,13 @@ export default function CandidatesPage() {
 						candidates={result.candidates}
 						index={cardIndex(result.candidates, params.get("candidate"))}
 						onSelect={(index) => {
-							setKeepError("");
+							setActionError("");
 							setParams({ candidate: String(result.candidates[index].id) }, { replace: true });
 						}}
-						onKeep={() => keep(result.candidates, cardIndex(result.candidates, params.get("candidate")))}
-						keeping={keeping}
+						onKeep={() => dismiss("keep", result.candidates, cardIndex(result.candidates, params.get("candidate")))}
+						keeping={pending === "keep"}
+						onExclude={() => dismiss("exclude", result.candidates, cardIndex(result.candidates, params.get("candidate")))}
+						excluding={pending === "exclude"}
 					/>
 				)}
 			</main>

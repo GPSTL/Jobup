@@ -318,6 +318,22 @@ class Shortlist(models.Model):
         ]
 
 
+# Candidats écartés avec 🚫 (JOB-038, REC-04). Portée retenue en attendant la décision de l'équipe :
+# le recruteur seul, sans limite de durée, toutes recherches confondues. Comme la présélection, elle
+# n'est jamais partagée avec les collègues de l'entreprise. Ne touche ni aux candidatures ni à la présélection.
+class Exclusion(models.Model):
+    recruiter = models.ForeignKey(Recruiter, models.CASCADE, related_name="exclusions")
+    student = models.ForeignKey(Student, models.CASCADE, related_name="excluded_by")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["recruiter", "student"], name="unique_recruiter_exclusion"
+            )
+        ]
+
+
 class Contract(models.Model):
     school = models.ForeignKey(School, models.PROTECT)
     company = models.ForeignKey(Company, models.PROTECT)

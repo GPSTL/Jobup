@@ -20,7 +20,7 @@ def isRecruiter(user: User) -> bool:
 def visibleStudents() -> QuerySet[Student]:
     # Every recruiter sees every active student, with or without a photo, a
     # school or a CV. The filters (JOB-036) and the candidates already kept or
-    # dismissed (JOB-037, JOB-038) will narrow this list down.
+    # dismissed (JOB-037, JOB-038) narrow this list down: see candidate_list().
     return (
         Student.objects.filter(user__is_active=True, user__role=Role.STUDENT)
         .select_related("user", "school")
@@ -95,9 +95,13 @@ def candidate_list(request: Request) -> Response:
     user: User = request.user
     if not isRecruiter(user):
         return Response({"error": "Forbidden"}, status=403)
-    # Les candidats déjà retenus par ce recruteur (JOB-037) quittent la pile de cartes ;
-    # leur profil reste accessible depuis « Candidats retenus »
-    deck = visibleStudents().exclude(shortlisted_by__recruiter__user=user)
+    # Les candidats déjà retenus (JOB-037) ou écartés (JOB-038) par ce recruteur quittent la pile
+    # de cartes ; seuls les siens comptent. Le profil des retenus reste accessible depuis « Candidats retenus »
+    deck = (
+        visibleStudents()
+        .exclude(shortlisted_by__recruiter__user=user)
+        .exclude(excluded_by__recruiter__user=user)
+    )
     return Response([candidateCard(student) for student in deck])
 
 

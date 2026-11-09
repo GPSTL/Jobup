@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 
+import BanIcon from "./BanIcon";
 import { CandidateAvatar, EducationLine } from "./CandidateIdentity";
 import HeartIcon from "./HeartIcon";
 import type { CandidateSummary } from "../services/candidates";
@@ -17,9 +18,15 @@ type CandidateCardProps = {
 	onKeep?: () => void;
 	/** Présélection en cours d'envoi : le bouton est inactif mais garde le focus */
 	keeping?: boolean;
+	/** 🚫 : écarter le candidat (JOB-038) ; sans cette fonction, pas de bouton */
+	onExclude?: () => void;
+	/** Exclusion en cours d'envoi : les deux boutons sont inactifs mais gardent le focus */
+	excluding?: boolean;
 };
 
-export default function CandidateCard({ candidate, onKeep, keeping = false }: CandidateCardProps) {
+export default function CandidateCard({ candidate, onKeep, keeping = false, onExclude, excluding = false }: CandidateCardProps) {
+	// Une seule action à la fois : pendant l'envoi de l'une, l'autre est inactive
+	const busy = keeping || excluding;
 	return (
 		<article className="relative flex min-h-[540px] flex-col items-center rounded-[20px] bg-surface px-6 pt-9 pb-10 shadow-[0_4px_12px_rgba(0,0,0,0.1)] sm:px-18">
 			<h2 className="text-center text-[32px] leading-tight font-semibold">{fullName(candidate)}</h2>
@@ -46,19 +53,31 @@ export default function CandidateCard({ candidate, onKeep, keeping = false }: Ca
 				)}
 			</div>
 
-			{/* TODO JOB-037, JOB-038: ♥ and 🚫 buttons at the bottom of the card, which show the next card */}
-			{onKeep && (
-				// Deux colonnes comme la maquette : 🚫 à gauche (JOB-038), ♥ à droite ; au-dessus du lien étiré sur la carte
+			{(onKeep || onExclude) && (
+				// Deux colonnes comme la maquette : 🚫 à gauche (JOB-038), ♥ à droite (JOB-037) ; au-dessus du lien étiré sur la carte
 				<div className="relative z-10 mt-auto grid w-full grid-cols-2 place-items-center pt-8">
-					<button
-						type="button"
-						aria-label={`Retenir ${fullName(candidate)}`}
-						aria-disabled={keeping}
-						onClick={() => !keeping && onKeep()}
-						className={`col-start-2 flex size-14 cursor-pointer items-center justify-center rounded-full text-primary hover:bg-primary/10 aria-disabled:cursor-wait aria-disabled:opacity-60 ${focus}`}
-					>
-						<HeartIcon width={40} height={40} fill="currentColor" />
-					</button>
+					{onExclude && (
+						<button
+							type="button"
+							aria-label={`Écarter ${fullName(candidate)}`}
+							aria-disabled={busy}
+							onClick={() => !busy && onExclude()}
+							className={`col-start-1 flex size-14 cursor-pointer items-center justify-center rounded-full text-[#b91c1c] hover:bg-[#b91c1c]/10 aria-disabled:cursor-wait aria-disabled:opacity-60 ${focus}`}
+						>
+							<BanIcon width={40} height={40} />
+						</button>
+					)}
+					{onKeep && (
+						<button
+							type="button"
+							aria-label={`Retenir ${fullName(candidate)}`}
+							aria-disabled={busy}
+							onClick={() => !busy && onKeep()}
+							className={`col-start-2 flex size-14 cursor-pointer items-center justify-center rounded-full text-primary hover:bg-primary/10 aria-disabled:cursor-wait aria-disabled:opacity-60 ${focus}`}
+						>
+							<HeartIcon width={40} height={40} fill="currentColor" />
+						</button>
+					)}
 				</div>
 			)}
 		</article>
