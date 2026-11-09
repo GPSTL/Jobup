@@ -84,3 +84,51 @@ export async function getCandidate(id: number): Promise<CandidateResult> {
 	const answer = await getJson<Candidate>(`/api/recruiter/candidates/${id}`);
 	return answer.ok ? { ok: true, candidate: answer.data } : answer;
 }
+
+// ----- Présélection (JOB-037, REC-03) -----
+
+/** Candidat retenu avec ♥ (écran « Candidats retenus ») */
+export type ShortlistedCandidate = CandidateSummary & {
+	/** Date du ♥, ISO 8601 */
+	shortlisted_at: string;
+	/** Offre pour laquelle il est retenu (« Pour : … ») ; toujours null tant que JOB-036 ne permet pas de la choisir */
+	offer: { id: number; title: string } | null;
+};
+
+export type ShortlistResult = { ok: true; candidates: ShortlistedCandidate[] } | { ok: false; reason: CandidatesError };
+
+export type ShortlistActionResult = { ok: true } | { ok: false; reason: CandidatesError | "notFound" };
+
+// Candidats retenus par le recruteur connecté, le plus récent en premier
+export async function getShortlist(): Promise<ShortlistResult> {
+	const answer = await getJson<ShortlistedCandidate[]>("/api/recruiter/shortlist");
+	if (answer.ok) return { ok: true, candidates: answer.data };
+	return { ok: false, reason: answer.reason === "notFound" ? "server" : answer.reason };
+}
+
+// ♥ (POST) ou « Retirer » (DELETE) : écritures, donc avec le jeton CSRF de /api/csrf
+async function changeShortlist(id: number, method: "POST" | "DELETE"): Promise<ShortlistActionResult> {
+	let response: Response;
+	try {
+		const csrf = await fetch("/api/csrf", { credentials: "same-origin" });
+		if (!csrf.ok) return { ok: false, reason: "server" };
+		const { csrfToken } = await csrf.json();
+		response = await fetch(`/api/recruiter/candidates/${id}/shortlist`, {
+			method,
+			credentials: "same-origin",
+			headers: { "X-CSRFToken": csrfToken },
+		});
+	} catch (error) {
+		// Réponse de /api/csrf qui n'est pas du JSON : l'API n'est pas disponible sur ce serveur
+		return { ok: false, reason: error instanceof TypeError ? "network" : "server" };
+	}
+
+	if (response.status === 401 || response.status === 403) return { ok: false, reason: "unauthenticated" };
+	// Candidat désactivé entre-temps
+	if (response.status === 404) return { ok: false, reason: "notFound" };
+	return response.ok ? { ok: true } : { ok: false, reason: "server" };
+}
+
+export const keepCandidate = (id: number) => changeShortlist(id, "POST");
+
+export const removeFromShortlist = (id: number) => changeShortlist(id, "DELETE");
