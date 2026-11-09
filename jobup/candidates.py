@@ -39,8 +39,7 @@ def candidateCard(student: Student) -> dict[str, Any]:
         "id": user.pk,
         "first_name": user.first_name,
         "last_name": user.last_name,
-        # TODO JOB-008: URL of Student.photo, once that field is on main
-        "photo_url": None,
+        "photo_url": student.photo.url if student.photo else None,
         # Not stored: no screen asks the student for their program yet
         "education": None,
         "school": student.school.name if student.school else None,

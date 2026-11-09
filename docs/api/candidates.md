@@ -35,7 +35,7 @@ To be validated by the team (open question of JOB-035): ETU-02 presents the CV o
 | --- | --- | --- |
 | `id` | number | Account id of the student. |
 | `first_name`, `last_name` | string | Name of the student. |
-| `photo_url` | string or `null` | Always `null` for now: the photo arrives with JOB-008 (`Student.photo`). |
+| `photo_url` | string or `null` | URL of the photo of the profile (JOB-008), e.g. `/media/photos/<name>.jpg`; `null` when the student has none. |
 | `education` | string or `null` | Program followed, e.g. “Master MIAGE”. Always `null` for now: no screen asks the student for it, and `Student` does not store it. |
 | `school` | string or `null` | Name of the school; `null` when not filled in. |
 | `description` | string | Personal presentation; empty string when not written yet. |

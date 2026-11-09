@@ -6,7 +6,7 @@ export type CandidateSummary = {
 	id: number;
 	first_name: string;
 	last_name: string;
-	/** null when the student has no photo (always, until the photo of JOB-008 is on main) */
+	/** URL of the photo of the profile (JOB-008); null when the student has none */
 	photo_url: string | null;
 	/** Program followed, e.g. "Master MIAGE": always null for now, no screen asks the student for it */
 	education: string | null;
