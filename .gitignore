@@ -11,3 +11,6 @@ node_modules
 *.zip
 media
 .pytest_cache
+.ruff_cache/
+htmlcov/
+coverage.xml
