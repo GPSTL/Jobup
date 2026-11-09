@@ -1,4 +1,4 @@
-import { test } from "node:test";
+import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
@@ -6,7 +6,7 @@ import CandidateCard from "../front/components/CandidateCard";
 import RecruiterNavbar from "../front/components/RecruiterNavbar";
 import { CandidateProfile } from "../front/pages/CandidateProfilePage";
 import { CandidateDeck } from "../front/pages/CandidatesPage";
-import type { Candidate } from "../front/services/candidates";
+import { getCandidate, getCandidates, type Candidate } from "../front/services/candidates";
 import { availability, cardIndex, degreeLabel, exchangeText, initials } from "../front/utils/candidates";
 
 const candidate: Candidate = {
@@ -47,6 +47,22 @@ const incomplete: Candidate = {
 
 const render = (element: React.ReactNode, path = "/") =>
 	renderToStaticMarkup(<MemoryRouter initialEntries={[path]}>{element}</MemoryRouter>);
+
+const realFetch = globalThis.fetch;
+
+afterEach(() => {
+	globalThis.fetch = realFetch;
+});
+
+// Remplace fetch par une réponse simulée et garde la trace des appels
+function mockFetch(respond: (url: string) => Response) {
+	const calls: { url: string; init?: RequestInit }[] = [];
+	globalThis.fetch = (async (url: string, init?: RequestInit) => {
+		calls.push({ url, init });
+		return respond(url);
+	}) as typeof fetch;
+	return calls;
+}
 
 // Balise <a> complète dont le texte se termine par `text`, icône comprise
 const link = (html: string, text: string) => html.match(new RegExp(`<a [^>]*>(?:(?!</a>).)*${text}</a>`))?.[0] ?? "";
@@ -156,4 +172,38 @@ test("barre recruteur : liens de la maquette, « Candidats » actif sur le profi
 	assert.deepEqual(labels, [...expected, ...expected]);
 	const active = [...html.matchAll(/<a [^>]*aria-current="page"[^>]*>([^<]+)<\/a>/g)].map((match) => match[1]);
 	assert.deepEqual(active, ["Candidats", "Candidats"]);
+});
+
+test("API : cartes puis profil, avec le cookie de session", async () => {
+	const calls = mockFetch((url) => Response.json(url.endsWith("/7") ? candidate : [candidate, incomplete]));
+	assert.deepEqual(await getCandidates(), { ok: true, candidates: [candidate, incomplete] });
+	assert.deepEqual(await getCandidate(7), { ok: true, candidate });
+	assert.deepEqual(
+		calls.map((call) => call.url),
+		["/api/recruiter/candidates", "/api/recruiter/candidates/7"],
+	);
+	assert.ok(calls.every((call) => call.init?.credentials === "same-origin"));
+});
+
+test("API : session expirée, profil introuvable, erreurs du serveur et du réseau", async () => {
+	mockFetch(() => Response.json({ detail: "Authentication credentials were not provided." }, { status: 403 }));
+	assert.deepEqual(await getCandidates(), { ok: false, reason: "unauthenticated" });
+	assert.deepEqual(await getCandidate(7), { ok: false, reason: "unauthenticated" });
+
+	mockFetch(() => Response.json({ error: "Candidate not found" }, { status: 404 }));
+	assert.deepEqual(await getCandidate(9), { ok: false, reason: "notFound" });
+	// La liste existe toujours : un 404 vient d'un autre serveur
+	assert.deepEqual(await getCandidates(), { ok: false, reason: "server" });
+
+	mockFetch(() => new Response("Erreur", { status: 500 }));
+	assert.deepEqual(await getCandidates(), { ok: false, reason: "server" });
+	// Réponse qui n'est pas du JSON
+	mockFetch(() => new Response("<!doctype html>", { status: 200 }));
+	assert.deepEqual(await getCandidate(7), { ok: false, reason: "server" });
+
+	mockFetch(() => {
+		throw new TypeError("Failed to fetch");
+	});
+	assert.deepEqual(await getCandidates(), { ok: false, reason: "network" });
+	assert.deepEqual(await getCandidate(7), { ok: false, reason: "network" });
 });
