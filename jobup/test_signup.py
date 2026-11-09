@@ -1,4 +1,4 @@
-from rest_framework.test import APITestCase
+from rest_framework.test import APIClient, APITestCase
 
 from .models import Recruiter, Role, SchoolManager, Student, User
 
@@ -61,3 +61,58 @@ class SignupProfileTests(APITestCase):
         )
         response = self.client.get("/api/student/conversations")
         self.assertEqual((response.status_code, response.json()), (200, []))
+
+
+# Connexion automatique après l'inscription (JOB-005)
+class SignupLoginTests(APITestCase):
+    def setUp(self):
+        # Comme le front : jeton CSRF demandé avant l'inscription
+        self.client = APIClient(enforce_csrf_checks=True)
+        self.token = self.client.get("/api/csrf").json()["csrfToken"]
+
+    def signup(self, **extra):
+        return self.client.post(
+            "/api/signup",
+            {**PAYLOAD, "role": "Student", **extra},
+            format="json",
+            HTTP_X_CSRFTOKEN=self.token,
+        )
+
+    def test_signup_opens_the_session(self):
+        response = self.signup()
+        self.assertEqual(response.status_code, 201)
+        user = User.objects.get(email=PAYLOAD["email"])
+        self.assertEqual(response.json()["id"], user.pk)
+        self.assertNotIn("password", response.json())
+        # Connecté sans passer par /api/login
+        me = self.client.get("/api/me")
+        self.assertEqual(me.status_code, 200)
+        self.assertEqual(me.json()["id"], user.pk)
+        self.assertEqual(me.json()["role"], Role.STUDENT)
+        # Le profil étudiant existe : les pages étudiant sont accessibles tout de suite
+        conversations = self.client.get("/api/student/conversations")
+        self.assertEqual((conversations.status_code, conversations.json()), (200, []))
+
+    def test_refused_signup_does_not_open_a_session(self):
+        User.objects.create_user(
+            PAYLOAD["email"],
+            "Other123",
+            first_name="Nina",
+            last_name="Existante",
+            role=Role.STUDENT,
+        )
+        for extra in ({}, {"email": "pas-un-mail"}):
+            self.assertEqual(self.signup(**extra).status_code, 400)
+            self.assertEqual(self.client.get("/api/me").status_code, 403)
+
+    def test_login_again_right_after_signup_needs_the_csrf_token(self):
+        # Session ouverte par l'inscription : Django exige alors le jeton CSRF sur /api/login
+        self.assertEqual(self.signup().status_code, 201)
+        credentials = {"email": PAYLOAD["email"], "password": PAYLOAD["password"]}
+        without_token = self.client.post("/api/login", credentials, format="json")
+        self.assertEqual(without_token.status_code, 403)
+        token = self.client.get("/api/csrf").json()["csrfToken"]
+        with_token = self.client.post(
+            "/api/login", credentials, format="json", HTTP_X_CSRFTOKEN=token
+        )
+        self.assertEqual(with_token.status_code, 200)
