@@ -7,6 +7,7 @@ from django.urls import path, re_path
 from jobup import api, candidates
 from jobup.conversations import conversation_messages, student_conversations
 from jobup.profile import student, student_photo
+from jobup.resume import student_resume
 
 
 urlpatterns = [
@@ -18,6 +19,7 @@ urlpatterns = [
     path("api/me", api.me),
     path("api/student/<int:id>", student),
     path("api/student/<int:id>/photo", student_photo),
+    path("api/student/<int:id>/resume", student_resume),
     path("api/student/conversations", student_conversations),
     path("api/applications", api.applications),
     path("api/applications/draft", api.application_draft),

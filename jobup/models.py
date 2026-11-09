@@ -169,6 +169,8 @@ class Student(models.Model):
         default=StudentSubscription.FREE,
     )
     resume = models.FileField(upload_to="CVs", blank=True)
+    # Date of the last import of the CV
+    resume_updated_at = models.DateTimeField(null=True, blank=True)
     photo = models.ImageField(upload_to="photos", blank=True)
     desired_position = models.CharField(max_length=100, blank=True)
     description = models.CharField(max_length=500, blank=True)

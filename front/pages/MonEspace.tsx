@@ -112,7 +112,7 @@ export default function MonEspace({ user }: MonEspaceProps) {
 					)}
 
 					{/* JOB-019: loads its own data, so it does not wait for the profile */}
-					<CvSection />
+					<CvSection userId={user.id} />
 				</div>
 			</main>
 		</div>
