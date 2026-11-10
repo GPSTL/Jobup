@@ -1,16 +1,31 @@
 # Candidate cards and profiles for recruiters (JOB-035, REC-01): the list of
 # the cards, the full profile with the exchange history, and the CV download.
+# The filters of the cards and their lists of values (JOB-036, REC-02).
 # Contract with the front end: docs/api/candidates.md
 import os
-from typing import Any
+from collections.abc import Iterable
+from typing import Any, Literal
 
 from django.db.models import QuerySet
 from django.http import FileResponse
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from rest_framework.decorators import api_view
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from .conversations import normalize
 from .models import JobApplication, Role, Student, User
+
+# Levels of the "Expérience" list, in months of Student.experience_level:
+# value sent by the front end -> (label, first month, last month or None)
+EXPERIENCE_LEVELS: dict[str, tuple[str, int, int | None]] = {
+    "beginner": ("Débutant (moins de 6 mois)", 0, 5),
+    "junior": ("Junior (6 mois à 2 ans)", 6, 23),
+    "confirmed": ("Confirmé (2 ans et plus)", 24, None),
+}
+
+# What a recruiter or a student may write for remote work, in the region field
+REMOTE = {"remote", "full remote", "teletravail", "a distance", "distanciel"}
 
 
 def isRecruiter(user: User) -> bool:
@@ -74,20 +89,86 @@ def exchanges(student: Student, recruiter: User) -> list[dict[str, Any]]:
     ]
 
 
+def skillsOf(student: Student) -> list[str]:
+    # Stored comma separated
+    return [skill.strip() for skill in student.skills.split(",") if skill.strip()]
+
+
 def candidateProfile(student: Student, recruiter: User) -> dict[str, Any]:
     return {
         **candidateCard(student),
         "region": student.region,
         "study_degree": student.study_degree,
         "available_from": student.available_from,
-        # Stored comma separated
-        "skills": [
-            skill.strip() for skill in student.skills.split(",") if skill.strip()
-        ],
+        "skills": skillsOf(student),
         # Not stored: Student only has experience_level, in months
         "experiences": [],
         "exchanges": exchanges(student, recruiter),
     }
+
+
+def recruiterDeck(recruiter: User) -> QuerySet[Student]:
+    # Les candidats déjà retenus (JOB-037) ou écartés (JOB-038) par ce recruteur quittent la pile
+    # de cartes ; seuls les siens comptent. Le profil des retenus reste accessible depuis « Candidats retenus »
+    return (
+        visibleStudents()
+        .exclude(shortlisted_by__recruiter__user=recruiter)
+        .exclude(excluded_by__recruiter__user=recruiter)
+    )
+
+
+class CandidateFilters(BaseModel):
+    # Query of GET /api/recruiter/candidates; an empty criterion is not applied
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    position: str = Field(default="", max_length=100)
+    experience: Literal["", "beginner", "junior", "confirmed"] = ""
+    skill: str = Field(default="", max_length=64)
+    region: str = Field(default="", max_length=64)
+
+
+def comparable(text: str) -> str:
+    # Neither case, accents nor hyphens count: "Île-de-France" is "ile de france"
+    return " ".join(normalize(text).replace("-", " ").replace("'", " ").split())
+
+
+def matchesRegion(region: str, wanted: str) -> bool:
+    # "remote" (or "télétravail"…) finds the students who wrote one of these words;
+    # anything else is looked for in the region of the student: "paris" finds "Paris 15e"
+    if comparable(wanted) in REMOTE:
+        return comparable(region) in REMOTE
+    return comparable(wanted) in comparable(region)
+
+
+def matches(student: Student, filters: CandidateFilters) -> bool:
+    # Every criterion that is filled in must hold
+    if filters.position and comparable(student.desired_position) != comparable(
+        filters.position
+    ):
+        return False
+    if filters.experience:
+        _, first, last = EXPERIENCE_LEVELS[filters.experience]
+        months = student.experience_level
+        if months < first or (last is not None and months > last):
+            return False
+    if filters.skill and comparable(filters.skill) not in {
+        comparable(skill) for skill in skillsOf(student)
+    }:
+        return False
+    return not filters.region or matchesRegion(student.region, filters.region)
+
+
+def distinct(values: Iterable[str]) -> list[str]:
+    # One spelling per value, whatever its case or accents, in alphabetical order.
+    # min() keeps the same spelling whatever the order of the cards ("Data analyst"
+    # rather than "data ANALYST")
+    found: dict[str, str] = {}
+    for value in values:
+        value = value.strip()
+        if value:
+            key = comparable(value)
+            found[key] = min(found.get(key, value), value)
+    return [found[key] for key in sorted(found)]
 
 
 @api_view(["GET"])
@@ -95,14 +176,39 @@ def candidate_list(request: Request) -> Response:
     user: User = request.user
     if not isRecruiter(user):
         return Response({"error": "Forbidden"}, status=403)
-    # Les candidats déjà retenus (JOB-037) ou écartés (JOB-038) par ce recruteur quittent la pile
-    # de cartes ; seuls les siens comptent. Le profil des retenus reste accessible depuis « Candidats retenus »
-    deck = (
-        visibleStudents()
-        .exclude(shortlisted_by__recruiter__user=user)
-        .exclude(excluded_by__recruiter__user=user)
+    try:
+        filters = CandidateFilters.model_validate(request.query_params.dict())
+    except ValidationError:
+        return Response({"error": "Invalid filters"}, status=400)
+    return Response(
+        [
+            candidateCard(student)
+            for student in recruiterDeck(user)
+            if matches(student, filters)
+        ]
     )
-    return Response([candidateCard(student) for student in deck])
+
+
+@api_view(["GET"])
+def candidate_filters(request: Request) -> Response:
+    # Values offered by the lists of the form: the positions and the skills come from
+    # the cards of this recruiter, so that every value finds at least one candidate
+    user: User = request.user
+    if not isRecruiter(user):
+        return Response({"error": "Forbidden"}, status=403)
+    deck = list(recruiterDeck(user))
+    return Response(
+        {
+            "positions": distinct(student.desired_position for student in deck),
+            "experiences": [
+                {"value": value, "label": label}
+                for value, (label, _, _) in EXPERIENCE_LEVELS.items()
+            ],
+            "skills": distinct(
+                skill for student in deck for skill in skillsOf(student)
+            ),
+        }
+    )
 
 
 @api_view(["GET"])

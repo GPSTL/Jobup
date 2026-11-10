@@ -3,10 +3,22 @@ import { Link, Navigate, useSearchParams } from "react-router-dom";
 
 import Button from "../components/Button";
 import CandidateCard from "../components/CandidateCard";
+import CandidateFilterPanel, { NoMatchingCandidates } from "../components/CandidateFilters";
 import ChevronDownIcon from "../components/ChevronDownIcon";
 import HeartIcon from "../components/HeartIcon";
 import RecruiterNavbar from "../components/RecruiterNavbar";
-import { excludeCandidate, getCandidates, keepCandidate, type CandidateSummary, type CandidatesResult } from "../services/candidates";
+import {
+	excludeCandidate,
+	filterQuery,
+	getCandidates,
+	getFilterOptions,
+	keepCandidate,
+	type CandidateFilters,
+	type CandidateSummary,
+	type CandidatesResult,
+	type FilterOptions,
+} from "../services/candidates";
+import { filtersFromParams, hasFilters, NO_FILTERS, withCandidate, withFilters } from "../utils/candidateFilters";
 import { cardIndex, fullName } from "../utils/candidates";
 import { focus } from "../utils/searchPageStyles";
 import { REQUEST_ERRORS } from "../utils/validation";
@@ -76,14 +88,22 @@ export function CandidateDeck({ candidates, index, onSelect, onKeep, keeping, on
 	);
 }
 
-// "Candidats" tab of the recruiter (JOB-035, REC-01)
+// "Candidats" tab of the recruiter (JOB-035, REC-01), with its filters (JOB-036, REC-02)
 export default function CandidatesPage() {
 	// null while the candidates load
 	const [result, setResult] = useState<CandidatesResult | null>(null);
 	// Incremented by "Réessayer" to load the candidates again
 	const [attempt, setAttempt] = useState(0);
-	// The card shown is kept in the URL, so that "Retour aux candidats" on the profile comes back to it
+	// The card shown and the criteria of the search are kept in the URL, so that "Retour aux candidats"
+	// on the profile comes back to them
 	const [params, setParams] = useSearchParams();
+	const applied = filtersFromParams(params);
+	// Same string for the same criteria: the search is run again only when they change
+	const query = filterQuery(applied);
+	// Values of the lists of the filters (JOB-036)
+	const [options, setOptions] = useState<FilterOptions | null>(null);
+	const [optionsError, setOptionsError] = useState("");
+	const [optionsAttempt, setOptionsAttempt] = useState(0);
 	// ♥ ou 🚫 en cours d'envoi, message d'échec et annonce du succès (JOB-037, JOB-038)
 	const [pending, setPending] = useState<"keep" | "exclude" | null>(null);
 	const [actionError, setActionError] = useState("");
@@ -92,20 +112,43 @@ export default function CandidatesPage() {
 	const [allDone, setAllDone] = useState(false);
 
 	useEffect(() => {
-		// Ignores the answer if the page was left in the meantime
+		// Ignores the answer if the page was left, or the criteria changed, in the meantime
 		let ignore = false;
-		getCandidates().then((response) => {
+		// New search, from the button, a filter chip or the arrows of the browser
+		setResult(null);
+		setAllDone(false);
+		setActionError("");
+		getCandidates(filtersFromParams(new URLSearchParams(query))).then((response) => {
 			if (!ignore) setResult(response);
 		});
 		return () => {
 			ignore = true;
 		};
-	}, [attempt]);
+	}, [attempt, query]);
+
+	useEffect(() => {
+		let ignore = false;
+		setOptionsError("");
+		getFilterOptions().then((response) => {
+			if (ignore) return;
+			if (response.ok) setOptions(response.options);
+			// Session expired: back to the login page, as for the cards
+			else if (response.reason === "unauthenticated") setResult(response);
+			else setOptionsError(`Les listes des filtres n’ont pas pu être chargées. ${REQUEST_ERRORS[response.reason]}`);
+		});
+		return () => {
+			ignore = true;
+		};
+	}, [optionsAttempt]);
 
 	const retry = () => {
 		setResult(null);
 		setAttempt(attempt + 1);
 	};
+
+	// "Rechercher les candidats", a chip removed or "Réinitialiser": a new entry in the history, so that
+	// the "back" arrow of the browser gives the previous search back
+	const search = (filters: CandidateFilters) => setParams(withFilters(params, filters));
 
 	// ♥ (retenir) ou 🚫 (écarter) sur la carte affichée : la carte quitte la pile et la suivante s'affiche
 	const dismiss = async (kind: "keep" | "exclude", candidates: CandidateSummary[], index: number) => {
@@ -143,7 +186,7 @@ export default function CandidatesPage() {
 				: `${fullName(candidate)} a été écarté de vos candidats.`,
 		);
 		if (rest.length === 0) setAllDone(true);
-		else setParams({ candidate: String(rest[Math.min(index, rest.length - 1)].id) }, { replace: true });
+		else setParams(withCandidate(params, rest[Math.min(index, rest.length - 1)].id), { replace: true });
 	};
 
 	// Session expired in the meantime
@@ -157,71 +200,95 @@ export default function CandidatesPage() {
 
 			<main className="px-4 pt-6 pb-16 md:px-6 md:pt-9">
 				<h1 className="sr-only">Candidats</h1>
-				<div className="mx-auto mb-6 flex max-w-[464px] justify-end sm:max-w-[640px]">
-					<Link to="/recruiter/shortlist" className={`flex items-center gap-2 rounded-sm font-medium text-primary hover:underline ${focus}`}>
-						<HeartIcon width={18} height={18} fill="currentColor" />
-						Candidats retenus
-					</Link>
-				</div>
-				{/* Succès du ♥ ou du 🚫 annoncé aux lecteurs d'écran */}
-				<p role="status" className="sr-only">
-					{announcement}
-				</p>
-				{actionError && (
-					<p role="alert" className="mx-auto mb-4 max-w-[464px] rounded-[12px] bg-[#fef2f2] px-4 py-3 text-center text-[#b91c1c]">
-						{actionError}
-					</p>
-				)}
-
-				{result === null && (
-					// Gray block with the shape of a card, while the candidates load
-					<>
-						<p role="status" className="sr-only">
-							Chargement des candidats…
-						</p>
-						<div className="mx-auto h-[540px] max-w-[464px] rounded-[20px] bg-surface/60 motion-safe:animate-pulse" />
-					</>
-				)}
-
-				{result?.ok === false && (
-					<div role="alert" className={statePanel}>
-						<p>{REQUEST_ERRORS[result.reason]}</p>
-						<Button onClick={retry}>Réessayer</Button>
-					</div>
-				)}
-
-				{result?.ok && result.candidates.length === 0 && !allDone && (
-					<div className={statePanel}>
-						<h2 className="text-2xl font-semibold">Aucun candidat pour le moment</h2>
-						<p className="text-[#6b7280]">Les profils des étudiants apparaîtront ici.</p>
-					</div>
-				)}
-
-				{result?.ok && result.candidates.length === 0 && allDone && (
-					<div className={statePanel}>
-						{/* Le bouton de la dernière carte vient de disparaître : le focus clavier se pose ici */}
-						<h2 ref={(heading) => heading?.focus()} tabIndex={-1} className="text-2xl font-semibold outline-none">
-							Vous avez parcouru tous les candidats
-						</h2>
-						<p className="text-[#6b7280]">Retrouvez les profils que vous avez retenus dans votre présélection. Ceux que vous avez écartés n’apparaîtront plus.</p>
-						<Button to="/recruiter/shortlist">Voir les candidats retenus</Button>
-					</div>
-				)}
-
-				{result?.ok && result.candidates.length > 0 && (
-					<CandidateDeck
-						candidates={result.candidates}
-						index={cardIndex(result.candidates, params.get("candidate"))}
-						onSelect={(index) => {
-							setActionError("");
-							setParams({ candidate: String(result.candidates[index].id) }, { replace: true });
-						}}
-						onKeep={() => dismiss("keep", result.candidates, cardIndex(result.candidates, params.get("candidate")))}
-						keeping={pending === "keep"}
-						onExclude={() => dismiss("exclude", result.candidates, cardIndex(result.candidates, params.get("candidate")))}
-						excluding={pending === "exclude"}
+				{/* Large screens: the filters on the left of the cards, as in the mockup. Small screens: above them */}
+				<div className="mx-auto flex max-w-[1236px] flex-col gap-8 lg:flex-row lg:items-start">
+					<CandidateFilterPanel
+						key={query}
+						applied={applied}
+						options={options}
+						optionsError={optionsError}
+						onRetryOptions={() => setOptionsAttempt(optionsAttempt + 1)}
+						onSearch={search}
+						count={result?.ok ? result.candidates.length : null}
+						className="lg:w-[320px] lg:shrink-0"
 					/>
-				)}
+					<div className="min-w-0 flex-1">
+						<div className="mx-auto mb-6 flex max-w-[464px] justify-end sm:max-w-[640px]">
+							<Link to="/recruiter/shortlist" className={`flex items-center gap-2 rounded-sm font-medium text-primary hover:underline ${focus}`}>
+								<HeartIcon width={18} height={18} fill="currentColor" />
+								Candidats retenus
+							</Link>
+						</div>
+						{/* Succès du ♥ ou du 🚫 annoncé aux lecteurs d'écran */}
+						<p role="status" className="sr-only">
+							{announcement}
+						</p>
+						{actionError && (
+							<p role="alert" className="mx-auto mb-4 max-w-[464px] rounded-[12px] bg-[#fef2f2] px-4 py-3 text-center text-[#b91c1c]">
+								{actionError}
+							</p>
+						)}
+
+						{result === null && (
+							// Gray block with the shape of a card, while the candidates load
+							<>
+								<p role="status" className="sr-only">
+									Chargement des candidats…
+								</p>
+								<div className="mx-auto h-[540px] max-w-[464px] rounded-[20px] bg-surface/60 motion-safe:animate-pulse" />
+							</>
+						)}
+
+						{result?.ok === false && (
+							<div role="alert" className={statePanel}>
+								<p>{REQUEST_ERRORS[result.reason]}</p>
+								<Button onClick={retry}>Réessayer</Button>
+							</div>
+						)}
+
+						{result?.ok && result.candidates.length === 0 && !allDone && !hasFilters(applied) && (
+							<div className={statePanel}>
+								<h2 className="text-2xl font-semibold">Aucun candidat pour le moment</h2>
+								<p className="text-[#6b7280]">Les profils des étudiants apparaîtront ici.</p>
+							</div>
+						)}
+
+						{result?.ok && result.candidates.length === 0 && !allDone && hasFilters(applied) && (
+							<NoMatchingCandidates
+								filters={applied}
+								options={options}
+								onRemove={(key) => search({ ...applied, [key]: "" })}
+								onReset={() => search(NO_FILTERS)}
+							/>
+						)}
+
+						{result?.ok && result.candidates.length === 0 && allDone && (
+							<div className={statePanel}>
+								{/* Le bouton de la dernière carte vient de disparaître : le focus clavier se pose ici */}
+								<h2 ref={(heading) => heading?.focus()} tabIndex={-1} className="text-2xl font-semibold outline-none">
+									Vous avez parcouru tous les candidats
+								</h2>
+								<p className="text-[#6b7280]">Retrouvez les profils que vous avez retenus dans votre présélection. Ceux que vous avez écartés n’apparaîtront plus.</p>
+								<Button to="/recruiter/shortlist">Voir les candidats retenus</Button>
+							</div>
+						)}
+
+						{result?.ok && result.candidates.length > 0 && (
+							<CandidateDeck
+								candidates={result.candidates}
+								index={cardIndex(result.candidates, params.get("candidate"))}
+								onSelect={(index) => {
+									setActionError("");
+									setParams(withCandidate(params, result.candidates[index].id), { replace: true });
+								}}
+								onKeep={() => dismiss("keep", result.candidates, cardIndex(result.candidates, params.get("candidate")))}
+								keeping={pending === "keep"}
+								onExclude={() => dismiss("exclude", result.candidates, cardIndex(result.candidates, params.get("candidate")))}
+								excluding={pending === "exclude"}
+							/>
+						)}
+					</div>
+				</div>
 			</main>
 		</div>
 	);

@@ -27,6 +27,7 @@ urlpatterns = [
     path("api/applications/<int:id>/documents/<slug:kind>", api.application_document),
     path("api/conversations/<int:id>/messages", conversation_messages),
     path("api/recruiter/candidates", candidates.candidate_list),
+    path("api/recruiter/candidates/filters", candidates.candidate_filters),
     path("api/recruiter/candidates/<int:id>", candidates.candidate_detail),
     path("api/recruiter/candidates/<int:id>/cv", candidates.candidate_cv),
     path("api/recruiter/candidates/<int:id>/shortlist", shortlist.shortlist_candidate),

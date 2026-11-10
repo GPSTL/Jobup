@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import BanIcon from "./BanIcon";
 import { CandidateAvatar, EducationLine } from "./CandidateIdentity";
@@ -27,6 +27,8 @@ type CandidateCardProps = {
 export default function CandidateCard({ candidate, onKeep, keeping = false, onExclude, excluding = false }: CandidateCardProps) {
 	// Une seule action à la fois : pendant l'envoi de l'une, l'autre est inactive
 	const busy = keeping || excluding;
+	// Recherche en cours (critères des filtres, JOB-036), reprise par « Retour aux candidats » sur le profil
+	const { search } = useLocation();
 	return (
 		<article className="relative flex min-h-[540px] flex-col items-center rounded-[20px] bg-surface px-6 pt-9 pb-10 shadow-[0_4px_12px_rgba(0,0,0,0.1)] sm:px-18">
 			<h2 className="text-center text-[32px] leading-tight font-semibold">{fullName(candidate)}</h2>
@@ -41,7 +43,11 @@ export default function CandidateCard({ candidate, onKeep, keeping = false, onEx
 			</p>
 
 			<div className="mt-5 flex flex-col gap-4 self-stretch text-xl font-medium">
-				<Link to={`/recruiter/candidates/${candidate.id}`} className={`${cardLink} after:absolute after:inset-0 after:rounded-[20px]`}>
+				<Link
+					to={`/recruiter/candidates/${candidate.id}`}
+					state={{ candidatesSearch: search }}
+					className={`${cardLink} after:absolute after:inset-0 after:rounded-[20px]`}
+				>
 					Consulter le profil
 				</Link>
 				{candidate.cv_url ? (

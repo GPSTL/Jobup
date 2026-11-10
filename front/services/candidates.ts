@@ -72,9 +72,9 @@ async function getJson<T>(url: string): Promise<Answer<T>> {
 	}
 }
 
-// Candidates the logged-in recruiter may see, in the order of the cards
-export async function getCandidates(): Promise<CandidatesResult> {
-	const answer = await getJson<CandidateSummary[]>("/api/recruiter/candidates");
+// Candidates the logged-in recruiter may see, in the order of the cards; only those matching the filters (JOB-036)
+export async function getCandidates(filters?: CandidateFilters): Promise<CandidatesResult> {
+	const answer = await getJson<CandidateSummary[]>(`/api/recruiter/candidates${filters ? filterQuery(filters) : ""}`);
 	if (answer.ok) return { ok: true, candidates: answer.data };
 	// The list route always exists: a 404 means the server is not the expected one
 	return { ok: false, reason: answer.reason === "notFound" ? "server" : answer.reason };
@@ -83,6 +83,48 @@ export async function getCandidates(): Promise<CandidatesResult> {
 export async function getCandidate(id: number): Promise<CandidateResult> {
 	const answer = await getJson<Candidate>(`/api/recruiter/candidates/${id}`);
 	return answer.ok ? { ok: true, candidate: answer.data } : answer;
+}
+
+// ----- Filtres (JOB-036, REC-02) -----
+
+export const FILTER_KEYS = ["position", "experience", "skill", "region"] as const;
+
+/** Critères de la recherche, envoyés tels quels à l'API ; "" pour un critère non utilisé */
+export type CandidateFilters = {
+	/** Poste recherché par l'étudiant : une valeur de FilterOptions.positions */
+	position: string;
+	/** Niveau d'expérience : une valeur de FilterOptions.experiences */
+	experience: string;
+	/** Logiciel maîtrisé : une valeur de FilterOptions.skills */
+	skill: string;
+	/** Saisie libre : une ville, une région, ou « remote » */
+	region: string;
+};
+
+/** Valeurs proposées par les listes du formulaire, fournies par l'API pour ne jamais diverger de ce qu'elle accepte */
+export type FilterOptions = {
+	positions: string[];
+	experiences: { value: string; label: string }[];
+	skills: string[];
+};
+
+export type FilterOptionsResult = { ok: true; options: FilterOptions } | { ok: false; reason: CandidatesError };
+
+// Seuls les critères renseignés partent : « ?skill=SQL&region=Bordeaux »
+export function filterQuery(filters: CandidateFilters) {
+	const params = new URLSearchParams();
+	for (const key of FILTER_KEYS) {
+		const value = filters[key].trim();
+		if (value) params.set(key, value);
+	}
+	const query = params.toString();
+	return query ? `?${query}` : "";
+}
+
+export async function getFilterOptions(): Promise<FilterOptionsResult> {
+	const answer = await getJson<FilterOptions>("/api/recruiter/candidates/filters");
+	if (answer.ok) return { ok: true, options: answer.data };
+	return { ok: false, reason: answer.reason === "notFound" ? "server" : answer.reason };
 }
 
 // ----- Présélection (JOB-037, REC-03) -----
