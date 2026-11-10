@@ -58,6 +58,13 @@ To be validated by the team (open question of JOB-035): ETU-02 presents the CV o
       "id": 31,
       "date": "2026-10-15T09:12:00.123456Z",
       "offer_title": "Développeur Java en alternance"
+    },
+    {
+      "kind": "message",
+      "id": 87,
+      "date": "2026-10-16T14:05:00.123456Z",
+      "from_me": true,
+      "body": "Bonjour Lucas, votre profil nous intéresse."
     }
   ]
 }
@@ -72,7 +79,7 @@ To be validated by the team (open question of JOB-035): ETU-02 presents the CV o
 | `experiences` | array | Always empty for now: `Student` only stores `experience_level`, a number of months. Items will be `{ "title": string, "details": string }`. |
 | `exchanges` | array | History of the exchanges with the logged-in recruiter, oldest first. |
 
-The exchanges are the applications sent by the student to the offers of the logged-in recruiter (`kind: "application"`, date of sending, title of the offer). Drafts are left out, since the recruiter never received them. The applications to the offers of other recruiters, colleagues of the same company included, are never sent. The messages of the conversation (`kind: "message"`, with `from_me` and `body`) will be added by JOB-039, from the `Conversation` and `Message` models of JOB-032.
+The exchanges are the applications sent by the student to the offers of the logged-in recruiter (`kind: "application"`, date of sending, title of the offer). Drafts are left out, since the recruiter never received them. The applications to the offers of other recruiters, colleagues of the same company included, are never sent. They also include the messages of the conversation between the student and the logged-in recruiter (JOB-039): `kind: "message"`, id of the `Message`, date of sending, `from_me` (true when the recruiter sent it) and `body`. The messages of the conversations of other recruiters are never sent. Applications and messages come mixed, oldest first; the whole conversation is in the « Messages » tab (`docs/api/recruiter-conversations.md`).
 
 ## The CV
 

@@ -12,33 +12,18 @@ Envoi refusé si vide ou > 2000 caractères. Brouillon conservé en cas d'erreur
 Horodatages serveur, affichage local fr-FR, regroupement par jour. Polling des
 messages toutes les 10 secondes lorsque l'onglet est visible.
 
-## Contrat proposé — à valider avec JOB-041 / backend
+## Liste et présence
 
-GET `/api/recruiter/conversations` (endpoint non présent à cette date) :
+La liste vient de `GET /api/recruiter/conversations` : contrat et mécanisme de présence
+dans `docs/api/recruiter-conversations.md`. La recherche par nom filtre la liste chargée ;
+la recherche côté serveur et le bouton « + » relèvent de JOB-041.
 
-```json
-[{"id": 1, "candidate": {"id": 12, "first_name": "Sarah", "last_name": "Benali"}, "last_message": {"body": "Bonjour", "created_at": "2026-11-09T10:00:00Z", "from_me": false}, "last_seen_at": null}]
-```
-
-`candidate.id` est l'identifiant du compte (`User`), pas celui de la ligne `Student` :
-c'est lui que le profil passe dans `?candidate=<id>`.
-`last_message` peut être null. Le serveur doit filtrer les conversations selon
-le participant connecté. Le client ne constitue pas un contrôle d'accès.
-
-Présence proposée : `last_seen_at` doit être une activité observée par le serveur
-(heartbeat authentifié, pas last_login). « En ligne » pendant 120 secondes,
-puis « Hors ligne ». La valeur future, invalide ou absente affiche
+Le serveur envoie l'âge de la dernière requête du candidat (`seen_seconds_ago`), que
+`front/services/recruiterConversations.ts` convertit en `last_seen_at` dans l'horloge du
+navigateur. « En ligne » pendant 120 secondes, puis « Hors ligne » ; `null` affiche
 « Présence indisponible ». Le navigateur réévalue l'expiration toutes les 5 secondes
 et actualise la liste toutes les 30 secondes quand la page est visible.
-La règle et le heartbeat restent à implémenter/valider côté backend.
+Côté étudiant, `RequireStudent` envoie une requête par minute tant que la page est
+visible (`front/services/presence.ts`).
 
-## Démonstration frontend
-
-`/recruiter/messages?demo=1` (à saisir dans l'adresse, aucun lien n'y mène) : trois
-conversations fictives, une en ligne, une hors ligne et une sans présence connue.
-La présence en ligne expire après deux minutes sans renouvellement.
-Les envois sont simulés en mémoire et disparaissent au rechargement ; ils ne sont
-jamais envoyés au serveur. La page indique explicitement ce mode. Les endpoints
-réels et la protection d'accès ne sont pas remplacés dans le mode normal.
-
-La conformité visuelle Figma et la présence effective nécessitent encore une validation.
+La conformité visuelle Figma reste à valider.

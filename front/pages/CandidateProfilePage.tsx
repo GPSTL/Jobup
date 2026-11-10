@@ -75,7 +75,7 @@ export function CandidateProfile({ candidate }: { candidate: Candidate }) {
 					</ul>
 				</div>
 				<div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-					{/* TODO JOB-039: open the conversation with this candidate, or start it */}
+					{/* Opens the conversation with this candidate (JOB-039); starting one when there is none: JOB-041 */}
 					<Link to={`/recruiter/messages?candidate=${candidate.id}`} className={outlineAction}>
 						<MessageIcon width={18} height={18} />
 						Message
@@ -146,7 +146,7 @@ export function CandidateProfile({ candidate }: { candidate: Candidate }) {
 									</li>
 								))}
 							</ol>
-							{/* TODO JOB-039: open the conversation with this candidate */}
+							{/* Opens the conversation with this candidate (JOB-039) */}
 							<Link to={`/recruiter/messages?candidate=${candidate.id}`} className={outlineAction}>
 								<MessageIcon width={18} height={18} />
 								Ouvrir la conversation

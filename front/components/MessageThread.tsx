@@ -7,14 +7,9 @@ import { getMessages, sendMessage, type Message } from "../services/messages";
 import { groupByDay, formatTime, MAX_MESSAGE_LENGTH, mergeMessages, REFRESH_DELAY, SEND_ERRORS, type MessageDay } from "../utils/messages";
 import { MESSAGES } from "../utils/validation";
 
-export type MessageTransport = { getMessages: typeof getMessages; sendMessage: typeof sendMessage };
-const defaultTransport: MessageTransport = { getMessages, sendMessage };
-
 type MessageThreadProps = {
 	variant?: "student" | "recruiter";
 	presence?: ReactNode;
-	/** Injected only for explicitly labelled frontend previews/tests. */
-	transport?: MessageTransport;
 	conversationId: number;
 	/** Interlocuteur, préparé par la page comme pour la liste */
 	name: string;
@@ -57,7 +52,7 @@ export function ThreadMessages({ days, name, variant = "student" }: { days: Mess
 }
 
 // Fil d'une conversation et champ d'envoi (JOB-034, ETU-15). À monter avec key={conversationId}.
-export default function MessageThread({ conversationId, name, initials, color, backTo, onActivity, presence, transport = defaultTransport, variant = "student" }: MessageThreadProps) {
+export default function MessageThread({ conversationId, name, initials, color, backTo, onActivity, presence, variant = "student" }: MessageThreadProps) {
 	const [messages, setMessages] = useState<Message[] | null>(null);
 	const [hasMore, setHasMore] = useState(false);
 	const [loadError, setLoadError] = useState("");
@@ -98,7 +93,7 @@ export default function MessageThread({ conversationId, name, initials, color, b
 		let ignore = false;
 		setMessages(null);
 		setLoadError("");
-		transport.getMessages(conversationId).then((result) => {
+		getMessages(conversationId).then((result) => {
 			if (ignore) return;
 			if (result.ok) {
 				pendingScroll.current = "bottom";
@@ -111,7 +106,7 @@ export default function MessageThread({ conversationId, name, initials, color, b
 		return () => {
 			ignore = true;
 		};
-	}, [conversationId, attempt, transport]);
+	}, [conversationId, attempt]);
 
 	// Nouveaux messages : vérification régulière tant que l'onglet est visible, et dès qu'il le redevient.
 	// En cas d'échec, la vérification suivante reprend depuis le même message : rien n'est perdu.
@@ -120,7 +115,7 @@ export default function MessageThread({ conversationId, name, initials, color, b
 		let ignore = false;
 		const refresh = () => {
 			if (document.visibilityState !== "visible") return;
-			transport.getMessages(conversationId, { after: lastId.current }).then((result) => {
+			getMessages(conversationId, { after: lastId.current }).then((result) => {
 				if (ignore) return;
 				if (!result.ok) {
 					if (result.reason === "noSession") setNoSession(true);
@@ -139,14 +134,14 @@ export default function MessageThread({ conversationId, name, initials, color, b
 			clearInterval(timer);
 			document.removeEventListener("visibilitychange", refresh);
 		};
-	}, [loaded, conversationId, onActivity, transport]);
+	}, [loaded, conversationId, onActivity]);
 
 	const loadOlder = async () => {
 		const first = messages?.[0];
 		if (!first) return;
 		setOlderLoading(true);
 		setOlderError("");
-		const result = await transport.getMessages(conversationId, { before: first.id });
+		const result = await getMessages(conversationId, { before: first.id });
 		setOlderLoading(false);
 		if (result.ok) {
 			const element = scroller.current;
@@ -166,7 +161,7 @@ export default function MessageThread({ conversationId, name, initials, color, b
 		if (!canSend) return;
 		setSending(true);
 		setSendError("");
-		const result = await transport.sendMessage(conversationId, body);
+		const result = await sendMessage(conversationId, body);
 		setSending(false);
 		if (result.ok) {
 			// La saisie n'est vidée qu'une fois le message enregistré : en cas d'échec, elle reste pour réessayer

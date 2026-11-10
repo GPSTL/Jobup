@@ -142,6 +142,9 @@ class User(AbstractBaseUser, PermissionsMixin):  # pyright: ignore[reportIncompa
     is_active = models.BooleanField(default=True)
     email_confirmed = models.BooleanField(default=True)
     date_joined = models.DateTimeField(auto_now_add=True)
+    # Last request of the logged-in user, for the presence (JOB-039, jobup/presence.py);
+    # null until the first one
+    last_seen_at = models.DateTimeField(null=True, blank=True)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS: ClassVar = ["first_name", "last_name", "role"]
