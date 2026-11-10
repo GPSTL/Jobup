@@ -72,9 +72,9 @@ async function getJson<T>(url: string): Promise<Answer<T>> {
 	}
 }
 
-// Candidates the logged-in recruiter may see, in the order of the cards
-export async function getCandidates(): Promise<CandidatesResult> {
-	const answer = await getJson<CandidateSummary[]>("/api/recruiter/candidates");
+// Candidates the logged-in recruiter may see, in the order of the cards; only those matching the filters (JOB-036)
+export async function getCandidates(filters?: CandidateFilters): Promise<CandidatesResult> {
+	const answer = await getJson<CandidateSummary[]>(`/api/recruiter/candidates${filters ? filterQuery(filters) : ""}`);
 	if (answer.ok) return { ok: true, candidates: answer.data };
 	// The list route always exists: a 404 means the server is not the expected one
 	return { ok: false, reason: answer.reason === "notFound" ? "server" : answer.reason };
@@ -84,3 +84,98 @@ export async function getCandidate(id: number): Promise<CandidateResult> {
 	const answer = await getJson<Candidate>(`/api/recruiter/candidates/${id}`);
 	return answer.ok ? { ok: true, candidate: answer.data } : answer;
 }
+
+// ----- Filtres (JOB-036, REC-02) -----
+
+export const FILTER_KEYS = ["position", "experience", "skill", "region"] as const;
+
+/** Critères de la recherche, envoyés tels quels à l'API ; "" pour un critère non utilisé */
+export type CandidateFilters = {
+	/** Poste recherché par l'étudiant : une valeur de FilterOptions.positions */
+	position: string;
+	/** Niveau d'expérience : une valeur de FilterOptions.experiences */
+	experience: string;
+	/** Logiciel maîtrisé : une valeur de FilterOptions.skills */
+	skill: string;
+	/** Saisie libre : une ville, une région, ou « remote » */
+	region: string;
+};
+
+/** Valeurs proposées par les listes du formulaire, fournies par l'API pour ne jamais diverger de ce qu'elle accepte */
+export type FilterOptions = {
+	positions: string[];
+	experiences: { value: string; label: string }[];
+	skills: string[];
+};
+
+export type FilterOptionsResult = { ok: true; options: FilterOptions } | { ok: false; reason: CandidatesError };
+
+// Seuls les critères renseignés partent : « ?skill=SQL&region=Bordeaux »
+export function filterQuery(filters: CandidateFilters) {
+	const params = new URLSearchParams();
+	for (const key of FILTER_KEYS) {
+		const value = filters[key].trim();
+		if (value) params.set(key, value);
+	}
+	const query = params.toString();
+	return query ? `?${query}` : "";
+}
+
+export async function getFilterOptions(): Promise<FilterOptionsResult> {
+	const answer = await getJson<FilterOptions>("/api/recruiter/candidates/filters");
+	if (answer.ok) return { ok: true, options: answer.data };
+	return { ok: false, reason: answer.reason === "notFound" ? "server" : answer.reason };
+}
+
+// ----- Présélection (JOB-037, REC-03) -----
+
+/** Candidat retenu avec ♥ (écran « Candidats retenus ») */
+export type ShortlistedCandidate = CandidateSummary & {
+	/** Date du ♥, ISO 8601 */
+	shortlisted_at: string;
+	/** Offre pour laquelle il est retenu (« Pour : … ») ; toujours null tant que JOB-036 ne permet pas de la choisir */
+	offer: { id: number; title: string } | null;
+};
+
+export type ShortlistResult = { ok: true; candidates: ShortlistedCandidate[] } | { ok: false; reason: CandidatesError };
+
+export type ShortlistActionResult = { ok: true } | { ok: false; reason: CandidatesError | "notFound" };
+
+// Candidats retenus par le recruteur connecté, le plus récent en premier
+export async function getShortlist(): Promise<ShortlistResult> {
+	const answer = await getJson<ShortlistedCandidate[]>("/api/recruiter/shortlist");
+	if (answer.ok) return { ok: true, candidates: answer.data };
+	return { ok: false, reason: answer.reason === "notFound" ? "server" : answer.reason };
+}
+
+// Écritures sur un candidat (♥, « Retirer », 🚫) : avec le jeton CSRF de /api/csrf
+async function writeCandidate(path: string, method: "POST" | "DELETE"): Promise<ShortlistActionResult> {
+	let response: Response;
+	try {
+		const csrf = await fetch("/api/csrf", { credentials: "same-origin" });
+		if (!csrf.ok) return { ok: false, reason: "server" };
+		const { csrfToken } = await csrf.json();
+		response = await fetch(`/api/recruiter/candidates/${path}`, {
+			method,
+			credentials: "same-origin",
+			headers: { "X-CSRFToken": csrfToken },
+		});
+	} catch (error) {
+		// Réponse de /api/csrf qui n'est pas du JSON : l'API n'est pas disponible sur ce serveur
+		return { ok: false, reason: error instanceof TypeError ? "network" : "server" };
+	}
+
+	if (response.status === 401 || response.status === 403) return { ok: false, reason: "unauthenticated" };
+	// Candidat désactivé entre-temps
+	if (response.status === 404) return { ok: false, reason: "notFound" };
+	return response.ok ? { ok: true } : { ok: false, reason: "server" };
+}
+
+export const keepCandidate = (id: number) => writeCandidate(`${id}/shortlist`, "POST");
+
+export const removeFromShortlist = (id: number) => writeCandidate(`${id}/shortlist`, "DELETE");
+
+// ----- Exclusion (JOB-038, REC-04) -----
+
+// 🚫 : le candidat quitte les cartes de ce recruteur. Répéter l'appel est sans effet : un nouvel essai est toujours permis
+export const excludeCandidate = (id: number) => writeCandidate(`${id}/exclusion`, "POST");

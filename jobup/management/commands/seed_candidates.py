@@ -27,6 +27,8 @@ CANDIDATES: list[dict[str, Any]] = [
         "last_name": "Martin",
         "school": "Université Paris Nanterre",
         "study_degree": StudyDegree.MASTER1,
+        "desired_position": "Développeur back-end",
+        "experience_level": 12,
         "region": "Paris",
         "skills": "Java, Spring Boot, Angular, SQL, Docker, Git",
         "description": "Étudiant en Master MIAGE, je recherche une alternance de 12 mois "
@@ -39,6 +41,8 @@ CANDIDATES: list[dict[str, Any]] = [
         "last_name": "Benali",
         "school": "IUT Montreuil",
         "study_degree": StudyDegree.LICENCE3,
+        "desired_position": "Développeuse front-end",
+        "experience_level": 4,
         "region": "Montreuil",
         "skills": "Angular, TypeScript, Accessibilité, Figma",
         "description": "Passionnée de front-end (Angular, accessibilité), je cherche une "
@@ -51,6 +55,8 @@ CANDIDATES: list[dict[str, Any]] = [
         "last_name": "Diallo",
         "school": None,
         "study_degree": None,
+        "desired_position": "",
+        "experience_level": 0,
         "region": "Lyon",
         "skills": "Python, Django, SQL",
         "description": "Intéressée par le développement back-end, je souhaite approfondir "
@@ -99,6 +105,9 @@ def demoStudent(data: dict[str, Any]) -> Student:
     school = data["school"]
     student.school = School.objects.get_or_create(name=school)[0] if school else None
     student.study_degree = data["study_degree"]
+    # Criteria of the filters (JOB-036)
+    student.desired_position = data["desired_position"]
+    student.experience_level = data["experience_level"]
     student.region = data["region"]
     student.skills = data["skills"]
     student.description = data["description"]

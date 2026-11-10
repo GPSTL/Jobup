@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, Navigate, useParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useParams } from "react-router-dom";
 
 import Button from "../components/Button";
 import CalendarIcon from "../components/CalendarIcon";
@@ -10,6 +10,7 @@ import MapPinIcon from "../components/MapPinIcon";
 import MessageIcon from "../components/MessageIcon";
 import RecruiterNavbar from "../components/RecruiterNavbar";
 import { getCandidate, type Candidate, type CandidateResult } from "../services/candidates";
+import { candidatesLink } from "../utils/candidateFilters";
 import { availability, degreeLabel, exchangeDate, exchangeText, fullName } from "../utils/candidates";
 import { focus } from "../utils/searchPageStyles";
 import { REQUEST_ERRORS } from "../utils/validation";
@@ -21,11 +22,14 @@ const metaItem = "flex items-center gap-1.5";
 const action = `flex items-center justify-center gap-2 rounded-[14px] px-[22px] py-3 text-[16px] font-semibold ${focus}`;
 const outlineAction = `${action} border border-[#d1d5db] bg-surface text-[#111827] hover:bg-slate-50`;
 
-// Back to the cards, on the card of this candidate when there is one
+// Back to the cards, on the card of this candidate when there is one, with the criteria of the
+// search when the profile was opened from a card (JOB-036)
 function BackToCandidates({ id }: { id?: number }) {
+	const state = useLocation().state as { candidatesSearch?: unknown } | null;
+	const search = typeof state?.candidatesSearch === "string" ? state.candidatesSearch : "";
 	return (
 		<Link
-			to={id === undefined ? "/recruiter/candidates" : `/recruiter/candidates?candidate=${id}`}
+			to={candidatesLink(search, id)}
 			className={`flex w-fit items-center gap-2 rounded-[14px] py-1 text-[16px] font-semibold text-primary ${focus}`}
 		>
 			<img src="/static/img/applications/back.svg" width={18} height={18} alt="" />
