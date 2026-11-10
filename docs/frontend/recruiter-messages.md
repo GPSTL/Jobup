@@ -1,9 +1,11 @@
 # REC-05 — interface recruteur (frontend)
 
 Routes protégées par RequireRecruiter : `/recruiter/messages` et `/recruiter/messages/:id`.
-Le profil transmet `?candidate=<id>` pour sélectionner une conversation existante.
+Le profil transmet `?candidate=<id>` pour sélectionner une conversation existante,
+avec l'identifiant du compte du candidat (celui de `/api/recruiter/candidates/<id>`).
 La création d'une conversation reste à coordonner avec JOB-041 ; aucune conversation
-n'est créée automatiquement à l'ouverture d'un profil.
+n'est créée automatiquement à l'ouverture d'un profil. Sans conversation avec ce
+candidat, la page l'indique et renvoie vers la liste.
 
 Le fil réutilise MessageThread et les GET/POST de JOB-034, sans stockage parallèle.
 Envoi refusé si vide ou > 2000 caractères. Brouillon conservé en cas d'erreur.
@@ -18,6 +20,8 @@ GET `/api/recruiter/conversations` (endpoint non présent à cette date) :
 [{"id": 1, "candidate": {"id": 12, "first_name": "Sarah", "last_name": "Benali"}, "last_message": {"body": "Bonjour", "created_at": "2026-11-09T10:00:00Z", "from_me": false}, "last_seen_at": null}]
 ```
 
+`candidate.id` est l'identifiant du compte (`User`), pas celui de la ligne `Student` :
+c'est lui que le profil passe dans `?candidate=<id>`.
 `last_message` peut être null. Le serveur doit filtrer les conversations selon
 le participant connecté. Le client ne constitue pas un contrôle d'accès.
 
@@ -30,8 +34,9 @@ La règle et le heartbeat restent à implémenter/valider côté backend.
 
 ## Démonstration frontend
 
-`/recruiter/messages?demo=1` : deux conversations fictives, dont une en ligne et
-une hors ligne. La présence en ligne expire après deux minutes sans renouvellement.
+`/recruiter/messages?demo=1` (à saisir dans l'adresse, aucun lien n'y mène) : trois
+conversations fictives, une en ligne, une hors ligne et une sans présence connue.
+La présence en ligne expire après deux minutes sans renouvellement.
 Les envois sont simulés en mémoire et disparaissent au rechargement ; ils ne sont
 jamais envoyés au serveur. La page indique explicitement ce mode. Les endpoints
 réels et la protection d'accès ne sont pas remplacés dans le mode normal.

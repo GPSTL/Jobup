@@ -1,6 +1,7 @@
 // Frontend integration contract proposed for JOB-041/JOB-039; backend endpoint pending.
 export type RecruiterConversation = {
 	id: number;
+	/** id: account id, as in /api/recruiter/candidates/<id>; the profile opens the conversation with ?candidate=<id> */
 	candidate: { id: number; first_name: string; last_name: string };
 	last_message: { body: string; created_at: string; from_me: boolean } | null;
 	/** Server-observed activity, not last_login. null = presence unknown. */
