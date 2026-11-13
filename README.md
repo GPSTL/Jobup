@@ -105,8 +105,21 @@ Once running, access the application at `http://127.0.0.1:8000/`.
 | `make debug` | Builds the non-minified JS and CSS without starting the server. |
 | `make run_only` | Starts the server without rebuilding the frontend. |
 | `make migrate` | Creates and applies the database migrations of the `jobup` app. |
+| `make seed` | Fills the database with a complete demo (local use, can be run again): see below. |
 | `make watch_js` | Rebuilds the JS on every change. Used by `make dev`. |
 | `make watch_css` | Rebuilds the CSS on every change. Used by `make dev`. |
+
+## Demo data
+
+After `make migrate`, `make seed` (or `python manage.py seed_demo`) creates a recruiter, its candidates, offers, applications, shortlist, an excluded candidate and conversations, including a message with a PDF attachment (JOB-043) and one with a Word document. It refuses to run when `DEBUG` is off, and running it again creates nothing new.
+
+| Account | Email | Password | To see |
+|---|---|---|---|
+| Recruiter | `recruteur@demo.jobup.fr` | `Demo1234` | `/recruiter/candidates`, a profile with its exchange history, `/recruiter/shortlist` |
+| Student | `lucas.martin@demo.jobup.fr` | `Demo1234` | `/messages` (the conversation with the file to download), `/applications` |
+| School employee | `ecole@demo.jobup.fr` | `Demo1234` | the other side of Lucas's second conversation |
+
+The recruiter's message page (JOB-041) does not exist yet: the files sent by the recruiter are seen and downloaded from the student account.
 
 ## Signup and login forms (JOB-027)
 

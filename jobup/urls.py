@@ -5,7 +5,11 @@ from django.contrib.staticfiles.views import serve
 from django.urls import path, re_path
 
 from jobup import api, candidates, exclusions, shortlist
-from jobup.conversations import conversation_messages, student_conversations
+from jobup.conversations import (
+    conversation_messages,
+    message_attachment,
+    student_conversations,
+)
 from jobup.profile import student, student_photo
 from jobup.resume import student_resume
 
@@ -26,6 +30,10 @@ urlpatterns = [
     path("api/applications/<int:id>/submit", api.application_submit),
     path("api/applications/<int:id>/documents/<slug:kind>", api.application_document),
     path("api/conversations/<int:id>/messages", conversation_messages),
+    path(
+        "api/conversations/<int:id>/messages/<int:message_id>/attachment",
+        message_attachment,
+    ),
     path("api/recruiter/candidates", candidates.candidate_list),
     path("api/recruiter/candidates/filters", candidates.candidate_filters),
     path("api/recruiter/candidates/<int:id>", candidates.candidate_detail),

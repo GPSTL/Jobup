@@ -116,6 +116,10 @@ USE_TZ = True
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# Pièces jointes des messages (JOB-043) : hors de MEDIA_ROOT, donc jamais servies par
+# MEDIA_URL. Elles ne sont lisibles que par l'API, pour les participants de la conversation.
+PRIVATE_MEDIA_ROOT = BASE_DIR / "private_media"
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 

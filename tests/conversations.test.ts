@@ -7,7 +7,7 @@ const realFetch = globalThis.fetch;
 const conversation: ConversationSummary = {
 	id: 3,
 	interlocutor: { kind: "recruiter", first_name: "Léa", last_name: "Martin", organization: "Acme" },
-	last_message: { body: "Disponible jeudi ?", created_at: "2026-11-03T10:32:00", from_me: false },
+	last_message: { body: "Disponible jeudi ?", created_at: "2026-11-03T10:32:00", from_me: false, attachment: null },
 	created_at: "2026-10-01T09:00:00",
 };
 
@@ -49,6 +49,11 @@ test("affichage : interlocuteur, initiales et aperçu", () => {
 	assert.equal(lastMessagePreview(conversation), "Disponible jeudi ?");
 	assert.equal(lastMessagePreview({ ...conversation, last_message: { ...conversation.last_message!, from_me: true } }), "Vous : Disponible jeudi ?");
 	assert.equal(lastMessagePreview({ ...conversation, last_message: null }), "Aucun message pour l’instant");
+	// Un message qui ne contient qu'un fichier montre son nom ; avec du texte, le texte reste affiché
+	const file = { ...conversation.last_message!, body: "", attachment: "Convocation_entretien.pdf" };
+	assert.equal(lastMessagePreview({ ...conversation, last_message: file }), "Pièce jointe : Convocation_entretien.pdf");
+	assert.equal(lastMessagePreview({ ...conversation, last_message: { ...file, from_me: true } }), "Vous : Pièce jointe : Convocation_entretien.pdf");
+	assert.equal(lastMessagePreview({ ...conversation, last_message: { ...file, body: "Voici" } }), "Voici");
 	const school = { ...conversation, interlocutor: { kind: "school" as const, first_name: "Inès", last_name: "Roux", organization: "Université Paris" } };
 	assert.equal(interlocutorName(school), "Inès Roux – Université Paris");
 });
