@@ -1,15 +1,16 @@
 import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
-import { ThreadMessages } from "../front/components/MessageThread";
-import { getMessages, sendMessage, type Message } from "../front/services/messages";
-import { dayLabel, formatTime, groupByDay, mergeMessages } from "../front/utils/messages";
+import { MemoryRouter } from "react-router-dom";
+import MessageThread, { ThreadMessages } from "../front/components/MessageThread";
+import { getMessages, sendMessage, type Message, type MessageAttachment } from "../front/services/messages";
+import { attachmentProblem, dayLabel, formatFileSize, formatTime, groupByDay, mergeMessages, sendError } from "../front/utils/messages";
 
 const realFetch = globalThis.fetch;
 
 // Dates locales : les tests ne dépendent pas du fuseau de la machine
 const at = (day: number, hour: number, minute = 0, month = 10, year = 2026) => new Date(year, month, day, hour, minute).toISOString();
-const message = (id: number, created_at: string, from_me = false): Message => ({ id, body: `Message ${id}`, created_at, from_me });
+const message = (id: number, created_at: string, from_me = false): Message => ({ id, body: `Message ${id}`, created_at, from_me, attachment: null });
 
 type Call = { url: string; init?: RequestInit };
 
@@ -116,4 +117,108 @@ test("rendu : pastille de date, heure d'envoi et auteur annoncé", () => {
 	assert.match(html, new RegExp(`<time dateTime="${now.toISOString()}"[^>]*>${formatTime(now.toISOString())}</time>`));
 	// Mes messages à droite en bleu, ceux de l'interlocuteur à gauche en gris (maquette)
 	assert.match(html, /justify-end[^]*bg-\[#dcedfc\][^]*Message 2/);
+});
+
+const attachment: MessageAttachment = { name: "Convocation_entretien.pdf", size: 220 * 1024, extension: "pdf", url: "/api/conversations/7/messages/12/attachment" };
+const withFile = (id: number, body: string, from_me: boolean): Message => ({ ...message(id, at(3, 10), from_me), body, attachment });
+
+test("envoi avec fichier : multipart avec jeton CSRF, sans Content-Type écrit à la main", async () => {
+	const saved = withFile(12, "", true);
+	const calls = mockFetch(sendResponse(() => Response.json(saved, { status: 201 })));
+	const file = new File(["%PDF-1.7"], "Convocation entretien.pdf", { type: "application/pdf" });
+	assert.deepEqual(await sendMessage(7, "Voici", file), { ok: true, message: saved });
+	assert.deepEqual(calls.map((call) => call.url), ["/api/csrf", "/api/conversations/7/messages"]);
+	assert.equal(calls[1].init?.method, "POST");
+	// Le navigateur ajoute lui-même le séparateur du multipart
+	assert.deepEqual(calls[1].init?.headers, { "X-CSRFToken": "jeton" });
+	const form = calls[1].init?.body;
+	assert.ok(form instanceof FormData);
+	assert.equal(form.get("body"), "Voici");
+	assert.equal((form.get("file") as File).name, "Convocation entretien.pdf");
+	// Fichier seul : le texte est vide
+	await sendMessage(7, "", file);
+	assert.equal((calls[3].init?.body as FormData).get("body"), "");
+});
+
+test("envoi avec fichier : refus et échec expliqués par le serveur, rien n'est présenté comme envoyé", async () => {
+	const file = new File(["MZ"], "virus.exe");
+	const refusal = { errors: { file: "Le fichier doit être au format PDF, DOCX ou DOC." } };
+	mockFetch(sendResponse(() => Response.json(refusal, { status: 400 })));
+	assert.deepEqual(await sendMessage(7, "", file), { ok: false, reason: "invalid", message: refusal.errors.file });
+	mockFetch(sendResponse(() => Response.json({ errors: { file: "Le fichier est vide." } }, { status: 413 })));
+	assert.deepEqual(await sendMessage(7, "", file), { ok: false, reason: "invalid", message: "Le fichier est vide." });
+	mockFetch(sendResponse(() => Response.json({ errors: { file: "Le fichier n’a pas pu être enregistré." } }, { status: 500 })));
+	assert.deepEqual(await sendMessage(7, "", file), { ok: false, reason: "server", message: "Le fichier n’a pas pu être enregistré." });
+	// Sans explication du serveur : la raison seule
+	mockFetch(sendResponse(() => new Response("<html>", { status: 400 })));
+	assert.deepEqual(await sendMessage(7, "", file), { ok: false, reason: "invalid" });
+	mockFetch(sendResponse(() => new Response("<html>", { status: 502 })));
+	assert.deepEqual(await sendMessage(7, "", file), { ok: false, reason: "server" });
+	// Le recruteur n'est plus autorisé : retour à la connexion, comme pour un texte
+	mockFetch(sendResponse(() => new Response(null, { status: 403 })));
+	assert.deepEqual(await sendMessage(7, "", file), { ok: false, reason: "noSession" });
+	mockFetch(sendResponse(() => new Response(null, { status: 404 })));
+	assert.deepEqual(await sendMessage(7, "", file), { ok: false, reason: "notFound" });
+	mockFetch(() => Promise.reject(new TypeError("Failed to fetch")));
+	assert.deepEqual(await sendMessage(7, "", file), { ok: false, reason: "network" });
+});
+
+test("fichier : refusé avant l'envoi selon le nom et la taille, tailles à la française", () => {
+	assert.equal(attachmentProblem({ name: "Fiche_de_poste.pdf", size: 1000 }), null);
+	assert.equal(attachmentProblem({ name: "CV.DOCX", size: 1000 }), null);
+	assert.equal(attachmentProblem({ name: "ancien.doc", size: 10 * 1024 * 1024 }), null);
+	assert.equal(attachmentProblem({ name: "vide.pdf", size: 0 }), "Le fichier est vide.");
+	assert.equal(attachmentProblem({ name: "gros.pdf", size: 10 * 1024 * 1024 + 1 }), "Le fichier ne doit pas dépasser 10 Mo.");
+	for (const name of ["virus.exe", "photo.png", "sans_extension", "archive.pdf.zip", "pdf"]) {
+		assert.equal(attachmentProblem({ name, size: 1000 }), "Le fichier doit être au format PDF, DOCX ou DOC.", name);
+	}
+	assert.equal(formatFileSize(512), "512 o");
+	assert.equal(formatFileSize(220 * 1024), "220 Ko");
+	assert.equal(formatFileSize(1536 * 1024), "1,5 Mo");
+});
+
+test("erreur d'envoi : celle du serveur si elle concerne le fichier, sinon la phrase générale", () => {
+	assert.equal(sendError("invalid", "Le fichier est vide.", true), "Le fichier est vide.");
+	assert.match(sendError("invalid", undefined, true), /le fichier ou le texte a été refusé/);
+	assert.match(sendError("invalid", undefined, false), /vide ou trop long/);
+	assert.match(sendError("network", undefined, true), /impossible de joindre le serveur/);
+});
+
+test("rendu : fichier téléchargeable avec son nom, son format et sa taille", () => {
+	const now = new Date();
+	const html = renderToStaticMarkup(<ThreadMessages days={groupByDay([withFile(12, "Voici la convocation", true)], now)} name="Lucas Martin" />);
+	assert.match(html, /<a href="\/api\/conversations\/7\/messages\/12\/attachment" download="Convocation_entretien.pdf"/);
+	assert.match(html, /<span class="sr-only">Télécharger <\/span>Convocation_entretien.pdf/);
+	assert.match(html, /PDF • 220 Ko/);
+	// Le texte reste affiché avec le fichier
+	assert.match(html, /<span class="sr-only">Vous : <\/span>Voici la convocation/);
+});
+
+test("rendu : un message sans texte n'a pas de paragraphe vide et annonce quand même son auteur", () => {
+	const now = new Date();
+	for (const [from_me, author] of [[true, "Vous"], [false, "Lucas Martin"]] as const) {
+		const html = renderToStaticMarkup(<ThreadMessages days={groupByDay([withFile(12, "", from_me)], now)} name="Lucas Martin" />);
+		assert.doesNotMatch(html, /<p /);
+		assert.match(html, new RegExp(`<span class="sr-only">${author} : </span><span class="sr-only">Télécharger </span>Convocation_entretien.pdf`));
+	}
+	// Un message de texte seul n'affiche aucun fichier
+	const plain = renderToStaticMarkup(<ThreadMessages days={groupByDay([message(1, now.toISOString())], now)} name="Lucas Martin" />);
+	assert.doesNotMatch(plain, /download|PDF/);
+});
+
+test("rendu : le trombone n'existe que dans le fil du recruteur", () => {
+	const props = { conversationId: 7, name: "Lucas Martin", initials: "LM", color: "bg-primary", backTo: "/messages", onActivity: () => {} };
+	const render = (allowAttachment?: boolean) =>
+		renderToStaticMarkup(
+			<MemoryRouter>
+				<MessageThread {...props} allowAttachment={allowAttachment} />
+			</MemoryRouter>,
+		);
+	const recruiter = render(true);
+	assert.match(recruiter, /aria-label="Joindre un fichier"/);
+	assert.match(recruiter, /type="file" accept="\.pdf,\.docx,\.doc"/);
+	// L'étudiant lit et télécharge, il n'a pas de trombone
+	for (const student of [render(), render(false)]) {
+		assert.doesNotMatch(student, /Joindre un fichier|type="file"/);
+	}
 });
