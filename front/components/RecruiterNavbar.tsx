@@ -12,5 +12,5 @@ const links = [
 
 // Shared by every page of the logged-in recruiter
 export default function RecruiterNavbar() {
-	return <AccountNavbar links={links} />;
+	return <AccountNavbar links={links} showBell />;
 }

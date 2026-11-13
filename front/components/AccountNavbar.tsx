@@ -6,12 +6,13 @@ import Navbar, { NavbarLink } from "./Navbar";
 type AccountNavbarProps = {
 	/** Pages of the role, in the order of the mockup */
 	links: { label: string; to: string }[];
+	showBell?: boolean;
 };
 
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary";
 
 // Bar of the logged-in pages, filled by StudentNavbar and RecruiterNavbar. NavbarLink highlights the link of the current page.
-export default function AccountNavbar({ links }: AccountNavbarProps) {
+export default function AccountNavbar({ links, showBell = false }: AccountNavbarProps) {
 	// Menu of the small screens, where the links do not fit in the bar
 	const [open, setOpen] = useState(false);
 	const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -63,7 +64,8 @@ export default function AccountNavbar({ links }: AccountNavbarProps) {
 					))}
 				</ul>
 
-				{/* TODO: notifications */}
+				{/* Notifications are not integrated: static icon, no fictitious unread count. */}
+				{showBell && <span role="img" aria-label="Notifications"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" strokeLinecap="round" strokeLinejoin="round" /></svg></span>}
 			</div>
 		</Navbar>
 	);
