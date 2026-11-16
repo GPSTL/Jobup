@@ -11,13 +11,12 @@ type AccountNavbarProps = {
 	/** Tighter spacing for roles with more navigation items. */
 	compact?: boolean;
 	hoverHighlight?: boolean;
-	variant?: "glass" | "solid";
 };
 
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary";
 
 // Shared by student, recruiter and administrator pages.
-export default function AccountNavbar({ links, showBell = false, actions, compact = false, hoverHighlight = false, variant = "solid" }: AccountNavbarProps) {
+export default function AccountNavbar({ links, showBell = false, actions, compact = false, hoverHighlight = false }: AccountNavbarProps) {
 	// Menu of the small screens, where the links do not fit in the bar
 	const [open, setOpen] = useState(false);
 	const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -32,7 +31,7 @@ export default function AccountNavbar({ links, showBell = false, actions, compac
 	};
 
 	return (
-		<Navbar variant={variant}>
+		<Navbar>
 			<div className={`relative ml-auto flex min-w-0 items-center ${hoverHighlight ? "account-nav-hover" : ""} ${compact ? "gap-4 lg:gap-6" : "gap-12"}`} onKeyDown={onKeyDown}>
 				{/* Large screens: the links are in the bar */}
 				<div className={`hidden lg:flex ${compact ? "min-w-0 flex-wrap justify-end gap-x-6 gap-y-4" : "gap-12"}`}>
