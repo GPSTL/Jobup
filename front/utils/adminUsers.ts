@@ -88,5 +88,8 @@ export function adminReturnTo(next: unknown) {
 	return typeof next === "string" && /^\/administration\/[^/?#][^#]*$/.test(next) ? next : "/administration/users";
 }
 
+// Admin login, then back to `path` (expired session on an administration page)
+export const adminLoginLink = (path: string) => `/administration?${new URLSearchParams({ next: path })}`;
+
 // « 09/10/2026 », in the time zone of the platform
 export const formatDate = (iso: string) => new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris" }).format(new Date(iso));

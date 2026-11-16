@@ -11,6 +11,7 @@ export const REFRESH_DELAY = 10_000;
 export const SEND_ERRORS = {
 	invalid: "Le message n’a pas été envoyé : il est vide ou trop long.",
 	notFound: "Le message n’a pas été envoyé : cette conversation n’existe plus.",
+	suspended: "Le message n’a pas été envoyé : le compte de cet étudiant est suspendu.",
 	server: "Le message n’a pas été envoyé. Réessayez dans un instant.",
 	network: "Le message n’a pas été envoyé : impossible de joindre le serveur. Vérifiez votre connexion et réessayez.",
 };

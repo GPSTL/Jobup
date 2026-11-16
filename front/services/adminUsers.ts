@@ -1,5 +1,7 @@
-// Calls to the administration API (JOB-063, ADM-01): the table of the student accounts and the
-// profile of one of them. Contract: docs/api/admin-users.md
+// Calls to the administration API (JOB-063, ADM-01): the table of the student accounts, the
+// profile of one of them (JOB-064) and its suspension (ADM-03, ADM-04). Contract: docs/api/admin-users.md
+
+import { getCsrfToken } from "./auth";
 
 export type AdminUser = {
 	id: number;
@@ -23,6 +25,8 @@ export type AdminSchool = { id: number; name: string };
 export type AdminUserFiltersResult = { ok: true; schools: AdminSchool[] } | { ok: false };
 
 export type AdminUserDetail = Omit<AdminUser, "detail_url"> & {
+	/** Photo of the profile, null when none was imported */
+	photo_url: string | null;
 	phone: string | null;
 	applications_sent: number;
 	cv_url: string | null;
@@ -33,6 +37,25 @@ export async function getAdminUser(id: string): Promise<AdminUserDetailResult> {
 	let response: Response;
 	try { response = await fetch(`/api/administration/users/${encodeURIComponent(id)}`, { credentials: "same-origin" }); }
 	catch { return { ok: false, reason: "network" }; }
+	if (response.status === 401 || response.status === 403) return { ok: false, reason: "forbidden" };
+	if (response.status === 404) return { ok: false, reason: "notFound" };
+	if (!response.ok) return { ok: false, reason: "server" };
+	try { return { ok: true, user: await response.json() }; }
+	catch { return { ok: false, reason: "server" }; }
+}
+
+// Suspends (ADM-03) or gives back (ADM-04) a student account; answers the updated profile
+export async function setSuspension(id: number, suspended: boolean): Promise<AdminUserDetailResult> {
+	let response: Response;
+	try {
+		const csrfToken = await getCsrfToken();
+		if (!csrfToken) return { ok: false, reason: "server" };
+		response = await fetch(`/api/administration/users/${id}/suspension`, {
+			method: suspended ? "POST" : "DELETE",
+			credentials: "same-origin",
+			headers: { "X-CSRFToken": csrfToken },
+		});
+	} catch { return { ok: false, reason: "network" }; }
 	if (response.status === 401 || response.status === 403) return { ok: false, reason: "forbidden" };
 	if (response.status === 404) return { ok: false, reason: "notFound" };
 	if (!response.ok) return { ok: false, reason: "server" };

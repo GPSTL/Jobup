@@ -22,7 +22,8 @@ Search on the server and starting a conversation (« + ») belong to JOB-041, wh
     "id": 3,
     "candidate": { "id": 12, "first_name": "Lucas", "last_name": "Martin" },
     "last_message": { "body": "Bonjour !", "created_at": "2026-11-10T09:12:00.123456Z", "from_me": false },
-    "seen_seconds_ago": 42
+    "seen_seconds_ago": 42,
+    "suspended": false
   }
 ]
 ```
@@ -33,6 +34,7 @@ Search on the server and starting a conversation (« + ») belong to JOB-041, wh
 | `candidate.id` | number | Account id of the student, as in `/api/recruiter/candidates/<id>`, not the id of the `Student` row: the « Message » button of the profile opens the conversation with `/recruiter/messages?candidate=<id>`. |
 | `candidate.first_name`, `candidate.last_name` | string | Name of the student. |
 | `last_message` | object or `null` | Last message of the conversation; `from_me` is true when the logged-in recruiter sent it. `null` for a conversation without message. |
+| `suspended` | boolean | The student account is suspended by an administrator (ADM-03): the page greys the conversation, writes « Compte suspendu » instead of the last message and of the presence, and replaces the message field by the reason. The history stays readable; a new message is refused (409). |
 | `seen_seconds_ago` | number or `null` | Seconds since the last request of the student (presence, below); `null` when the student has not made any request since the presence exists. |
 
 ## The presence

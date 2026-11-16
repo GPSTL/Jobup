@@ -13,6 +13,8 @@ export const MESSAGES = {
 
 	// Returned by the backend, to display once the forms are connected
 	invalidCredentials: "Adresse e-mail ou mot de passe incorrect.",
+	// Account suspended by an administrator (ADM-03)
+	accountSuspended: "Votre compte est suspendu.",
 	emailTaken: "Cette adresse e-mail est déjà utilisée.",
 	serverError: "Une erreur est survenue, veuillez réessayer plus tard.",
 	networkError: "Impossible de joindre le serveur. Vérifiez votre connexion internet et réessayez.",

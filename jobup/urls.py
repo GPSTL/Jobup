@@ -29,6 +29,7 @@ from jobup.administration import (
     user_detail,
     user_filters,
     user_list,
+    user_suspension,
 )
 
 urlpatterns = [
@@ -38,6 +39,7 @@ urlpatterns = [
     path("api/administration/users/filters", user_filters),
     path("api/administration/users/<int:id>", user_detail),
     path("api/administration/users/<int:id>/cv", user_cv),
+    path("api/administration/users/<int:id>/suspension", user_suspension),
     re_path(r"^administration/?$", admin_login_page),
     re_path(r"^administration/.+$", admin_page),
     path("api/csrf", api.csrf),

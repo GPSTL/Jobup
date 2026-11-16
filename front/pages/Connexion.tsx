@@ -13,6 +13,7 @@ import { accountHome } from "../utils/accountHome";
 
 const FORM_ERRORS = {
 	invalidCredentials: MESSAGES.invalidCredentials,
+	suspended: MESSAGES.accountSuspended,
 	server: MESSAGES.serverError,
 	network: MESSAGES.networkError,
 };
