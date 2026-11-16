@@ -84,6 +84,21 @@ export async function getSession(): Promise<SessionResult> {
 	}
 }
 
+export async function logout(): Promise<{ ok: true } | { ok: false; reason: "server" | "network" }> {
+	try {
+		const csrfToken = await getCsrfToken();
+		if (!csrfToken) return { ok: false, reason: "server" };
+		const response = await fetch("/api/logout", {
+			method: "POST",
+			headers: { "X-CSRFToken": csrfToken },
+			credentials: "same-origin",
+		});
+		return response.ok ? { ok: true } : { ok: false, reason: "server" };
+	} catch {
+		return { ok: false, reason: "network" };
+	}
+}
+
 export type SignupPayload = { first_name: string; last_name: string; email: string; password: string; role: RoleApiName };
 type SignupResult =
 	| { ok: true; user: User }
