@@ -13,6 +13,7 @@ import RecruiterNavbar from "../components/RecruiterNavbar";
 import Pagination from "../components/Pagination";
 import { getSession, type SessionResult } from "../services/auth";
 import { saveDraft } from "../services/applications";
+import { isOfferSaved, removeSavedOffer, saveOffer } from "../services/savedOffers";
 import { filterPublicOffers, getOffer, getOffers, type PublicOffer, type PublicOfferFilters, type PublicOfferResult } from "../services/offers";
 export { filterPublicOffers } from "../services/offers";
 import { card, field, focus, input, searchButton, select } from "../utils/searchPageStyles";
@@ -91,6 +92,8 @@ function OfferDetailRequest({ id }: { id: string }) {
 	const [result, setResult] = useState<PublicOfferResult<PublicOffer> | null>(null);
 	const [attempt, setAttempt] = useState(0);
 	const [applying, setApplying] = useState(false);
+	const [saving, setSaving] = useState(false);
+	const [saved, setSaved] = useState(false);
 	const [actionError, setActionError] = useState("");
 	useEffect(() => {
 		let ignore = false;
@@ -102,6 +105,15 @@ function OfferDetailRequest({ id }: { id: string }) {
 		getOffer(id).then((response) => { if (!ignore) setResult(response); });
 		return () => { ignore = true; };
 	}, [id, attempt]);
+	useEffect(() => {
+		let ignore = false;
+		if (session?.ok && session.user.role === 1) {
+			isOfferSaved(Number(id)).then((result) => {
+				if (!ignore && result.ok) setSaved(result.data);
+			});
+		} else setSaved(false);
+		return () => { ignore = true; };
+	}, [id, session]);
 	const startApplication = async () => {
 		if (!result?.ok || !session?.ok || session.user.role !== 1 || applying) return;
 		setApplying(true);
@@ -115,6 +127,18 @@ function OfferDetailRequest({ id }: { id: string }) {
 	};
 	const student = session?.ok && session.user.role === 1;
 	const recruiter = session?.ok && session.user.role === 3;
+	const toggleSaved = async () => {
+		if (saving) return;
+		setSaving(true);
+		const result = saved ? await removeSavedOffer(Number(id)) : await saveOffer(Number(id));
+		setSaving(false);
+		if (!result.ok) {
+			setActionError("Impossible de mettre à jour cette offre sauvegardée.");
+			return;
+		}
+		setActionError("");
+		setSaved(!saved);
+	};
 	return <div className="min-h-dvh bg-[#f0f0f0] px-4 pt-4 pb-16 text-[#111827] md:px-6 md:pt-[50px]">
 		{session !== null && <header>
 			{student ? <StudentNavbar /> : recruiter ? <RecruiterNavbar /> : session.ok ? null : <Navbar>
@@ -128,7 +152,7 @@ function OfferDetailRequest({ id }: { id: string }) {
 				{actionError && <p role="alert" className="text-[15px] font-medium text-red-700">{actionError}</p>}
 				<div className="flex flex-wrap items-center gap-3">
 					{student ? <Button onClick={startApplication} disabled={applying}>{applying ? "Préparation…" : "Postuler"}</Button> : <Link to="/login" state={{ studentReturnTo: `/offers/${result.data.id}` }} className="inline-flex items-center justify-center rounded-full bg-primary px-4 py-1 text-base font-medium text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">Se connecter pour postuler</Link>}
-					<Button variant="outline" disabled title="La sauvegarde des offres sera disponible prochainement">Sauvegarder</Button>
+					{student ? <Button variant="outline" onClick={toggleSaved} disabled={saving}>{saving ? "Mise à jour…" : saved ? "Retirer des sauvegardées" : "Sauvegarder"}</Button> : <Button variant="outline" disabled title="Connectez-vous avec un compte étudiant pour sauvegarder cette offre">Sauvegarder</Button>}
 					<Button variant="outline" disabled title="Le signalement des offres sera disponible prochainement">Signaler l’offre</Button>
 				</div>
 			</> : <>

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type FormEvent, type PointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type PointerEvent } from "react";
 import { Link } from "react-router-dom";
 
 import BanIcon from "../components/BanIcon";
@@ -9,6 +9,7 @@ import SearchIcon from "../components/SearchIcon";
 import type { PublicOffer, PublicOfferFilters } from "../services/offers";
 import { SECTOR_OPTIONS } from "../utils/companies";
 import { filterPublicOffers } from "../services/offers";
+import { getSavedOffers, saveOffer } from "../services/savedOffers";
 
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary";
 
@@ -18,6 +19,12 @@ function EditIcon() {
 
 function FilterIcon() {
 	return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-[18px]"><path d="M4 5h16M7 12h10m-7 7h4" /></svg>;
+}
+
+function SavedOffersButton({ count }: { count: number }) {
+	return <Link to="/student/saved-offers" className={`flex items-center gap-2 rounded-sm font-medium text-primary hover:underline ${focus}`}>
+		<HeartIcon width={18} height={18} fill="currentColor" />Offres sauvegardées ({count})
+	</Link>;
 }
 
 function OfferFilters({
@@ -84,12 +91,34 @@ export default function StudentOfferSwipe({ offers }: { offers: PublicOffer[] })
 	const [filters, setFilters] = useState<PublicOfferFilters>({ query: "", city: "", sector: "" });
 	const [seen, setSeen] = useState<number[]>([]);
 	const [saved, setSaved] = useState<number[]>([]);
+	const [savedError, setSavedError] = useState("");
+	const [saving, setSaving] = useState(false);
+	useEffect(() => {
+		let ignore = false;
+		getSavedOffers().then((result) => {
+			if (ignore) return;
+			if (result.ok) setSaved(result.data.map((item) => item.offerId));
+			else setSavedError("Impossible de charger tes offres sauvegardées.");
+		});
+		return () => { ignore = true; };
+	}, []);
 	const swipeStart = useRef<number | null>(null);
 	const matchingOffers = useMemo(() => filterPublicOffers(offers, filters), [offers, filters]);
 	const current = matchingOffers.find((offer) => !seen.includes(offer.id));
 	const remaining = matchingOffers.filter((offer) => !seen.includes(offer.id)).length;
-	const markSeen = (offer: PublicOffer, like: boolean) => {
-		if (like) setSaved((items) => items.includes(offer.id) ? items : [...items, offer.id]);
+	const markSeen = async (offer: PublicOffer, like: boolean) => {
+		if (saving) return;
+		if (like) {
+			setSaving(true);
+			const result = await saveOffer(offer.id);
+			setSaving(false);
+			if (!result.ok) {
+				setSavedError("Impossible d’enregistrer cette offre. Réessaie.");
+				return;
+			}
+			setSavedError("");
+			setSaved((items) => items.includes(offer.id) ? items : [...items, offer.id]);
+		}
 		setSeen((items) => [...items, offer.id]);
 	};
 	const startSwipe = (event: PointerEvent<HTMLElement>) => {
@@ -108,6 +137,10 @@ export default function StudentOfferSwipe({ offers }: { offers: PublicOffer[] })
 	return <div className="mx-auto mt-8 grid max-w-[1236px] items-start gap-6 pb-12 lg:grid-cols-[320px_minmax(0,464px)_1fr] lg:gap-0">
 		<OfferFilters offers={offers} onApply={(next) => { setFilters(next); setSeen([]); }} />
 		<section aria-label="Découvrir les offres" aria-live="polite" className="mx-auto w-full max-w-[464px] lg:col-start-2 lg:ml-[226px]">
+			<div className="mx-auto mb-6 flex max-w-[464px] justify-end sm:max-w-[640px]">
+				<SavedOffersButton count={saved.length} />
+			</div>
+			{savedError && <p role="alert" className="mb-3 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{savedError}</p>}
 			{current ? <article onPointerDown={startSwipe} onPointerUp={finishSwipe} className="flex min-h-[620px] touch-pan-y flex-col items-center gap-[15px] rounded-[25px] bg-white px-6 py-8 shadow-[0_4px_12px_rgba(0,0,0,0.1)] sm:px-[28px]">
 				<h1 className="w-full text-center text-[30px] leading-[1] font-semibold text-black sm:text-[36px]">{current.title}</h1>
 				<p className="w-full text-center text-[19px] font-medium text-black sm:text-[24px]">{current.company?.name || "Entreprise non renseignée"}{current.company?.city && ` • ${current.company.city}`}</p>
@@ -117,13 +150,13 @@ export default function StudentOfferSwipe({ offers }: { offers: PublicOffer[] })
 					<Link to={`/offers/${current.id}`} className={`mt-3 inline-block font-semibold text-primary hover:underline ${focus}`}>Plus d’informations</Link>
 				</div>
 				<div className="mt-auto flex w-[222px] items-center justify-between pt-2">
-					<button type="button" onClick={() => markSeen(current, false)} aria-label={`Passer l’offre ${current.title}`} className={`flex size-[51px] items-center justify-center rounded-full text-red-600 hover:bg-red-50 ${focus}`}><BanIcon className="size-9" /></button>
+					<button type="button" onClick={() => void markSeen(current, false)} aria-label={`Passer l’offre ${current.title}`} className={`flex size-[51px] items-center justify-center rounded-full text-red-600 hover:bg-red-50 ${focus}`}><BanIcon className="size-9" /></button>
 					<Link to="/student" aria-label="Modifier mon CV et mes documents" title="Modifier mon CV et mes documents" className={`flex size-[51px] items-center justify-center rounded-full text-primary hover:bg-blue-50 ${focus}`}><EditIcon /></Link>
-					<button type="button" onClick={() => markSeen(current, true)} aria-label={`Sauvegarder l’offre ${current.title}`} className={`flex size-[51px] items-center justify-center rounded-full text-primary hover:bg-blue-50 ${focus}`}><HeartIcon className="size-9 fill-current" /></button>
+					<button type="button" onClick={() => void markSeen(current, true)} aria-label={`Sauvegarder l’offre ${current.title}`} aria-disabled={saving} className={`flex size-[51px] items-center justify-center rounded-full text-primary hover:bg-blue-50 aria-disabled:opacity-60 ${focus}`}><HeartIcon className="size-9 fill-current" /></button>
 				</div>
 			</article> : <div className="flex min-h-[320px] flex-col items-center justify-center rounded-[25px] bg-white p-8 text-center shadow-[0_4px_12px_rgba(0,0,0,0.1)]">
 				<h1 className="text-2xl font-semibold">{matchingOffers.length ? "Tu as vu toutes les offres !" : "Aucune offre ne correspond à tes filtres."}</h1>
-				<p className="mt-2 text-[#6b7280]">{saved.length ? `${saved.length} offre${saved.length > 1 ? "s" : ""} sauvegardée${saved.length > 1 ? "s" : ""} pendant cette session.` : "Modifie tes filtres ou reviens découvrir les offres."}</p>
+				<p className="mt-2 text-[#6b7280]">{saved.length ? `${saved.length} offre${saved.length > 1 ? "s" : ""} sauvegardée${saved.length > 1 ? "s" : ""} sur cet appareil.` : "Modifie tes filtres ou reviens découvrir les offres."}</p>
 				{matchingOffers.length > 0 && <button type="button" onClick={resetSeen} className={`mt-5 rounded-xl bg-primary px-5 py-3 font-semibold text-white ${focus}`}>Revoir les offres</button>}
 			</div>}
 			{current && <p className="mt-3 text-center text-sm text-[#6b7280]">{remaining} {remaining === 1 ? "offre" : "offres"} à découvrir</p>}

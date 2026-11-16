@@ -23,6 +23,7 @@ import ShortlistPage from "./pages/ShortlistPage";
 import CandidateProfilePage from "./pages/CandidateProfilePage";
 import RecruiterOffersPage from "./pages/RecruiterOffersPage";
 import OfferApplicantsPage from "./pages/OfferApplicantsPage";
+import SavedOffersPage from "./pages/SavedOffersPage";
 
 import RecruiterMessagesPage from "./pages/RecruiterMessagesPage";
 import RecruiterAccountPage from "./pages/RecruiterAccountPage";
@@ -37,6 +38,7 @@ function App() {
 				<Route path="/signup" element={<Inscription />} />
 				<Route path="/login" element={<Connexion />} />
 				<Route path="/student" element={<RequireStudent>{(user) => <MonEspace user={user} />}</RequireStudent>} />
+				<Route path="/student/saved-offers" element={<RequireStudent>{() => <SavedOffersPage />}</RequireStudent>} />
 				<Route path="/offers" element={<OffersPage />} />
 				<Route path="/offers/:id" element={<OffersPage />} />
 				<Route path="/companies" element={<CompaniesPage />} />
