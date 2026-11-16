@@ -21,6 +21,7 @@ import RequireRecruiter from "./components/RequireRecruiter";
 import CandidatesPage from "./pages/CandidatesPage";
 import ShortlistPage from "./pages/ShortlistPage";
 import CandidateProfilePage from "./pages/CandidateProfilePage";
+import NotificationsPage from "./pages/NotificationsPage";
 import RecruiterOffersPage from "./pages/RecruiterOffersPage";
 import OfferApplicantsPage from "./pages/OfferApplicantsPage";
 
@@ -55,6 +56,7 @@ function App() {
 				<Route path="/applications/:id/edit" element={<RequireStudent>{() => <ApplicationDraftPage />}</RequireStudent>} />
 				<Route path="/pricing" element={<ComingSoonPage />} />
 				<Route path="/messages/:id?" element={<RequireStudent>{() => <MessagesPage />}</RequireStudent>} />
+				<Route path="/notifications" element={<RequireStudent>{() => <NotificationsPage />}</RequireStudent>} />
 				<Route path="/filters" element={<ComingSoonPage />} />
 				<Route path="/messages" element={<ComingSoonPage />} />
 				<Route path="*" element={<NotFoundPage />} />

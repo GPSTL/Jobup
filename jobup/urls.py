@@ -4,7 +4,7 @@ from django.contrib import admin
 from django.contrib.staticfiles.views import serve
 from django.urls import path, re_path
 
-from jobup import api, candidates, exclusions, shortlist
+from jobup import api, candidates, exclusions, notifications, shortlist
 from jobup.companies import cities, companies, company
 from jobup.conversations import (
     conversation_messages,
@@ -55,6 +55,11 @@ urlpatterns = [
     path("api/companies", companies),
     path("api/companies/cities", cities),
     path("api/companies/<int:id>", company),
+    path("api/notifications", notifications.notification_list),
+    path("api/notifications/unread-count", notifications.notification_unread_count),
+    path("api/notifications/read-all", notifications.notification_read_all),
+    path("api/notifications/preferences", notifications.notification_preferences),
+    path("api/notifications/<int:id>/read", notifications.notification_read),
     re_path(r"^(?!api)[^.]*$", serve, kwargs={"path": "index.html"}),
     path("favicon.ico", serve, kwargs={"path": "favicon.ico"}),
 ]
