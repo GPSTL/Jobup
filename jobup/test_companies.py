@@ -67,6 +67,7 @@ class CompaniesTests(APITestCase):
             {
                 "id": self.acme.pk,
                 "name": "Acme",
+                "logo_url": None,
                 "sector": JobCategory.COMPUTER_SCIENCE,
                 "city": "Paris",
                 "employees": 120,
