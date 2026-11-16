@@ -17,7 +17,7 @@ type AccountNavbarProps = {
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary";
 
 // Bar of the logged-in pages, filled by StudentNavbar and RecruiterNavbar. NavbarLink highlights the link of the current page.
-export default function AccountNavbar({ links, showBell = false, notifications = false }: AccountNavbarProps) {
+export default function AccountNavbar({ links, showBell = false, notifications = false, variant = "solid" }: AccountNavbarProps) {
 	// Menu of the small screens, where the links do not fit in the bar
 	const [open, setOpen] = useState(false);
 	const menuButtonRef = useRef<HTMLButtonElement>(null);
