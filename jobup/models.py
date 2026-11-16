@@ -108,6 +108,14 @@ class ApplicationStatus(models.IntegerChoices):
 FINAL_STATUSES = frozenset({ApplicationStatus.ACCEPTED, ApplicationStatus.REFUSED})
 
 
+# Type de contrat d'une offre (JOB-051) : valeurs envoyées par le formulaire « Créer une offre »
+class ContractType(models.TextChoices):
+    APPRENTICESHIP = "alternance", "Alternance"
+    INTERNSHIP = "stage", "Stage"
+    FIXED_TERM = "cdd", "CDD"
+    PERMANENT = "cdi", "CDI"
+
+
 # ----- GROUPS ----- #
 
 
@@ -270,6 +278,15 @@ class Offer(models.Model):
     description = StrictCharField(max_length=2048)
     requirements = models.CharField(max_length=256, blank=True)
     category = models.SmallIntegerField(choices=JobCategory.choices)
+    # Critères du formulaire « Créer une offre » (JOB-051, repris par JOB-065), tous facultatifs.
+    # L'entreprise n'est pas un champ : c'est toujours celle du recruteur.
+    image_url = models.URLField(blank=True)
+    contract_type = models.CharField(
+        max_length=32, blank=True, choices=ContractType.choices
+    )
+    duration = models.CharField(max_length=64, blank=True)
+    start_date = models.DateField(null=True, blank=True)
+    location = models.CharField(max_length=128, blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
