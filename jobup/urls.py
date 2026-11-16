@@ -8,6 +8,7 @@ from jobup import api, candidates, exclusions, shortlist
 from jobup.conversations import (
     conversation_messages,
     message_attachment,
+    recruiter_conversations,
     student_conversations,
 )
 from jobup.profile import student, student_photo
@@ -41,6 +42,7 @@ urlpatterns = [
     path("api/recruiter/candidates/<int:id>/shortlist", shortlist.shortlist_candidate),
     path("api/recruiter/candidates/<int:id>/exclusion", exclusions.exclude_candidate),
     path("api/recruiter/shortlist", shortlist.shortlist),
+    path("api/recruiter/conversations", recruiter_conversations),
     re_path(r"^(?!api)[^.]*$", serve, kwargs={"path": "index.html"}),
     path("favicon.ico", serve, kwargs={"path": "favicon.ico"}),
 ]

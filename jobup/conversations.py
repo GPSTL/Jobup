@@ -5,6 +5,8 @@
 # Fil de messages et envoi (JOB-034, ETU-15), communs à tous les participants ; contrat réutilisé par JOB-039.
 # Pièce jointe d'un message (JOB-043, REC-14) : envoi par le recruteur de la conversation,
 # téléchargement par tous ses participants. Contrat : docs/api/message_attachments.md
+# Liste des conversations du recruteur avec la présence des candidats (JOB-039, REC-05) :
+# docs/api/recruiter-conversations.md
 import os
 import unicodedata
 from typing import Any, Self
@@ -18,6 +20,7 @@ from pydantic import BaseModel, Field, ValidationError, model_validator
 from rest_framework.decorators import api_view
 from rest_framework.request import Request
 from rest_framework.response import Response
+from .presence import secondsSinceSeen
 
 from .attachments import (
     ATTACHMENT_TYPES,
@@ -105,25 +108,46 @@ def interlocutor(conversation: Conversation) -> dict[str, Any]:
     }
 
 
+def lastMessage(conversation: Conversation, viewer: User) -> dict[str, Any] | None:
+    # Annoté par withLastMessage ; None pour une conversation sans message
+    if conversation.last_at is None:
+        return None
+    return {
+        "body": conversation.last_body,
+        "created_at": conversation.last_at,
+        "from_me": conversation.last_sender == viewer.pk,
+        # Nom du fichier du dernier message, pour l'aperçu d'un message sans texte
+        "attachment": (
+            os.path.basename(conversation.last_attachment)
+            if conversation.last_attachment
+            else None
+        ),
+    }
+
+
 def summary(conversation: Conversation, viewer: User) -> dict[str, Any]:
-    last = None
-    if conversation.last_at is not None:
-        last = {
-            "body": conversation.last_body,
-            "created_at": conversation.last_at,
-            "from_me": conversation.last_sender == viewer.pk,
-            # Nom du fichier du dernier message, pour l'aperçu d'un message sans texte
-            "attachment": (
-                os.path.basename(conversation.last_attachment)
-                if conversation.last_attachment
-                else None
-            ),
-        }
     return {
         "id": conversation.pk,
         "interlocutor": interlocutor(conversation),
-        "last_message": last,
+        "last_message": lastMessage(conversation, viewer),
         "created_at": conversation.created_at,
+    }
+
+
+def candidateSummary(conversation: Conversation, viewer: User) -> dict[str, Any]:
+    candidate = conversation.student.user
+    return {
+        "id": conversation.pk,
+        # Id du compte, comme /api/recruiter/candidates/<id> : le profil ouvre la
+        # conversation avec ?candidate=<id>
+        "candidate": {
+            "id": candidate.pk,
+            "first_name": candidate.first_name,
+            "last_name": candidate.last_name,
+        },
+        "last_message": 
+      (conversation, viewer),
+        "seen_seconds_ago": secondsSinceSeen(candidate),
     }
 
 
@@ -148,6 +172,23 @@ def student_conversations(request: Request) -> Response:
         ]
     return Response([summary(conversation, user) for conversation in results])
 
+@api_view(["GET"])
+def recruiter_conversations(request: Request) -> Response:
+    user: User = request.user
+    # Réservé aux recruteurs : chacun ne voit que ses conversations, pas celles de ses
+    # collègues de la même entreprise. Recherche et démarrage d'une conversation : JOB-041
+    if user.role != Role.RECRUITER:
+        return Response({"error": "Forbidden"}, status=403)
+
+    conversations = Conversation.objects.filter(recruiter__user=user).select_related(
+        "student__user"
+    )
+    return Response(
+        [
+            candidateSummary(conversation, user)
+            for conversation in withLastMessage(conversations)
+        ]
+    )
 
 def attachmentDict(message: Message) -> dict[str, Any] | None:
     # Jamais le chemin de stockage : seulement l'adresse de l'API qui contrôle l'accès
@@ -160,7 +201,6 @@ def attachmentDict(message: Message) -> dict[str, Any] | None:
         "extension": os.path.splitext(attachment.name)[1].removeprefix(".").lower(),
         "url": f"/api/conversations/{message.conversation_id}/messages/{message.pk}/attachment",
     }
-
 
 def messageDict(message: Message, viewer: User) -> dict[str, Any]:
     return {

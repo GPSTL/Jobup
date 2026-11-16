@@ -144,7 +144,7 @@ test("profil : informations, compétences, expérience, historique des échanges
 		"Vous : « Bonjour Lucas »",
 	];
 	for (const text of texts) assert.ok(html.includes(text), text);
-	assert.match(link(html, "Ouvrir la conversation"), /href="\/recruiter\/messages"/);
+	assert.match(link(html, "Ouvrir la conversation"), /href="\/recruiter\/messages\?candidate=7"/);
 	const cv = link(html, "Télécharger le CV");
 	assert.match(cv, /href="\/api\/recruiter\/candidates\/7\/cv"/);
 	assert.match(cv, / download=""/);

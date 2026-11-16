@@ -14,7 +14,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from .conversations import normalize
-from .models import JobApplication, Role, Student, User
+from .models import JobApplication, Message, Role, Student, User
 
 # Levels of the "Expérience" list, in months of Student.experience_level:
 # value sent by the front end -> (label, first month, last month or None)
@@ -68,7 +68,6 @@ def exchanges(student: Student, recruiter: User) -> list[dict[str, Any]]:
     # Applications sent to the offers of this recruiter, never to those of
     # other recruiters, even in the same company. A draft has no submitted_at:
     # the recruiter never received it.
-    # TODO JOB-039: add the messages of their conversation (models of JOB-032).
     applications = (
         JobApplication.objects.filter(
             student=student,
@@ -78,7 +77,12 @@ def exchanges(student: Student, recruiter: User) -> list[dict[str, Any]]:
         .select_related("offer")
         .order_by("submitted_at", "pk")
     )
-    return [
+    # Messages of their conversation (JOB-039), never those of the conversations
+    # of other recruiters
+    messages = Message.objects.filter(
+        conversation__student=student, conversation__recruiter__user=recruiter
+    ).order_by("created_at", "pk")
+    history = [
         {
             "kind": "application",
             "id": application.pk,
@@ -86,7 +90,18 @@ def exchanges(student: Student, recruiter: User) -> list[dict[str, Any]]:
             "offer_title": application.offer.title,
         }
         for application in applications
+    ] + [
+        {
+            "kind": "message",
+            "id": message.pk,
+            "date": message.created_at,
+            "from_me": message.sender_id == recruiter.pk,
+            "body": message.body,
+        }
+        for message in messages
     ]
+    # Oldest first, applications and messages mixed
+    return sorted(history, key=lambda exchange: exchange["date"])
 
 
 def skillsOf(student: Student) -> list[str]:

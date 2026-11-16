@@ -21,6 +21,8 @@ import CandidatesPage from "./pages/CandidatesPage";
 import ShortlistPage from "./pages/ShortlistPage";
 import CandidateProfilePage from "./pages/CandidateProfilePage";
 
+import RecruiterMessagesPage from "./pages/RecruiterMessagesPage";
+
 function App() {
 	return (
 		<BrowserRouter>
@@ -36,6 +38,7 @@ function App() {
 				<Route path="/recruiter/candidates" element={<RequireRecruiter>{() => <CandidatesPage />}</RequireRecruiter>} />
 				<Route path="/recruiter/candidates/:id" element={<RequireRecruiter>{() => <CandidateProfilePage />}</RequireRecruiter>} />
 				<Route path="/recruiter/shortlist" element={<RequireRecruiter>{() => <ShortlistPage />}</RequireRecruiter>} />
+				<Route path="/recruiter/messages/:id?" element={<RequireRecruiter>{() => <RecruiterMessagesPage />}</RequireRecruiter>} />
 				{/* Recruiter pages not built yet (RecruiterNavbar). The routes above, more specific, take precedence. */}
 				<Route path="/recruiter/*" element={<ComingSoonPage />} />
 				<Route path="/applications" element={<RequireStudent>{() => <ApplicationsPage />}</RequireStudent>} />

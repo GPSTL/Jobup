@@ -21,7 +21,6 @@ export type CandidateSummary = {
 /** Line of the exchange history: an application received or a message of the conversation (id of the JobApplication or of the Message) */
 export type Exchange =
 	| { kind: "application"; id: number; date: string; offer_title: string }
-	// TODO JOB-039: sent by the API once the messages of JOB-032 are on main
 	| { kind: "message"; id: number; date: string; from_me: boolean; body: string };
 
 /** Full profile ("Profil du candidat" screen) */
