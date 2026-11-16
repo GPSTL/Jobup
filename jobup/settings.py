@@ -143,3 +143,10 @@ MAILERS = {
         },
     }
 }
+# Sans compte SMTP (développement) : les e-mails des notifications (JOB-042) s'affichent dans
+# la console au lieu d'échouer. Le choix du prestataire reste une question ouverte de JOB-042.
+if not os.getenv("THE_EMAIL_ADDRESS"):
+    MAILERS["default"] = {"BACKEND": "django.core.mail.backends.console.EmailBackend"}
+DEFAULT_FROM_EMAIL = os.getenv("THE_EMAIL_ADDRESS", "JobUp <notifications@jobup.local>")
+# Adresse du site, pour les liens des e-mails
+SITE_URL = os.getenv("SITE_URL", "http://127.0.0.1:8000")

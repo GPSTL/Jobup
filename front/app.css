@@ -5,16 +5,12 @@
 
 /* Preview one admin navigation item at a time; leaving restores the active route. */
 @media (hover: hover) {
-  .account-nav-hover :is(a, span[aria-disabled], button[data-nav-action]:enabled):hover {
+  .account-nav-hover :is(a, span[aria-disabled]):hover {
     background-color: var(--color-primary);
     color: var(--color-on-primary);
   }
 
-  .account-nav-hover button[data-nav-action]:enabled:hover {
-    border-color: var(--color-primary);
-  }
-
-  .account-nav-hover:has(:is(a, span[aria-disabled], button[data-nav-action]:enabled):hover) [aria-current="page"]:not(:hover) {
+  .account-nav-hover:has(:is(a, span[aria-disabled]):hover) [aria-current="page"]:not(:hover) {
     background-color: transparent;
     color: var(--color-ink);
   }

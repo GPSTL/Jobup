@@ -25,7 +25,8 @@ test("navigation partagée : menu mobile, page active, rubriques indisponibles e
 	assert.match(student, /href="\/student"/);
 	assert.match(student, /href="\/applications"/);
 	assert.match(student, /aria-expanded="false"/);
-	assert.doesNotMatch(student, /Déconnexion/);
+	// Every role logs out from the account menu of AccountNavbar
+	assert.match(student, /Déconnexion/);
 });
 
 test("carte : identité, date française et fiche indisponible sans lien cassé", () => {

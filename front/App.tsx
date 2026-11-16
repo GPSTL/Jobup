@@ -12,6 +12,7 @@ import RequireStudent from "./components/RequireStudent";
 import SchoolPage from "./pages/SchoolPage";
 import OffersPage from "./pages/OffersPage";
 import CompaniesPage from "./pages/CompaniesPage";
+import CompanyPage from "./pages/CompanyPage";
 import MessagesPage from "./pages/MessagesPage";
 import ApplicationsPage from "./pages/ApplicationsPage";
 import ApplicationDetailPage from "./pages/ApplicationDetailPage";
@@ -20,8 +21,12 @@ import RequireRecruiter from "./components/RequireRecruiter";
 import CandidatesPage from "./pages/CandidatesPage";
 import ShortlistPage from "./pages/ShortlistPage";
 import CandidateProfilePage from "./pages/CandidateProfilePage";
+import NotificationsPage from "./pages/NotificationsPage";
+import RecruiterOffersPage from "./pages/RecruiterOffersPage";
+import OfferApplicantsPage from "./pages/OfferApplicantsPage";
 
 import RecruiterMessagesPage from "./pages/RecruiterMessagesPage";
+import RecruiterAccountPage from "./pages/RecruiterAccountPage";
 import RequireAdmin from "./components/RequireAdmin";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminUserDetailPage from "./pages/AdminUserDetailPage";
@@ -39,9 +44,14 @@ function App() {
 				<Route path="/login" element={<Connexion />} />
 				<Route path="/student" element={<RequireStudent>{(user) => <MonEspace user={user} />}</RequireStudent>} />
 				<Route path="/offers" element={<OffersPage />} />
+				<Route path="/offers/:id" element={<OffersPage />} />
 				<Route path="/companies" element={<CompaniesPage />} />
+				<Route path="/companies/:id" element={<CompanyPage />} />
+				<Route path="/recruiter/account" element={<RequireRecruiter>{() => <RecruiterAccountPage />}</RequireRecruiter>} />
 				<Route path="/recruiter/candidates" element={<RequireRecruiter>{() => <CandidatesPage />}</RequireRecruiter>} />
 				<Route path="/recruiter/candidates/:id" element={<RequireRecruiter>{() => <CandidateProfilePage />}</RequireRecruiter>} />
+				<Route path="/recruiter/offers" element={<RequireRecruiter>{() => <RecruiterOffersPage />}</RequireRecruiter>} />
+				<Route path="/recruiter/offers/:id/applicants" element={<RequireRecruiter>{() => <OfferApplicantsPage />}</RequireRecruiter>} />
 				<Route path="/recruiter/shortlist" element={<RequireRecruiter>{() => <ShortlistPage />}</RequireRecruiter>} />
 				<Route path="/recruiter/messages/:id?" element={<RequireRecruiter>{() => <RecruiterMessagesPage />}</RequireRecruiter>} />
 				{/* Recruiter pages not built yet (RecruiterNavbar). The routes above, more specific, take precedence. */}
@@ -51,6 +61,7 @@ function App() {
 				<Route path="/applications/:id/edit" element={<RequireStudent>{() => <ApplicationDraftPage />}</RequireStudent>} />
 				<Route path="/pricing" element={<ComingSoonPage />} />
 				<Route path="/messages/:id?" element={<RequireStudent>{() => <MessagesPage />}</RequireStudent>} />
+				<Route path="/notifications" element={<RequireStudent>{() => <NotificationsPage />}</RequireStudent>} />
 				<Route path="/filters" element={<ComingSoonPage />} />
 				<Route path="/messages" element={<ComingSoonPage />} />
 				<Route path="*" element={<NotFoundPage />} />

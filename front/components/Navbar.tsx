@@ -20,7 +20,7 @@ export default function Navbar({ children, variant = "solid" }: NavbarProps) {
 	return (
 		<nav
 			aria-label="Navigation principale"
-			className={`flex items-center gap-4 rounded-full px-4 py-3 text-ink md:gap-8 md:px-8 md:py-4 ${variants[variant]}`}
+			className={`mx-auto flex w-full max-w-[1236px] items-center gap-4 rounded-full px-4 py-3 text-ink md:gap-8 md:px-8 md:py-4 ${variants[variant]}`}
 		>
 			<Logo />
 			{children}

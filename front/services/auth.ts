@@ -17,19 +17,6 @@ export const STUDENT_ROLE = 1;
 export const RECRUITER_ROLE = 3;
 export const ADMIN_ROLE = 127;
 
-export async function logout(): Promise<boolean> {
-	try {
-		const csrfToken = await getCsrfToken();
-		if (!csrfToken) return false;
-		const response = await fetch("/api/logout", {
-			method: "POST", credentials: "same-origin", headers: { "X-CSRFToken": csrfToken },
-		});
-		return response.ok;
-	} catch {
-		return false;
-	}
-}
-
 export type LoginResult =
 	| { ok: true; user: User }
 	| { ok: false; reason: "invalidCredentials" | "server" | "network" };
@@ -95,6 +82,21 @@ export async function getSession(): Promise<SessionResult> {
 		return { ok: true, user: (await response.json()) as User };
 	} catch {
 		return { ok: false, reason: "server" };
+	}
+}
+
+export async function logout(): Promise<{ ok: true } | { ok: false; reason: "server" | "network" }> {
+	try {
+		const csrfToken = await getCsrfToken();
+		if (!csrfToken) return { ok: false, reason: "server" };
+		const response = await fetch("/api/logout", {
+			method: "POST",
+			headers: { "X-CSRFToken": csrfToken },
+			credentials: "same-origin",
+		});
+		return response.ok ? { ok: true } : { ok: false, reason: "server" };
+	} catch {
+		return { ok: false, reason: "network" };
 	}
 }
 

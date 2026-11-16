@@ -4,14 +4,18 @@ from django.contrib import admin
 from django.contrib.staticfiles.views import serve
 from django.urls import path, re_path
 
-from jobup import api, candidates, exclusions, shortlist
+from jobup import api, candidates, exclusions, notifications, shortlist
+from jobup.companies import cities, companies, company
 from jobup.conversations import (
     conversation_messages,
     message_attachment,
     recruiter_conversations,
     student_conversations,
 )
+from jobup.offers import offer, offers
 from jobup.profile import student, student_photo
+from jobup.recruiter_company import recruiter_company
+from jobup.recruiter_offers import offer_applicants, recruiter_offers
 from jobup.resume import student_resume
 from jobup.administration import admin_page, user_cv, user_detail, user_list
 
@@ -26,6 +30,8 @@ urlpatterns = [
     path("api/login", api.api_login),
     path("api/logout", api.api_logout),
     path("api/me", api.me),
+    path("api/offers", offers),
+    path("api/offers/<int:id>", offer),
     path("api/student/<int:id>", student),
     path("api/student/<int:id>/photo", student_photo),
     path("api/student/<int:id>/resume", student_resume),
@@ -44,10 +50,21 @@ urlpatterns = [
     path("api/recruiter/candidates/filters", candidates.candidate_filters),
     path("api/recruiter/candidates/<int:id>", candidates.candidate_detail),
     path("api/recruiter/candidates/<int:id>/cv", candidates.candidate_cv),
+    path("api/recruiter/offers", recruiter_offers),
+    path("api/recruiter/offers/<int:id>/applicants", offer_applicants),
     path("api/recruiter/candidates/<int:id>/shortlist", shortlist.shortlist_candidate),
     path("api/recruiter/candidates/<int:id>/exclusion", exclusions.exclude_candidate),
     path("api/recruiter/shortlist", shortlist.shortlist),
     path("api/recruiter/conversations", recruiter_conversations),
+    path("api/recruiter/company", recruiter_company),
+    path("api/companies", companies),
+    path("api/companies/cities", cities),
+    path("api/companies/<int:id>", company),
+    path("api/notifications", notifications.notification_list),
+    path("api/notifications/unread-count", notifications.notification_unread_count),
+    path("api/notifications/read-all", notifications.notification_read_all),
+    path("api/notifications/preferences", notifications.notification_preferences),
+    path("api/notifications/<int:id>/read", notifications.notification_read),
     re_path(r"^(?!api)[^.]*$", serve, kwargs={"path": "index.html"}),
     path("favicon.ico", serve, kwargs={"path": "favicon.ico"}),
 ]
