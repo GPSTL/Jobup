@@ -14,7 +14,13 @@ export type ConversationSummary = {
 	id: number;
 	interlocutor: Interlocutor;
 	/** null pour une conversation sans message */
-	last_message: { body: string; created_at: string; from_me: boolean } | null;
+	last_message: {
+		body: string;
+		created_at: string;
+		from_me: boolean;
+		/** Nom du fichier joint au dernier message (JOB-043), dont le texte peut alors être vide */
+		attachment: string | null;
+	} | null;
 	created_at: string;
 };
 
