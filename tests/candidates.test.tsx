@@ -167,9 +167,9 @@ test("profil incomplet : mentions adaptées, sans téléchargement ni conversati
 test("barre recruteur : liens de la maquette, « Candidats » actif sur le profil d'un candidat", () => {
 	const html = render(<RecruiterNavbar />, "/recruiter/candidates/7");
 	const labels = [...html.matchAll(/<a [^>]*>([^<]+)<\/a>/g)].map((match) => match[1]);
-	// Barre des grands écrans, puis menu des petits écrans
+	// Barre des grands écrans, menu des petits écrans, puis le panneau de la cloche (JOB-046)
 	const expected = ["Mon espace", "Candidats", "Vos offres", "Messages"];
-	assert.deepEqual(labels, [...expected, ...expected]);
+	assert.deepEqual(labels, [...expected, ...expected, "Voir toutes les notifications"]);
 	const active = [...html.matchAll(/<a [^>]*aria-current="page"[^>]*>([^<]+)<\/a>/g)].map((match) => match[1]);
 	assert.deepEqual(active, ["Candidats", "Candidats"]);
 });

@@ -1,4 +1,5 @@
 import type { CandidateSummary } from "./candidates";
+import { STATUS } from "../utils/applications";
 
 export type RecruiterOffer = {
 	id: number;
@@ -87,4 +88,41 @@ export async function createOffer(values: NewOffer): Promise<CreateOfferResult> 
 	} catch {
 		return { ok: false, status: 0, errors: {} };
 	}
+}
+
+export type RecruiterApplication = {
+    id: number;
+    offer: RecruiterOffer;
+    candidate: CandidateSummary;
+    status: number;
+    submitted_at: string;
+    message: string;
+    decision_message: string;
+    conversation_id: number | null;
+};
+
+export const getRecruiterApplication = (id: string) => read<RecruiterApplication>(`/api/recruiter/applications/${encodeURIComponent(id)}`);
+
+export type DecisionResult = OfferResult<RecruiterApplication> | { ok: false; reason: "conflict" };
+
+export async function decideApplication(id: number, status: typeof STATUS.ACCEPTED | typeof STATUS.REFUSED, message: string): Promise<DecisionResult> {
+    try {
+        const csrfResponse = await fetch("/api/csrf", { credentials: "same-origin" });
+        if (!csrfResponse.ok) return { ok: false, reason: "server" };
+        const { csrfToken } = await csrfResponse.json() as { csrfToken: string };
+        if (typeof csrfToken !== "string" || !csrfToken) return { ok: false, reason: "server" };
+        const response = await fetch(`/api/recruiter/applications/${id}`, {
+            method: "PATCH",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+            body: JSON.stringify({ status, message }),
+        });
+        if (response.status === 401 || response.status === 403) return { ok: false, reason: "unauthenticated" };
+        if (response.status === 404) return { ok: false, reason: "notFound" };
+        if (response.status === 409) return { ok: false, reason: "conflict" };
+        if (!response.ok) return { ok: false, reason: "server" };
+        return { ok: true, data: await response.json() as RecruiterApplication };
+    } catch {
+        return { ok: false, reason: "network" };
+    }
 }

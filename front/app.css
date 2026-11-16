@@ -3,6 +3,19 @@
 @source "./**/*.{ts,tsx}";
 @source "../jobup/static/index.html";
 
+/* Preview one admin navigation item at a time; leaving restores the active route. */
+@media (hover: hover) {
+  .account-nav-hover :is(a, span[aria-disabled]):hover {
+    background-color: var(--color-primary);
+    color: var(--color-on-primary);
+  }
+
+  .account-nav-hover:has(:is(a, span[aria-disabled]):hover) [aria-current="page"]:not(:hover) {
+    background-color: transparent;
+    color: var(--color-ink);
+  }
+}
+
 @theme {
   /* Mockup colors */
   --color-primary: #007fff; /* JobUp blue (azure): buttons, "Up" in the logo */

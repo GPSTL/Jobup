@@ -15,6 +15,7 @@ export type User = {
 // Valeur de Role.STUDENT dans jobup/models.py
 export const STUDENT_ROLE = 1;
 export const RECRUITER_ROLE = 3;
+export const ADMIN_ROLE = 127;
 
 export type LoginResult =
 	| { ok: true; user: User }
@@ -33,11 +34,21 @@ async function getCsrfToken(): Promise<string | null> {
 }
 
 export async function login(email: string, password: string): Promise<LoginResult> {
+	return postCredentials("/api/login", email, password);
+}
+
+// Administration login (ADM-13): only an administrator account opens a session there,
+// any other account gets "invalidCredentials", as with a wrong password
+export async function adminLogin(email: string, password: string): Promise<LoginResult> {
+	return postCredentials("/api/administration/login", email, password);
+}
+
+async function postCredentials(url: string, email: string, password: string): Promise<LoginResult> {
 	let response: Response;
 	try {
 		const csrfToken = await getCsrfToken();
 		if (!csrfToken) return { ok: false, reason: "server" };
-		response = await fetch("/api/login", {
+		response = await fetch(url, {
 			method: "POST",
 			headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
 			credentials: "same-origin",

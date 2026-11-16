@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 
-import OffersPage, { PublicOfferDetail, PublicOfferList, PublicOfferRequestState } from "../front/pages/OffersPage";
+import OffersPage, { filterPublicOffers, PublicOfferDetail, PublicOfferList, PublicOfferRequestState } from "../front/pages/OffersPage";
+import StudentOfferSwipe from "../front/pages/StudentOfferSwipe";
 import { getOffer, getOffers, type PublicOffer } from "../front/services/offers";
 
 const offer: PublicOffer = { id: 12, title: "Développeur Java", description: "Description réelle du poste", requirements: "Java et SQL", category: 1, created_at: "2026-11-10T09:00:00Z", company: { id: 3, name: "Entreprise réelle", city: "Nantes" } };
@@ -15,6 +16,7 @@ test("liste : données réelles et liens par identifiant même avec deux titres 
 	const html = render(<PublicOfferList offers={[offer, { ...offer, id: 13 }]} page={1} onPageChange={() => {}} />);
 	assert.match(html, /Entreprise réelle/);
 	assert.match(html, /Nantes/);
+	assert.match(html, /Alternance/);
 	assert.match(html, /href="\/offers\/12"/);
 	assert.match(html, /href="\/offers\/13"/);
 	assert.doesNotMatch(html, /12 mois|24 mois|Atelier Studio|Pagination/);
@@ -40,10 +42,17 @@ test("aucune offre et entreprise non renseignée sans données fictives", () => 
 test("détail : description et critères réels, texte échappé, retour à la liste", () => {
 	const html = render(<PublicOfferDetail offer={{ ...offer, description: "<script>danger</script>" }} />);
 	assert.match(html, /Développeur Java/);
+	assert.match(html, /Description du poste/);
+	assert.match(html, /Entreprise réelle — voir la page entreprise/);
+	assert.match(html, /Alternance/);
+	assert.match(html, /Informatique/);
+	assert.match(html, /Nantes/);
+	assert.match(html, /Publiée le 10 novembre 2026/);
+	assert.match(html, /offer\.webp/);
 	assert.match(html, /Java et SQL/);
 	assert.match(html, /&lt;script&gt;danger&lt;\/script&gt;/);
 	assert.match(html, /href="\/offers"/);
-	assert.match(html, /Se connecter pour postuler/);
+	assert.doesNotMatch(html, /Se connecter pour postuler/);
 	assert.doesNotMatch(render(<PublicOfferDetail offer={{ ...offer, requirements: "" }} />), /Profil recherché/);
 });
 
@@ -59,11 +68,38 @@ test("chargement, erreurs avec réessai et détail retiré sans réessai", () =>
 	assert.doesNotMatch(missing, /Réessayer/);
 });
 
-test("les filtres non implémentés sont désactivés et expliqués", () => {
+test("les filtres de recherche du design sont actifs", () => {
 	const html = render(<OffersPage />);
-	assert.match(html, /<fieldset disabled=""/);
-	assert.match(html, /La recherche et les filtres seront bientôt disponibles/);
+	assert.match(html, /role="search"/);
+	assert.match(html, /Poste, compétence ou entreprise/);
+	assert.match(html, /Ville ou code postal/);
+	assert.match(html, /Secteur/);
+	assert.doesNotMatch(html, /disabled=""|La recherche et les filtres seront bientôt disponibles/);
 	assert.doesNotMatch(html, /Atelier Studio|Horizon Tech/);
+});
+
+test("recherche publique : poste, entreprise, ville et secteur filtrent les offres chargées", () => {
+	const offers: PublicOffer[] = [
+		offer,
+		{ ...offer, id: 13, title: "Data analyst", description: "Analyse de données", requirements: "SQL", category: 2, company: { id: 4, name: "Horizon Tech", city: "Paris" } },
+		{ ...offer, id: 14, title: "Designer", description: "Design produit", requirements: "Figma", category: 17, company: { id: 5, name: "Nova", city: "Lyon" } },
+	];
+	assert.deepEqual(filterPublicOffers(offers, { query: "java", city: "", sector: "" }).map(({ id }) => id), [12]);
+	assert.deepEqual(filterPublicOffers(offers, { query: "horizon", city: "", sector: "" }).map(({ id }) => id), [13]);
+	assert.deepEqual(filterPublicOffers(offers, { query: "", city: "paris", sector: "2" }).map(({ id }) => id), [13]);
+	assert.deepEqual(filterPublicOffers(offers, { query: "", city: "Bordeaux", sector: "" }), []);
+});
+
+test("étudiant : offres en cartes swipe avec filtres, détail, passer et sauvegarder", () => {
+	const html = render(<StudentOfferSwipe offers={[offer]} />);
+	assert.match(html, /aria-label="Filtres des offres"/);
+	assert.match(html, /Développeur Java/);
+	assert.match(html, /Entreprise réelle • Nantes/);
+	assert.match(html, /Plus d’informations/);
+	assert.match(html, /Passer l’offre Développeur Java/);
+	assert.match(html, /Sauvegarder l’offre Développeur Java/);
+	assert.match(html, /Modifier mon CV et mes documents/);
+	assert.doesNotMatch(html, /Voir l’offre/);
 });
 
 test("API publique : liste et détail utilisent leurs URL propres, avec le cookie de session", async () => {

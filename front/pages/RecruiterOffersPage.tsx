@@ -13,7 +13,7 @@ export const offerPanel = "mx-auto flex max-w-[1236px] flex-col gap-5 rounded-[2
 export function RecruiterOffersLayout({ children }: { children: ReactNode }) {
 	return (
 		<div className="min-h-dvh bg-[#f0f0f0] text-[#111827]">
-			<header className="px-4 pt-6 md:pt-[50px]"><div className="mx-auto max-w-[1236px]"><RecruiterNavbar /></div></header>
+			<header className="px-4 pt-4"><div className="mx-auto max-w-[1236px]"><RecruiterNavbar /></div></header>
 			<main className="px-4 pt-[35px] pb-16 md:px-6">{children}</main>
 		</div>
 	);
