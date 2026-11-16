@@ -28,11 +28,18 @@ import RecruiterApplicationPage from "./pages/RecruiterApplicationPage";
 
 import RecruiterMessagesPage from "./pages/RecruiterMessagesPage";
 import RecruiterAccountPage from "./pages/RecruiterAccountPage";
+import RequireAdmin from "./components/RequireAdmin";
+import AdminLoginPage from "./pages/AdminLoginPage";
+import AdminUsersPage from "./pages/AdminUsersPage";
+import AdminUserDetailPage from "./pages/AdminUserDetailPage";
 
 function App() {
 	return (
 		<BrowserRouter>
 			<Routes>
+				<Route path="/administration" element={<AdminLoginPage />} />
+				<Route path="/administration/users" element={<RequireAdmin><AdminUsersPage /></RequireAdmin>} />
+				<Route path="/administration/users/:id" element={<RequireAdmin><AdminUserDetailPage /></RequireAdmin>} />
 				<Route path="/" element={<HomePage />} />
 				<Route path="/students" element={<StudentPage />} />
 				<Route path="/schools" element={<SchoolPage />} />

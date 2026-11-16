@@ -170,6 +170,8 @@ class User(AbstractBaseUser, PermissionsMixin):  # pyright: ignore[reportIncompa
     first_name = StrictCharField(max_length=32)
     role = models.SmallIntegerField(choices=Role.choices)
     is_active = models.BooleanField(default=True)
+    # ADM-01: historical suspension dates are unknown until recorded explicitly.
+    suspended_at = models.DateTimeField(null=True, blank=True)
     email_confirmed = models.BooleanField(default=True)
     date_joined = models.DateTimeField(auto_now_add=True)
     # Last request of the logged-in user, for the presence (JOB-039, jobup/presence.py);
@@ -624,7 +626,8 @@ class SignupSerializer(serializers.ModelSerializer):
         if not isinstance(data["role"], (str, int)):
             raise ValidationError({"role": "This field is invalid."})
         role = choice_from_frontend(Role, data["role"])
-        if role is None:
+        # ADM-13: an administrator account is never created by the public signup
+        if role is None or role == Role.ADMIN:
             raise ValidationError({"role": "This field is invalid."})
         data["role"] = role
         return super().to_internal_value(data)
