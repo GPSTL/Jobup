@@ -42,3 +42,56 @@ export async function getRecruiterConversations(): Promise<RecruiterConversation
 		})),
 	};
 }
+
+
+export type ConversationRecipient = {
+	id: number;
+	first_name: string;
+	last_name: string;
+	has_conversation: boolean;
+};
+
+export type RecipientSearchResult =
+	| { ok: true; recipients: ConversationRecipient[] }
+	| { ok: false; reason: "noSession" | "network" | "server" };
+
+export type StartConversationResult =
+	| { ok: true; id: number; created: boolean }
+	| { ok: false; reason: "noSession" | "notFound" | "network" | "server" };
+
+export async function searchConversationRecipients(query: string, signal?: AbortSignal): Promise<RecipientSearchResult> {
+	try {
+		const params = new URLSearchParams({ q: query });
+		const response = await fetch(`/api/recruiter/conversation-recipients?${params}`, {
+			credentials: "same-origin",
+			signal,
+		});
+		if (response.status === 401 || response.status === 403) return { ok: false, reason: "noSession" };
+		if (!response.ok) return { ok: false, reason: "server" };
+		return { ok: true, recipients: (await response.json()) as ConversationRecipient[] };
+	} catch (error) {
+		if (error instanceof DOMException && error.name === "AbortError") throw error;
+		return { ok: false, reason: error instanceof TypeError ? "network" : "server" };
+	}
+}
+
+export async function startRecruiterConversation(candidateId: number): Promise<StartConversationResult> {
+	try {
+		const csrf = await fetch("/api/csrf", { credentials: "same-origin" });
+		if (!csrf.ok) return { ok: false, reason: "server" };
+		const { csrfToken } = (await csrf.json()) as { csrfToken: string };
+		const response = await fetch("/api/recruiter/conversations", {
+			method: "POST",
+			credentials: "same-origin",
+			headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+			body: JSON.stringify({ candidate_id: candidateId }),
+		});
+		if (response.status === 401 || response.status === 403) return { ok: false, reason: "noSession" };
+		if (response.status === 404) return { ok: false, reason: "notFound" };
+		if (!response.ok) return { ok: false, reason: "server" };
+		const data = (await response.json()) as { id: number; created: boolean };
+		return { ok: true, id: data.id, created: data.created };
+	} catch (error) {
+		return { ok: false, reason: error instanceof TypeError ? "network" : "server" };
+	}
+}

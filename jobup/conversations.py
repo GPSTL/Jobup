@@ -12,7 +12,7 @@ import unicodedata
 from typing import Any, Self
 
 from django.core.files.uploadedfile import UploadedFile
-from django.db.models import F, OuterRef, Q, QuerySet, Subquery
+from django.db.models import Exists, F, OuterRef, Q, QuerySet, Subquery
 from django.db.models.functions import Coalesce
 from django.http import FileResponse
 from django.utils.datastructures import MultiValueDict
@@ -32,7 +32,9 @@ from .models import (
     Message,
     MessageAttachment,
     MessageSerializer,
+    Recruiter,
     Role,
+    Student,
     User,
 )
 from .presence import secondsSinceSeen
@@ -91,11 +93,16 @@ def matchesName(conversation: Conversation, query: str) -> bool:
 
 
 def interlocutor(conversation: Conversation) -> dict[str, Any]:
-    if conversation.recruiter is not None:
+    recruiter = conversation.recruiter
+    if recruiter is not None:
+        if recruiter.company is not None:
+            organization_name = recruiter.company.name
+        else:
+            organization_name = "Recruteur"
         person, kind, organization = (
-            conversation.recruiter.user,
+            recruiter.user,
             "recruiter",
-            conversation.recruiter.company.name,
+            organization_name,
         )
     else:
         manager = conversation.school_manager
@@ -172,8 +179,10 @@ def student_conversations(request: Request) -> Response:
     return Response([summary(conversation, user) for conversation in results])
 
 
-@api_view(["GET"])
+@api_view(["GET", "POST"])
 def recruiter_conversations(request: Request) -> Response:
+    if request.method == "POST":
+        return create_recruiter_conversation(request)
     user: User = request.user
     # Réservé aux recruteurs : chacun ne voit que ses conversations, pas celles de ses
     # collègues de la même entreprise. Recherche et démarrage d'une conversation : JOB-041
@@ -183,11 +192,113 @@ def recruiter_conversations(request: Request) -> Response:
     conversations = Conversation.objects.filter(recruiter__user=user).select_related(
         "student__user"
     )
-    return Response(
-        [
-            candidateSummary(conversation, user)
-            for conversation in withLastMessage(conversations)
+    query = request.query_params.get("q", "").strip()
+    results = withLastMessage(conversations)
+    if query:
+        # Même normalisation que la recherche des conversations côté étudiant.
+        results = [
+            conversation
+            for conversation in results
+            if all(
+                normalize(word)
+                in normalize(
+                    f"{conversation.student.user.first_name} {conversation.student.user.last_name}"
+                )
+                for word in query.split()
+            )
         ]
+    return Response([candidateSummary(conversation, user) for conversation in results])
+
+
+@api_view(["GET"])
+def recruiter_conversation_recipients(request: Request) -> Response:
+    user: User = request.user
+    if user.role != Role.RECRUITER or not Recruiter.objects.filter(user=user).exists():
+        return Response({"error": "Forbidden"}, status=403)
+
+    query = request.query_params.get("q", "").strip()
+    if len(query) < 2:
+        return Response([])
+
+    # visibleStudents() is the project's existing access boundary for recruiter
+    # candidate profiles: active student accounts only. Do not broaden this to
+    # inactive accounts or users without a Student profile.
+    students = (
+        Student.objects.filter(user__is_active=True, user__role=Role.STUDENT)
+        .select_related("user")
+        .annotate(
+            has_conversation=Exists(
+                Conversation.objects.filter(
+                    student_id=OuterRef("pk"), recruiter__user=user
+                )
+            )
+        )
+        .order_by("user__first_name", "user__last_name", "user_id")
+    )
+
+    words = [normalize(word) for word in query.split()]
+    recipients = []
+    for student in students:
+        name = normalize(f"{student.user.first_name} {student.user.last_name}")
+        if all(word in name for word in words):
+            recipients.append(
+                {
+                    "id": student.user_id,
+                    "first_name": student.user.first_name,
+                    "last_name": student.user.last_name,
+                    "has_conversation": student.has_conversation,
+                }
+            )
+            if len(recipients) == 20:
+                break
+    return Response(recipients)
+
+
+def create_recruiter_conversation(request: Request) -> Response:
+    user: User = request.user
+    if user.role != Role.RECRUITER:
+        return Response({"error": "Forbidden"}, status=403)
+    recruiter = Recruiter.objects.filter(user=user).first()
+    if recruiter is None:
+        return Response({"error": "Forbidden"}, status=403)
+
+    candidate_id = request.data.get("candidate_id")
+    # bool is an int subclass in Python; reject it explicitly.
+    if (
+        isinstance(candidate_id, bool)
+        or not isinstance(candidate_id, int)
+        or candidate_id <= 0
+    ):
+        return Response({"error": "Invalid candidate_id"}, status=400)
+
+    student = (
+        Student.objects.filter(
+            user_id=candidate_id, user__is_active=True, user__role=Role.STUDENT
+        )
+        .select_related("user")
+        .first()
+    )
+    if student is None:
+        # Same response for missing and inaccessible candidates to avoid enumeration.
+        return Response({"error": "Candidate not found"}, status=404)
+
+    # get_or_create uses an atomic insert and retries the lookup after a unique-key
+    # collision, so concurrent requests converge on the same conversation.
+    conversation, created = Conversation.objects.get_or_create(
+        student=student, recruiter=recruiter
+    )
+
+    return Response(
+        {
+            "id": conversation.pk,
+            "created": created,
+            "candidate": {
+                "id": student.user_id,
+                "first_name": student.user.first_name,
+                "last_name": student.user.last_name,
+            },
+        },
+        status=201 if created else 200,
     )
 
 

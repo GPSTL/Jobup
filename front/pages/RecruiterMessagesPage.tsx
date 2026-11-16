@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import CandidatePresence from "../components/CandidatePresence";
 import ConversationList, { type ConversationItem } from "../components/ConversationList";
 import MessageThread from "../components/MessageThread";
+import NewConversationDialog from "../components/NewConversationDialog";
+import Button from "../components/Button";
 import RecruiterNavbar from "../components/RecruiterNavbar";
 import { getRecruiterConversations, type RecruiterConversation } from "../services/recruiterConversations";
 import { avatarColor, formatConversationDate } from "../utils/conversations";
@@ -32,6 +34,7 @@ const toItem = (conversation: RecruiterConversation): ConversationItem => ({
 // of the selected one (shared with the student, JOB-034) and the presence of the candidate.
 // Search on the server and starting a conversation ("+"): JOB-041.
 export default function RecruiterMessagesPage() {
+	const navigate = useNavigate();
 	const { id } = useParams();
 	const [params] = useSearchParams();
 	const selectedId = id === undefined ? undefined : Number(id);
@@ -39,6 +42,7 @@ export default function RecruiterMessagesPage() {
 	const [error, setError] = useState("");
 	const [noSession, setNoSession] = useState(false);
 	const [query, setQuery] = useState("");
+	const [showRecipientDialog, setShowRecipientDialog] = useState(false);
 	// Incremented by « Réessayer » to load the list again
 	const [attempt, setAttempt] = useState(0);
 
@@ -83,7 +87,7 @@ export default function RecruiterMessagesPage() {
 	const filtered = conversations?.filter((conversation) => candidateName(conversation).toLocaleLowerCase("fr").includes(search));
 
 	return (
-		<div className="flex h-dvh flex-col gap-6 bg-[#f0f0f0] px-4 pt-4 pb-6 md:gap-10 md:px-6 md:pt-4 md:pb-12">
+		<div className="flex h-dvh flex-col gap-6 bg-[#f0f0f0] px-4 pt-4 pb-6 md:gap-10 md:px-6 md:pt-14 md:pb-12">
 			<header className="mx-auto w-full max-w-[1236px]">
 				<RecruiterNavbar />
 			</header>
@@ -101,6 +105,13 @@ export default function RecruiterMessagesPage() {
 							setAttempt((value) => value + 1);
 						}}
 						selectedId={selectedId}
+						action={
+							<Button ariaLabel="Nouvelle conversation" onClick={() => setShowRecipientDialog(true)} className="size-9">
+								<span className="text-[22px] translate-y-[2px]">
+									+
+								</span>
+							</Button>
+						}
 					/>
 				</div>
 				<section aria-label="Conversation" className={`min-h-0 min-w-0 flex-1 flex-col md:flex ${showThread ? "flex" : "hidden"}`}>
@@ -139,6 +150,15 @@ export default function RecruiterMessagesPage() {
 					)}
 				</section>
 			</main>
+			{showRecipientDialog && (
+				<NewConversationDialog
+					onClose={() => setShowRecipientDialog(false)}
+					onConversationCreated={(conversationId) => {
+						setShowRecipientDialog(false);
+						navigate(`/recruiter/messages/${conversationId}`);
+					}}
+				/>
+			)}
 		</div>
 	);
 }

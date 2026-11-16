@@ -10,6 +10,7 @@ from jobup.conversations import (
     conversation_messages,
     message_attachment,
     recruiter_conversations,
+    recruiter_conversation_recipients,
     student_conversations,
 )
 from jobup.offers import offer, offers
@@ -52,6 +53,7 @@ urlpatterns = [
     path("api/recruiter/shortlist", shortlist.shortlist),
     path("api/recruiter/conversations", recruiter_conversations),
     path("api/recruiter/company", recruiter_company),
+    path("api/recruiter/conversation-recipients", recruiter_conversation_recipients),
     path("api/companies", companies),
     path("api/companies/cities", cities),
     path("api/companies/<int:id>", company),
