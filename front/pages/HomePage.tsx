@@ -1,11 +1,21 @@
+import { useEffect, useState } from "react";
 import Button from "../components/Button";
 import Navbar, { NavbarLink } from "../components/Navbar";
+import StudentNavbar from "../components/StudentNavbar";
+import RecruiterNavbar from "../components/RecruiterNavbar";
+import { getSession, type SessionResult } from "../services/auth";
 
 import { ROLES } from "../utils/roles";
 
 const homeRoles = [...ROLES].sort((a, b) => a.homeOrder - b.homeOrder);
 
 export default function HomePage() {
+	const [session, setSession] = useState<SessionResult | null>(null);
+	useEffect(() => {
+		let ignore = false;
+		getSession().then((result) => { if (!ignore) setSession(result); });
+		return () => { ignore = true; };
+	}, []);
 
 	return (
 		<div className="relative flex min-h-dvh flex-col bg-[url(/static/img/home_bg_image.webp)] bg-cover bg-center">
@@ -13,8 +23,8 @@ export default function HomePage() {
 			<div className="absolute inset-0 bg-ink/60" />
 
 			{/* `relative` puts the header and the content above the veil. */}
-			<header className="relative p-4 md:p-6">
-				<Navbar variant="glass">
+			{session !== null && <header className="relative p-4 md:p-6">
+				{session.ok && session.user.role === 1 ? <StudentNavbar variant="glass" /> : session.ok && session.user.role === 3 ? <RecruiterNavbar variant="glass" /> : session.ok ? null : <Navbar variant="glass">
 					{/* Hidden on small screens: the full bar does not fit on a phone. */}
 					<div className="hidden gap-12 lg:flex">
 						<NavbarLink to="/offers">Trouver une alternance</NavbarLink>
@@ -23,8 +33,8 @@ export default function HomePage() {
 					</div>
 					<NavbarLink to="/signup" className="ml-auto">Inscription</NavbarLink>
 					<Button to="/login">Connexion</Button>
-				</Navbar>
-			</header>
+				</Navbar>}
+			</header>}
 
 			<main className="relative flex flex-1 flex-col items-center justify-center gap-12 px-4 pt-8 pb-16 text-center md:gap-28">
 				<h1 className="font-display text-5xl leading-tight text-surface md:text-7xl">

@@ -37,7 +37,7 @@ export default function Connexion() {
 				if (result.reason === "invalidCredentials") setFocus("password");
 				return;
 			}
-			navigate(accountHome(result.user.role, location.state?.recruiterReturnTo), { replace: true });
+			navigate(accountHome(result.user.role, location.state?.recruiterReturnTo, location.state?.studentReturnTo), { replace: true });
 		} finally {
 			submittingRef.current = false;
 		}
