@@ -2,9 +2,10 @@ import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
-import NotificationBell from "../front/components/NotificationBell";
+import NotificationBell, { NotificationPanelContent } from "../front/components/NotificationBell";
 import NotificationList from "../front/components/NotificationList";
-import NotificationSettings from "../front/components/NotificationSettings";
+import NotificationSettings, { NotificationSettingsCard } from "../front/components/NotificationSettings";
+import RecruiterAccountPage from "../front/pages/RecruiterAccountPage";
 import {
 	getNotifications,
 	getPreferences,
@@ -14,7 +15,7 @@ import {
 	updatePreferences,
 	type AppNotification,
 } from "../front/services/notifications";
-import { badgeLabel, bellLabel, kindIcon, relativeTime } from "../front/utils/notifications";
+import { badgeLabel, bellLabel, kindIcon, relativeTime, ROLE_NOTIFICATIONS } from "../front/utils/notifications";
 
 const realFetch = globalThis.fetch;
 
@@ -94,6 +95,31 @@ test("API : marquer comme lu, avec le jeton CSRF", async () => {
 	assert.deepEqual(await markRead(99), { ok: false, reason: "notFound" });
 });
 
+test("API : le compteur attend que la lecture soit enregistrée", async () => {
+	// Ouvrir une notification change de page : la cloche de la nouvelle page ne doit pas relire l'ancien nombre
+	let release = () => {};
+	const saved = new Promise<void>((resolve) => (release = resolve));
+	const calls = mockFetch(async (url) => {
+		if (url === "/api/csrf") return Response.json({ csrfToken: "jeton" });
+		if (url.endsWith("/read")) {
+			await saved;
+			return Response.json({ notification: notification(2, true), unread_count: 4 });
+		}
+		return Response.json({ unread_count: 4 });
+	});
+	const read = markRead(2);
+	const count = getUnreadCount();
+	await new Promise((resolve) => setTimeout(resolve, 20));
+	assert.ok(!calls.some((call) => call.url === "/api/notifications/unread-count"));
+	release();
+	assert.deepEqual(await count, { ok: true, unreadCount: 4 });
+	assert.deepEqual(await read, { ok: true, unreadCount: 4 });
+	assert.deepEqual(
+		calls.map((call) => call.url),
+		["/api/csrf", "/api/notifications/2/read", "/api/notifications/unread-count"],
+	);
+});
+
 test("API : préférences lues puis modifiées une à une", async () => {
 	const preferences = { messages: true, application_status: true, email: false };
 	mockFetch(() => Response.json(preferences));
@@ -147,4 +173,100 @@ test("préférences : section repérable et chargement annoncé", () => {
 	assert.match(html, /<section [^>]*id="notifications"/);
 	assert.match(html, /<h2 id="notification-settings"[^>]*>Notifications<\/h2>/);
 	assert.match(html, /role="status"[^>]*>Chargement de vos préférences…/);
+});
+
+// ----- Recruteur (JOB-046, REC-32) ----- //
+
+const recruiterNotification = (id: number, kind: AppNotification["kind"]): AppNotification => ({
+	...notification(id, false, "/recruiter/messages/3"),
+	kind,
+	title: kind === "new_application" ? "Nouvelle candidature" : "Nouveau message de Sarah Benali",
+	body: kind === "new_application" ? "Lucas Martin a postulé à « Développeur Java en alternance »." : "« Je suis disponible jeudi. »",
+});
+
+const preferences = { messages: true, application_status: true, new_applications: false, email: true };
+
+test("recruteur : icônes de la maquette « Notifications recruteur »", () => {
+	assert.deepEqual(kindIcon("new_application", "recruiter"), { src: "/static/img/notifications/user-plus.svg", background: "bg-[#dbeafe]" });
+	// Le bleu est réservé aux candidatures : les messages du recruteur sont en violet, ceux de l'étudiant restent bleus
+	assert.deepEqual(kindIcon("message", "recruiter"), { src: "/static/img/notifications/message-violet.svg", background: "bg-[#ede7fe]" });
+	assert.equal(kindIcon("message").src, "/static/img/notifications/message.svg");
+	assert.equal(kindIcon("contract", "recruiter").src, "/static/img/notifications/mail.svg");
+
+	const html = render(<NotificationList notifications={[recruiterNotification(1, "new_application"), recruiterNotification(2, "message")]} onOpen={() => {}} role="recruiter" />);
+	const [application, message] = html.split("</li>");
+	assert.match(application, /user-plus\.svg/);
+	assert.match(application, />Lucas Martin a postulé à « Développeur Java en alternance »\.</);
+	assert.match(message, /message-violet\.svg/);
+	assert.match(message, /href="\/recruiter\/messages\/3"/);
+});
+
+test("recruteur : les liens du panneau mènent à ses pages", () => {
+	const html = render(<NotificationBell role="recruiter" />);
+	assert.match(html, /href="\/recruiter\/notifications"[^>]*>Voir toutes les notifications<\/a>/);
+	assert.match(html, /href="\/recruiter\/account#notifications"/);
+	assert.doesNotMatch(html, /href="\/student/);
+});
+
+test("panneau : chargement, erreur, aucune notification, puis la liste", () => {
+	const props = { onRetry: () => {}, onOpen: () => {}, role: "recruiter" as const };
+	assert.match(render(<NotificationPanelContent notifications={null} error="" {...props} />), /role="status"[^>]*>Chargement des notifications…/);
+	const error = render(<NotificationPanelContent notifications={null} error="Le serveur ne répond pas." {...props} />);
+	assert.match(error, /role="alert"/);
+	assert.match(error, /Le serveur ne répond pas\./);
+	assert.match(error, />Réessayer<\/button>/);
+	assert.doesNotMatch(error, /Chargement/);
+	assert.match(render(<NotificationPanelContent notifications={[]} error="" {...props} />), />Aucune notification pour l’instant\.</);
+	assert.match(render(<NotificationPanelContent notifications={[recruiterNotification(1, "new_application")]} error="" {...props} />), /Nouvelle candidature/);
+});
+
+test("recruteur : interrupteurs de « Mon espace » dans l'ordre de la maquette", () => {
+	assert.deepEqual(
+		ROLE_NOTIFICATIONS.recruiter.settings.map(({ label }) => label),
+		["Nouvelles candidatures", "Nouveaux messages", "Recevoir aussi par e-mail"],
+	);
+	const card = (extra: Partial<Parameters<typeof NotificationSettingsCard>[0]>) =>
+		render(<NotificationSettingsCard role="recruiter" preferences={preferences} loadError="" saveError="" saving={null} onToggle={() => {}} onRetry={() => {}} {...extra} />);
+
+	const html = card({});
+	const switches = [...html.matchAll(/<span id="notification-(\w+)"[^>]*>([^<]+)<\/span><button[^>]*role="switch" aria-checked="(\w+)"/g)];
+	assert.deepEqual(
+		switches.map(([, key, label, checked]) => [key, label, checked]),
+		[
+			["new_applications", "Nouvelles candidatures", "false"],
+			["messages", "Nouveaux messages", "true"],
+			["email", "Recevoir aussi par e-mail", "true"],
+		],
+	);
+	// Le changement de statut est une préférence de l'étudiant
+	assert.doesNotMatch(html, /Changement de statut/);
+
+	const failed = card({ preferences: null, loadError: "Le serveur ne répond pas." });
+	assert.match(failed, /role="alert"[^>]*><p>Le serveur ne répond pas\.<\/p>/);
+	assert.match(failed, />Réessayer<\/button>/);
+	assert.doesNotMatch(failed, /role="switch"/);
+	assert.match(card({ saveError: "La préférence n’a pas été enregistrée." }), /role="alert"[^>]*>La préférence n’a pas été enregistrée\.</);
+});
+
+test("recruteur : « Préférences e-mail » ouvre l'onglet « Compte et abonnement » de « Mon espace » et son bloc « Notifications »", () => {
+	const at = (url: string) =>
+		renderToStaticMarkup(
+			<MemoryRouter initialEntries={[url]}>
+				<RecruiterAccountPage />
+			</MemoryRouter>,
+		);
+	for (const url of ["/recruiter/account#notifications", "/recruiter/account#compte"]) {
+		const html = at(url);
+		assert.match(html, /<a [^>]*aria-current="page"[^>]*>Compte et abonnement<\/a>/, url);
+		assert.match(html, /<section [^>]*id="notifications"/, url);
+		assert.doesNotMatch(html, /Chargement de votre page entreprise/, url);
+	}
+	// Sans ancre : la page entreprise de JOB-066, comme avant
+	const company = at("/recruiter/account");
+	assert.match(company, /<a [^>]*aria-current="page"[^>]*>Page entreprise<\/a>/);
+	assert.match(company, /href="\/recruiter\/account#compte"/);
+	assert.match(company, /Chargement de votre page entreprise/);
+	assert.doesNotMatch(company, /id="notifications"/);
+	// La cloche de la barre est celle des notifications du recruteur
+	assert.match(company, /href="\/recruiter\/notifications"/);
 });

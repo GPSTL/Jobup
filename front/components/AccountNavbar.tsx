@@ -6,6 +6,7 @@ import Navbar, { NavbarLink, navbarItemClass } from "./Navbar";
 import NotificationBell from "./NotificationBell";
 import UserIcon from "./UserIcon";
 import { logout } from "../services/auth";
+import type { NotificationRole } from "../utils/notifications";
 import { MESSAGES } from "../utils/validation";
 
 type AccountNavbarProps = {
@@ -13,8 +14,8 @@ type AccountNavbarProps = {
 	links: { label: string; to?: string }[];
 	/** Static bell, for the roles whose notifications are not built yet */
 	showBell?: boolean;
-	/** Bell with the unread count and the panel of the notifications (JOB-042) */
-	notifications?: boolean;
+	/** Bell with the unread count and the panel of the notifications of this role (JOB-042, JOB-046) */
+	notifications?: NotificationRole;
 	variant?: "glass" | "solid";
 	/** Page shown after « Déconnexion » */
 	logoutTo?: string;
@@ -26,7 +27,7 @@ type AccountNavbarProps = {
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary";
 
 // Shared by student, recruiter and administrator pages.
-export default function AccountNavbar({ links, showBell = false, notifications = false, variant = "solid", logoutTo = "/login", compact = false, hoverHighlight = false }: AccountNavbarProps) {
+export default function AccountNavbar({ links, showBell = false, notifications, variant = "solid", logoutTo = "/login", compact = false, hoverHighlight = false }: AccountNavbarProps) {
 	// Menu of the small screens, where the links do not fit in the bar
 	const [open, setOpen] = useState(false);
 	const [error, setError] = useState("");
@@ -107,8 +108,8 @@ export default function AccountNavbar({ links, showBell = false, notifications =
 					</div>
 				</div>
 
-				{notifications && <NotificationBell />}
-				{/* Notifications of this role are not integrated yet (REC-32): static icon, no fictitious unread count. */}
+				{notifications && <NotificationBell role={notifications} />}
+				{/* Notifications of this role are not integrated yet: static icon, no fictitious unread count. */}
 				{showBell && !notifications && <span role="img" aria-label="Notifications"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" strokeLinecap="round" strokeLinejoin="round" /></svg></span>}
 				{error && <span role="alert" className="sr-only">{error}</span>}
 			</div>

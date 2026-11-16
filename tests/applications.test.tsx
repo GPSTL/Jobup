@@ -30,6 +30,7 @@ const application: ApplicationDetail = {
 	submitted_at: "2026-10-08T12:00:00Z",
 	updated_at: "2026-10-10T12:00:00Z",
 	message: "Étudiant en Master MIAGE",
+	decision_message: "",
 	documents: { resume: "/api/applications/7/documents/resume", cover_letter: null },
 };
 const draft: ApplicationDetail = {
