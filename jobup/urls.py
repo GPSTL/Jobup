@@ -12,7 +12,7 @@ from jobup.conversations import (
     recruiter_conversations,
     student_conversations,
 )
-from jobup.offers import offer, offers
+from jobup.offers import offer, offers, savedOffers
 from jobup.profile import student, student_photo
 from jobup.recruiter_company import recruiter_company
 from jobup.recruiter_offers import (
@@ -47,6 +47,8 @@ urlpatterns = [
     path("api/me", api.me),
     path("api/offers", offers),
     path("api/offers/<int:id>", offer),
+    path("api/student/saved-offers", savedOffers),
+    path("api/student/saved-offers/<int:id>", savedOffers),
     path("api/student/<int:id>", student),
     path("api/student/<int:id>/photo", student_photo),
     path("api/student/<int:id>/resume", student_resume),

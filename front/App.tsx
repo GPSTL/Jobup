@@ -24,6 +24,7 @@ import CandidateProfilePage from "./pages/CandidateProfilePage";
 import NotificationsPage from "./pages/NotificationsPage";
 import RecruiterOffersPage from "./pages/RecruiterOffersPage";
 import OfferApplicantsPage from "./pages/OfferApplicantsPage";
+import SavedOffersPage from "./pages/SavedOffersPage";
 import RecruiterApplicationPage from "./pages/RecruiterApplicationPage";
 
 import RecruiterMessagesPage from "./pages/RecruiterMessagesPage";
@@ -46,6 +47,7 @@ function App() {
 				<Route path="/signup" element={<Inscription />} />
 				<Route path="/login" element={<Connexion />} />
 				<Route path="/student" element={<RequireStudent>{(user) => <MonEspace user={user} />}</RequireStudent>} />
+				<Route path="/student/saved-offers" element={<RequireStudent>{() => <SavedOffersPage />}</RequireStudent>} />
 				<Route path="/offers" element={<OffersPage />} />
 				<Route path="/offers/:id" element={<OffersPage />} />
 				<Route path="/companies" element={<CompaniesPage />} />

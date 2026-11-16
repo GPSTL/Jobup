@@ -276,6 +276,19 @@ class Offer(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
 
+class SavedOffer(models.Model):
+    student = models.ForeignKey(Student, models.CASCADE, related_name="saved_offers")
+    offer = models.ForeignKey(Offer, models.CASCADE, related_name="saved_by_students")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints: ClassVar = [
+            models.UniqueConstraint(
+                fields=["student", "offer"], name="unique_student_saved_offer"
+            )
+        ]
+
+
 class JobApplication(models.Model):
     student = models.ForeignKey(Student, models.CASCADE, related_name="applications")
     offer = models.ForeignKey(Offer, models.CASCADE, "applications")

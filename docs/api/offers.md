@@ -43,4 +43,24 @@ students is introduced; JOB-020's public `/offers` navigation remains available.
 Backend tests verify unpublished → published → withdrawn visibility in list
 and direct access using isolated test records. A full recruiter UI journey
 requires the JOB-065 publication and withdrawal implementation to be integrated.
-No user database migration or seed command is required by this change.
+The public JOB-068 offer API requires no schema change; saved-offer persistence
+adds the `SavedOffer` database table.
+
+## Student saved offers
+
+Saved offers are persistent, private to the authenticated student, and require a
+student account. The routes use normal session authentication and CSRF
+protection for writes:
+
+- `GET /api/student/saved-offers` lists that student's saved, currently active
+  offers, newest first. Each item uses the public offer fields plus `saved_at`.
+- `POST /api/student/saved-offers/:id` saves a currently active offer. It
+  returns the saved offer with `saved_at` (`201` when created, `200` if it was
+  already saved).
+- `DELETE /api/student/saved-offers/:id` removes the student's saved offer and
+  returns `204`, including when it was already removed.
+
+Visitors receive the normal unauthenticated response; authenticated non-student
+roles receive `403`. Saving an unknown or inactive offer returns `404`. The
+database enforces one saved row per student and offer. Removing or deleting an
+offer or student cascades to its saved rows.
