@@ -5,6 +5,7 @@ from django.contrib.staticfiles.views import serve
 from django.urls import path, re_path
 
 from jobup import api, candidates, exclusions, shortlist
+from jobup.companies import cities, companies, company
 from jobup.conversations import (
     conversation_messages,
     message_attachment,
@@ -43,6 +44,9 @@ urlpatterns = [
     path("api/recruiter/candidates/<int:id>/exclusion", exclusions.exclude_candidate),
     path("api/recruiter/shortlist", shortlist.shortlist),
     path("api/recruiter/conversations", recruiter_conversations),
+    path("api/companies", companies),
+    path("api/companies/cities", cities),
+    path("api/companies/<int:id>", company),
     re_path(r"^(?!api)[^.]*$", serve, kwargs={"path": "index.html"}),
     path("favicon.ico", serve, kwargs={"path": "favicon.ico"}),
 ]

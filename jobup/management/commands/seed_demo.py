@@ -1,6 +1,7 @@
 # Complete demo of the project, for local use: a recruiter account you can log in with, its
 # candidates, offers, applications, shortlist, exclusions and conversations, including a message
 # with an attachment (JOB-043). Builds on the candidates of seed_candidates (JOB-035).
+# Remplit aussi l'annuaire des entreprises (JOB-021) : entreprises, recruteurs et offres.
 import io
 import zipfile
 from datetime import datetime, time, timedelta
@@ -85,6 +86,116 @@ EXTRA_CANDIDATES: list[dict[str, Any]] = [
         "description": "Profil systèmes et réseaux, à la recherche d'une alternance en infrastructure.",
         "resume": "CV_Hugo_Lefevre.pdf",
     },
+]
+
+
+# Annuaire des entreprises (JOB-021) : (nom, siret, secteur, ville, effectif, site, présentation,
+# offres [(titre, catégorie, en cours)]). Un recruteur de démo par entreprise qui a des offres.
+COMPANIES: list[tuple[Any, ...]] = [
+    (
+        "Atelier Studio",
+        "90000000000001",
+        JobCategory.COMPUTER_SCIENCE,
+        "Paris",
+        70,
+        "https://atelier-studio.fr",
+        "Atelier Studio conçoit des applications web et mobiles pour des clients du retail et de la culture. "
+        "L'équipe de 70 personnes accueille chaque année une dizaine d'alternants en développement, design et gestion de projet, avec un tuteur dédié.",
+        [
+            ("Développeur Java en alternance", JobCategory.COMPUTER_SCIENCE, True),
+            ("Développeur Angular", JobCategory.COMPUTER_SCIENCE, True),
+            ("Chef de projet digital junior", JobCategory.PROJECT_MANAGEMENT, True),
+            ("Stage design UI (pourvu)", JobCategory.DESIGN, False),
+        ],
+    ),
+    (
+        "Doctolib",
+        "90000000000002",
+        JobCategory.HEALTH,
+        "Paris",
+        2800,
+        "https://www.doctolib.fr",
+        "Faciliter l'accès aux soins et accompagner les professionnels de santé.",
+        [
+            ("Alternance développeur back-end", JobCategory.COMPUTER_SCIENCE, True),
+            ("Alternance chargé de relation praticiens", JobCategory.SALES_BD, True),
+        ],
+    ),
+    (
+        "Back Market",
+        "90000000000003",
+        JobCategory.ENERGY_ENVIRONMENT,
+        "Paris",
+        700,
+        "https://www.backmarket.fr",
+        "Donner une seconde vie aux appareils et une autre voie à la technologie.",
+        [("Alternance data analyst", JobCategory.DATA_AI, True)],
+    ),
+    (
+        "Qonto",
+        "90000000000004",
+        JobCategory.FINANCE,
+        "Paris",
+        1600,
+        "https://qonto.com",
+        "Simplifier la gestion financière des indépendants et des entreprises.",
+        [
+            ("Alternance contrôle de gestion", JobCategory.FINANCE, True),
+            ("Alternance product designer", JobCategory.DESIGN, True),
+        ],
+    ),
+    (
+        "BlaBlaCar",
+        "90000000000005",
+        JobCategory.SUPPLY_CHAIN_LOGISTICS,
+        "Paris",
+        800,
+        "https://www.blablacar.fr",
+        "Connecter les voyageurs pour une mobilité plus accessible et partagée.",
+        [],
+    ),
+    (
+        "Alan",
+        "90000000000006",
+        JobCategory.BANKING_INSURANCE,
+        "Paris",
+        600,
+        "https://alan.com",
+        "Prendre soin de la santé et du bien-être, simplement et au quotidien.",
+        [("Alternance chargé de clientèle", JobCategory.BANKING_INSURANCE, True)],
+    ),
+    (
+        "Mistral AI",
+        "90000000000007",
+        JobCategory.DATA_AI,
+        "Paris",
+        250,
+        "https://mistral.ai",
+        "Créer une intelligence artificielle ouverte, utile et accessible à tous.",
+        [("Alternance ingénieur machine learning", JobCategory.DATA_AI, True)],
+    ),
+    (
+        "Lumen Conseil",
+        "90000000000008",
+        JobCategory.CONSULTING,
+        "Lyon",
+        45,
+        "",
+        "Cabinet de conseil en stratégie pour les PME de la région lyonnaise.",
+        [("Alternance consultant junior", JobCategory.CONSULTING, True)],
+    ),
+    (
+        "Verdi Énergie",
+        "90000000000009",
+        JobCategory.ENERGY_ENVIRONMENT,
+        "Nantes",
+        120,
+        "https://verdi-energie.example",
+        "Installation et maintenance de panneaux solaires pour les particuliers et les collectivités.",
+        [("Alternance technicien photovoltaïque", JobCategory.ENGINEERING, True)],
+    ),
+    # Fiche volontairement incomplète : affichage sans ville, effectif, site ni présentation
+    ("Pixel & Co", "90000000000010", JobCategory.DESIGN, "", None, "", "", []),
 ]
 
 
@@ -256,6 +367,7 @@ class Command(BaseCommand):
         today = timezone.localtime()
         self.conversations(recruiter, recruiter_user, lucas, sophie, emma, today)
         self.school(lucas, today)
+        self.companies()
 
         self.stdout.write(
             self.style.SUCCESS(
@@ -354,3 +466,49 @@ class Command(BaseCommand):
                 at(today - timedelta(days=5), 14, 20),
                 "Bonjour, je vous l'envoie dès que l'entreprise l'a signée.",
             )
+
+    def companies(self) -> None:
+        # Annuaire des entreprises (JOB-021) : relançable sans doublons
+        for (
+            name,
+            siret,
+            sector,
+            city,
+            employees,
+            website,
+            description,
+            offers,
+        ) in COMPANIES:
+            company, _ = Company.objects.update_or_create(
+                siret=siret,
+                defaults={
+                    "name": name,
+                    "sector": sector,
+                    "city": city,
+                    "employees": employees,
+                    "website": website,
+                    "description": description,
+                },
+            )
+            if not offers:
+                continue
+            # Un recruteur de démo par entreprise, pour rattacher ses offres
+            user = demoUser(
+                f"recrutement+{siret[-2:]}@demo.jobup",
+                name[:32],
+                "Démo",
+                Role.RECRUITER,
+            )
+            recruiter, _ = Recruiter.objects.get_or_create(
+                user=user, defaults={"company": company}
+            )
+            for title, category, active in offers:
+                Offer.objects.update_or_create(
+                    recruiter=recruiter,
+                    title=title,
+                    defaults={
+                        "description": f"{title} chez {name}.",
+                        "category": category,
+                        "is_active": active,
+                    },
+                )

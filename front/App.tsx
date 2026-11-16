@@ -12,6 +12,7 @@ import RequireStudent from "./components/RequireStudent";
 import SchoolPage from "./pages/SchoolPage";
 import OffersPage from "./pages/OffersPage";
 import CompaniesPage from "./pages/CompaniesPage";
+import CompanyPage from "./pages/CompanyPage";
 import MessagesPage from "./pages/MessagesPage";
 import ApplicationsPage from "./pages/ApplicationsPage";
 import ApplicationDetailPage from "./pages/ApplicationDetailPage";
@@ -35,6 +36,7 @@ function App() {
 				<Route path="/student" element={<RequireStudent>{(user) => <MonEspace user={user} />}</RequireStudent>} />
 				<Route path="/offers" element={<OffersPage />} />
 				<Route path="/companies" element={<CompaniesPage />} />
+				<Route path="/companies/:id" element={<CompanyPage />} />
 				<Route path="/recruiter/candidates" element={<RequireRecruiter>{() => <CandidatesPage />}</RequireRecruiter>} />
 				<Route path="/recruiter/candidates/:id" element={<RequireRecruiter>{() => <CandidateProfilePage />}</RequireRecruiter>} />
 				<Route path="/recruiter/shortlist" element={<RequireRecruiter>{() => <ShortlistPage />}</RequireRecruiter>} />
