@@ -119,5 +119,7 @@ class RecruiterOfferTests(CandidateTestCase):
 
     def test_no_writes(self):
         USERS[3].login(self)
-        for url in (LIST, self.applicants()):
-            self.assertEqual(self.client.post(url, {}).status_code, 405)
+        # POST sur la liste publie une offre depuis JOB-065 (test_create_offers.py)
+        self.assertEqual(self.client.post(self.applicants(), {}).status_code, 405)
+        for method in (self.client.put, self.client.patch, self.client.delete):
+            self.assertEqual(method(LIST, {}).status_code, 405)
