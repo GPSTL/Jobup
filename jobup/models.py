@@ -281,6 +281,7 @@ class JobApplication(models.Model):
         choices=ApplicationStatus.choices, default=ApplicationStatus.DRAFT
     )
     message = models.CharField(max_length=1024, blank=True)
+    decision_message = models.CharField(max_length=1024, blank=True)
     cover_letter = models.FileField(upload_to="covers", blank=True)
     sent_resume = models.FileField(upload_to="sent_resumes", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -324,6 +325,7 @@ class JobApplication(models.Model):
         return {
             **self.to_dict(),
             "message": self.message,
+            "decision_message": self.decision_message,
             "documents": {
                 "resume": f"{base}/resume" if self.sent_resume else None,
                 "cover_letter": f"{base}/cover_letter" if self.cover_letter else None,
