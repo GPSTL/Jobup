@@ -25,7 +25,9 @@ class CompanyFilters(BaseModel):
 def withActiveOffers(companies):
     # Nombre d'offres en cours, toutes offres des recruteurs de l'entreprise confondues
     return companies.annotate(
-        active_offers=Count("recruiters__offers", filter=Q(recruiters__offers__is_active=True))
+        active_offers=Count(
+            "recruiters__offers", filter=Q(recruiters__offers__is_active=True)
+        )
     )
 
 
@@ -51,7 +53,11 @@ def offerSummary(offer: Offer) -> dict[str, Any]:
 def companies(request: Request) -> Response:
     try:
         # Un filtre vide (ex. « Tous les secteurs ») équivaut à un filtre absent
-        params = {key: value for key, value in request.query_params.dict().items() if value.strip()}
+        params = {
+            key: value
+            for key, value in request.query_params.dict().items()
+            if value.strip()
+        }
         filters = CompanyFilters.model_validate(params)
     except ValidationError:
         return Response({"error": "Invalid filters"}, status=400)
@@ -68,12 +74,14 @@ def companies(request: Request) -> Response:
     count = found.count()
     start = (filters.page - 1) * PAGE_SIZE
     page = withActiveOffers(found).order_by("name")[start : start + PAGE_SIZE]
-    return Response({
-        "count": count,
-        "page": filters.page,
-        "pages": max(1, -(-count // PAGE_SIZE)),
-        "results": [companyCard(company) for company in page],
-    })
+    return Response(
+        {
+            "count": count,
+            "page": filters.page,
+            "pages": max(1, -(-count // PAGE_SIZE)),
+            "results": [companyCard(company) for company in page],
+        }
+    )
 
 
 @api_view(["GET"])
@@ -83,17 +91,26 @@ def company(_: Request, id: int) -> Response:
     if target is None:
         return Response({"error": "Company not found"}, status=404)
 
-    offers = Offer.objects.filter(recruiter__company=target, is_active=True).order_by("-created_at")
-    return Response({
-        **target.to_dict(),
-        "active_offers": target.active_offers,
-        "offers": [offerSummary(offer) for offer in offers],
-    })
+    offers = Offer.objects.filter(recruiter__company=target, is_active=True).order_by(
+        "-created_at"
+    )
+    return Response(
+        {
+            **target.to_dict(),
+            "active_offers": target.active_offers,
+            "offers": [offerSummary(offer) for offer in offers],
+        }
+    )
 
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def cities(_: Request) -> Response:
     # Options du menu « Toute la France » : villes renseignées par au moins une entreprise
-    found = Company.objects.exclude(city="").values_list("city", flat=True).distinct().order_by("city")
+    found = (
+        Company.objects.exclude(city="")
+        .values_list("city", flat=True)
+        .distinct()
+        .order_by("city")
+    )
     return Response(list(found))

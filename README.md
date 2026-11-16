@@ -4,7 +4,8 @@ A "setup" application built with Django (Python) on the backend and React with T
 
 ## Prerequisites
 
-- **Python** 3.10+
+- **Python** 3.14 (used in CI)
+- **Node.js** 24 (used in CI)
 - **npm** 10.+
 - **make** and a Unix shell (Linux, macOS or WSL)
 
@@ -25,7 +26,48 @@ make init
 
 Run `make init` again whenever `requirements.txt` or `package.json` changes.
 
-## Development
+## Continuous integration
+
+GitHub Actions runs [CI](.github/workflows/ci.yml) for every pull request,
+push to `main`, and manual run from the Actions tab. Two jobs run in parallel:
+
+- **Frontend**: ESLint (including React Hooks rules), strict TypeScript checking
+  of application and test code, all `tests/*.test.ts` and `tests/*.test.tsx`
+  tests, and the minified JS/CSS build.
+- **Backend**: Ruff lint and format checks, Django system checks, and pytest
+  with the existing 90% minimum coverage requirement.
+
+Install the development tools once, then run the same checks locally:
+
+```bash
+source .venv/bin/activate
+python -m pip install -r requirements-dev.txt
+npm ci
+
+npm run lint
+npm run typecheck
+npm test
+npm run build
+ruff check jobup manage.py
+ruff format --check jobup manage.py
+python manage.py check
+python -m pytest -v
+```
+
+The workflow generates Django migrations in its disposable checkout because
+this repository currently ignores migration files. No production secrets or
+external database are needed. Tracking migrations and checking for missing
+migrations is a recommended follow-up.
+
+After pushing this workflow and getting a successful run, configure a branch
+ruleset in GitHub **Settings → Rules → Rulesets** for `main`: require pull
+requests and require the **Frontend** and **Backend** status checks before
+merging. This repository change does not configure those GitHub settings.
+
+This workflow provides CI. Automatic deployment can be added separately once
+the hosting environment is chosen.
+
+## Running the development server
 
 To start the Django development server and rebuild the frontend automatically:
 
@@ -63,9 +105,21 @@ Once running, access the application at `http://127.0.0.1:8000/`.
 | `make debug` | Builds the non-minified JS and CSS without starting the server. |
 | `make run_only` | Starts the server without rebuilding the frontend. |
 | `make migrate` | Creates and applies the database migrations of the `jobup` app. |
-| `make seed` | Adds demo companies, recruiters and job offers to the local database (development only, can be run again safely). |
+| `make seed` | Fills the database with a complete demo (local use, can be run again): see below. |
 | `make watch_js` | Rebuilds the JS on every change. Used by `make dev`. |
 | `make watch_css` | Rebuilds the CSS on every change. Used by `make dev`. |
+
+## Demo data
+
+After `make migrate`, `make seed` (or `python manage.py seed_demo`) creates a recruiter, its candidates, offers, applications, shortlist, an excluded candidate and conversations, including a message with a PDF attachment (JOB-043) and one with a Word document. It also fills the companies directory (JOB-021, `/companies`): ten companies, some with a demo recruiter and job offers (`recrutement+NN@demo.jobup`, same password). It refuses to run when `DEBUG` is off, and running it again creates nothing new.
+
+| Account | Email | Password | To see |
+|---|---|---|---|
+| Recruiter | `recruteur@demo.jobup.fr` | `Demo1234` | `/recruiter/candidates`, a profile with its exchange history, `/recruiter/shortlist` |
+| Student | `lucas.martin@demo.jobup.fr` | `Demo1234` | `/messages` (the conversation with the file to download), `/applications` |
+| School employee | `ecole@demo.jobup.fr` | `Demo1234` | the other side of Lucas's second conversation |
+
+The recruiter's message page (JOB-041) does not exist yet: the files sent by the recruiter are seen and downloaded from the student account.
 
 ## Signup and login forms (JOB-027)
 

@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, type LoginForm } from "../utils/login";
@@ -9,6 +9,7 @@ import Field from "../components/Field";
 import Button from "../components/Button";
 import { login } from "../services/auth";
 import { MESSAGES } from "../utils/validation";
+import { accountHome } from "../utils/accountHome";
 
 const FORM_ERRORS = {
 	invalidCredentials: MESSAGES.invalidCredentials,
@@ -18,6 +19,7 @@ const FORM_ERRORS = {
 
 export default function Connexion() {
 	const navigate = useNavigate();
+	const location = useLocation();
 	const { register, handleSubmit, setFocus, formState: { errors, isSubmitting } } = useForm<LoginForm>({
 		resolver: zodResolver(loginSchema),
 		defaultValues: { email: "", password: "" },
@@ -35,7 +37,7 @@ export default function Connexion() {
 				if (result.reason === "invalidCredentials") setFocus("password");
 				return;
 			}
-			navigate("/student", { replace: true });
+			navigate(accountHome(result.user.role, location.state?.recruiterReturnTo), { replace: true });
 		} finally {
 			submittingRef.current = false;
 		}

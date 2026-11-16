@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import Logo from "../components/Logo";
 import Navbar, { NavbarLink } from "../components/Navbar";
 import Button from "../components/Button";
 import HandshakeIcon from "../components/HandshakeIcon";

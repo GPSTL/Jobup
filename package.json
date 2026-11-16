@@ -8,15 +8,27 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@tailwindcss/cli": "^4.3.0",
+    "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "esbuild": "^0.25.0",
+    "eslint": "^10.14.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.14.0",
     "tailwindcss": "^4.3.3",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "typescript-eslint": "^8.72.1"
   },
   "allowScripts": {
     "esbuild@0.25.12": true,
     "@parcel/watcher@2.5.1": true
+  },
+  "scripts": {
+    "lint": "eslint front tests",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/test-frontend.mjs",
+    "build": "make all"
   }
 }

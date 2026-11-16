@@ -43,7 +43,7 @@ const linkBase = [
 
 const linkStates = {
 	idle: "hover:bg-surface/60 focus-visible:bg-surface/60",
-	// Current page: blue pill, as in the mockup
+	// Current page: blue pill
 	active: "bg-primary text-on-primary",
 };
 
