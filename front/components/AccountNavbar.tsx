@@ -7,12 +7,13 @@ type AccountNavbarProps = {
 	/** Pages of the role, in the order of the mockup */
 	links: { label: string; to: string }[];
 	showBell?: boolean;
+	variant?: "glass" | "solid";
 };
 
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary";
 
 // Bar of the logged-in pages, filled by StudentNavbar and RecruiterNavbar. NavbarLink highlights the link of the current page.
-export default function AccountNavbar({ links, showBell = false }: AccountNavbarProps) {
+export default function AccountNavbar({ links, showBell = false, variant = "solid" }: AccountNavbarProps) {
 	// Menu of the small screens, where the links do not fit in the bar
 	const [open, setOpen] = useState(false);
 	const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -27,7 +28,7 @@ export default function AccountNavbar({ links, showBell = false }: AccountNavbar
 	};
 
 	return (
-		<Navbar>
+		<Navbar variant={variant}>
 			<div className="relative ml-auto flex items-center gap-12" onKeyDown={onKeyDown}>
 				{/* Large screens: the links are in the bar */}
 				<div className="hidden gap-12 lg:flex">

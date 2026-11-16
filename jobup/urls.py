@@ -13,6 +13,7 @@ from jobup.conversations import (
     student_conversations,
 )
 from jobup.profile import student, student_photo
+from jobup.recruiter_offers import offer_applicants, recruiter_offers
 from jobup.resume import student_resume
 
 urlpatterns = [
@@ -40,6 +41,8 @@ urlpatterns = [
     path("api/recruiter/candidates/filters", candidates.candidate_filters),
     path("api/recruiter/candidates/<int:id>", candidates.candidate_detail),
     path("api/recruiter/candidates/<int:id>/cv", candidates.candidate_cv),
+    path("api/recruiter/offers", recruiter_offers),
+    path("api/recruiter/offers/<int:id>/applicants", offer_applicants),
     path("api/recruiter/candidates/<int:id>/shortlist", shortlist.shortlist_candidate),
     path("api/recruiter/candidates/<int:id>/exclusion", exclusions.exclude_candidate),
     path("api/recruiter/shortlist", shortlist.shortlist),
