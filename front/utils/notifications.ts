@@ -1,12 +1,52 @@
-// Affichage des notifications (JOB-042) : heure relative, pastille, icône de chaque type.
+// Affichage des notifications (JOB-042, JOB-046) : heure relative, pastille, icône de chaque type,
+// et ce qui change d'un rôle à l'autre (pages, préférences affichées).
 
-import type { NotificationKind } from "../services/notifications";
+import type { NotificationKind, NotificationPreferences } from "../services/notifications";
 
 // Vérification régulière du nombre de non lues, tant que l'onglet est visible
 export const COUNT_REFRESH_DELAY = 30_000;
 
 // Préférence e-mail dans « Mon espace » : cible du lien « Préférences e-mail » du panneau
 export const PREFERENCES_ANCHOR = "notifications";
+
+// Rôles dont les notifications sont intégrées (les écoles viendront avec ECO-21)
+export type NotificationRole = "student" | "recruiter";
+
+type RoleNotifications = {
+	/** Page « Voir toutes les notifications » */
+	page: string;
+	/** Bloc « Notifications » de « Mon espace », cible de « Préférences e-mail » */
+	preferences: string;
+	/** Sous-titre de la page des notifications */
+	description: string;
+	/** Interrupteurs de « Mon espace », dans l'ordre et avec les libellés de la maquette du rôle */
+	settings: { key: keyof NotificationPreferences; label: string }[];
+};
+
+export const ROLE_NOTIFICATIONS: Record<NotificationRole, RoleNotifications> = {
+	// Maquettes « Notifications étudiant » et « Mon espace – Compte et abonnement »
+	student: {
+		page: "/notifications",
+		preferences: `/student#${PREFERENCES_ANCHOR}`,
+		description: "Les nouveaux messages et les changements de vos candidatures.",
+		settings: [
+			{ key: "messages", label: "Nouveaux messages" },
+			{ key: "application_status", label: "Changement de statut de candidature" },
+			{ key: "email", label: "Recevoir aussi par e-mail" },
+		],
+	},
+	// Maquettes « Notifications recruteur » et « Mon espace recruteur – Compte et abonnement »
+	recruiter: {
+		page: "/recruiter/notifications",
+		preferences: `/recruiter/account#${PREFERENCES_ANCHOR}`,
+		description: "Les nouvelles candidatures à vos offres et les nouveaux messages des candidats.",
+		settings: [
+			{ key: "new_applications", label: "Nouvelles candidatures" },
+			{ key: "messages", label: "Nouveaux messages" },
+			{ key: "email", label: "Recevoir aussi par e-mail" },
+		],
+	},
+};
 
 const MINUTE = 60 * 1000;
 const HOUR = 60 * MINUTE;
@@ -37,15 +77,24 @@ export function bellLabel(count: number) {
 	return `Notifications, ${count} non lue${count > 1 ? "s" : ""}`;
 }
 
+type KindIcon = { src: string; background: string };
+
 // Icône et couleur de fond de chaque type, comme la maquette « Notifications étudiant »
-export const KIND_ICONS: Record<NotificationKind, { src: string; background: string }> = {
+export const KIND_ICONS: Record<NotificationKind, KindIcon> = {
 	message: { src: "/static/img/notifications/message.svg", background: "bg-[#dbeafe]" },
 	application_update: { src: "/static/img/notifications/refresh.svg", background: "bg-[#fef3c7]" },
 	application_accepted: { src: "/static/img/notifications/check.svg", background: "bg-[#dcfce7]" },
 	// La maquette n'a pas d'icône pour un refus : celle d'une mise à jour
 	application_refused: { src: "/static/img/notifications/refresh.svg", background: "bg-[#fef3c7]" },
+	new_application: { src: "/static/img/notifications/user-plus.svg", background: "bg-[#dbeafe]" },
 };
 
-// Type inconnu (ajouté côté serveur par REC-32 ou ECO-21) : l'icône générique de la maquette
-export const kindIcon = (kind: string) =>
+// Maquette « Notifications recruteur » : le bleu y est réservé aux candidatures, les messages sont en violet
+const RECRUITER_ICONS: Partial<Record<NotificationKind, KindIcon>> = {
+	message: { src: "/static/img/notifications/message-violet.svg", background: "bg-[#ede7fe]" },
+};
+
+// Type inconnu (ajouté côté serveur par une autre story, comme ECO-21) : l'icône générique de la maquette
+export const kindIcon = (kind: string, role: NotificationRole = "student") =>
+	(role === "recruiter" ? RECRUITER_ICONS[kind as NotificationKind] : undefined) ??
 	KIND_ICONS[kind as NotificationKind] ?? { src: "/static/img/notifications/mail.svg", background: "bg-[#ede7fe]" };

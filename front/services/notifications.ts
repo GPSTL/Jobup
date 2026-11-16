@@ -1,4 +1,4 @@
-// Appels à l'API des notifications (JOB-042, ETU-28), commune à tous les rôles. Contrat : docs/api/notifications.md
+// Appels à l'API des notifications (JOB-042, ETU-28), commune à tous les rôles (étudiant, recruteur JOB-046). Contrat : docs/api/notifications.md
 //   GET  /api/notifications                  les plus récentes, avec le nombre de non lues
 //   GET  /api/notifications?before=<id>      les précédentes
 //   GET  /api/notifications/unread-count     pour la pastille de la barre de navigation
@@ -7,7 +7,7 @@
 //   GET  /api/notifications/preferences      préférences de l'utilisateur
 //   PUT  /api/notifications/preferences      les modifier (seuls les champs envoyés changent)
 
-export type NotificationKind = "message" | "application_update" | "application_accepted" | "application_refused";
+export type NotificationKind = "message" | "application_update" | "application_accepted" | "application_refused" | "new_application";
 
 export type AppNotification = {
 	id: number;
@@ -23,8 +23,10 @@ export type AppNotification = {
 export type NotificationPreferences = {
 	/** Notification à chaque nouveau message */
 	messages: boolean;
-	/** Notification à chaque changement de statut d'une candidature */
+	/** Étudiant : notification à chaque changement de statut d'une candidature */
 	application_status: boolean;
+	/** Recruteur : notification à chaque candidature reçue sur une de ses offres */
+	new_applications: boolean;
 	/** E-mail en plus de la notification dans l'application */
 	email: boolean;
 };
@@ -71,11 +73,25 @@ async function call(url: string, method: "GET" | "POST" | "PUT" = "GET", body?: 
 	}
 }
 
+// Lectures (« marquer comme lu ») pas encore enregistrées. Ouvrir une notification change de page : la cloche
+// de la nouvelle page relit le compteur aussitôt. Elle attend ces lectures, sinon elle afficherait l'ancien nombre.
+const pendingReads = new Set<Promise<unknown>>();
+
+function trackRead<T>(read: Promise<T>): Promise<T> {
+	pendingReads.add(read);
+	const done = () => pendingReads.delete(read);
+	read.then(done, done);
+	return read;
+}
+
+const readsSaved = () => Promise.allSettled([...pendingReads]);
+
 // Les routes de lecture existent toujours : un 404 ou un 400 veut dire que le serveur n'est pas celui attendu
 const asServerError = (reason: NotificationsError | "notFound" | "invalid"): NotificationsError =>
 	reason === "notFound" || reason === "invalid" ? "server" : reason;
 
 export async function getNotifications(before?: number): Promise<NotificationsResult> {
+	await readsSaved();
 	const answer = await call(before === undefined ? "/api/notifications" : `/api/notifications?before=${before}`);
 	if (!answer.ok) return { ok: false, reason: asServerError(answer.reason) };
 	const data = answer.data as { notifications: AppNotification[]; has_more: boolean; unread_count: number };
@@ -83,21 +99,28 @@ export async function getNotifications(before?: number): Promise<NotificationsRe
 }
 
 export async function getUnreadCount(): Promise<CountResult> {
+	await readsSaved();
 	const answer = await call("/api/notifications/unread-count");
 	if (!answer.ok) return { ok: false, reason: asServerError(answer.reason) };
 	return { ok: true, unreadCount: (answer.data as { unread_count: number }).unread_count };
 }
 
-export async function markRead(id: number): Promise<ReadResult> {
-	const answer = await call(`/api/notifications/${id}/read`, "POST");
-	if (!answer.ok) return { ok: false, reason: answer.reason === "invalid" ? "server" : answer.reason };
-	return { ok: true, unreadCount: (answer.data as { unread_count: number }).unread_count };
+export function markRead(id: number): Promise<ReadResult> {
+	return trackRead(
+		call(`/api/notifications/${id}/read`, "POST").then((answer): ReadResult => {
+			if (!answer.ok) return { ok: false, reason: answer.reason === "invalid" ? "server" : answer.reason };
+			return { ok: true, unreadCount: (answer.data as { unread_count: number }).unread_count };
+		}),
+	);
 }
 
-export async function markAllRead(): Promise<CountResult> {
-	const answer = await call("/api/notifications/read-all", "POST");
-	if (!answer.ok) return { ok: false, reason: asServerError(answer.reason) };
-	return { ok: true, unreadCount: 0 };
+export function markAllRead(): Promise<CountResult> {
+	return trackRead(
+		call("/api/notifications/read-all", "POST").then((answer): CountResult => {
+			if (!answer.ok) return { ok: false, reason: asServerError(answer.reason) };
+			return { ok: true, unreadCount: 0 };
+		}),
+	);
 }
 
 export async function getPreferences(): Promise<PreferencesResult> {

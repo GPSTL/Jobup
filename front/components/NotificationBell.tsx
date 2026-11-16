@@ -3,13 +3,50 @@ import { Link, Navigate } from "react-router-dom";
 
 import NotificationList from "./NotificationList";
 import { getNotifications, getUnreadCount, markAllRead, markRead, type AppNotification } from "../services/notifications";
-import { badgeLabel, bellLabel, COUNT_REFRESH_DELAY, PREFERENCES_ANCHOR } from "../utils/notifications";
+import { badgeLabel, bellLabel, COUNT_REFRESH_DELAY, ROLE_NOTIFICATIONS, type NotificationRole } from "../utils/notifications";
 import { REQUEST_ERRORS } from "../utils/validation";
 
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
 
-// Cloche de la barre de navigation (JOB-042) : nombre de non lues, et panneau des dernières notifications
-export default function NotificationBell() {
+type PanelContentProps = {
+	/** null pendant le chargement */
+	notifications: AppNotification[] | null;
+	error: string;
+	onRetry: () => void;
+	onOpen: (notification: AppNotification) => void;
+	role: NotificationRole;
+};
+
+// Corps du panneau : chargement, erreur, aucune notification, ou la liste
+export function NotificationPanelContent({ notifications, error, onRetry, onOpen, role }: PanelContentProps) {
+	return (
+		<div className="max-h-[min(420px,60vh)] overflow-y-auto">
+			{notifications === null && !error && (
+				<p role="status" className="border-t border-[#e5e7eb] px-5 py-6 text-[14px] text-[#6b7280]">
+					Chargement des notifications…
+				</p>
+			)}
+			{error && (
+				<div role="alert" className="flex flex-col items-start gap-2 border-t border-[#e5e7eb] px-5 py-5 text-[14px]">
+					<p>{error}</p>
+					<button type="button" onClick={onRetry} className={`cursor-pointer rounded-sm font-semibold text-primary underline ${focus}`}>
+						Réessayer
+					</button>
+				</div>
+			)}
+			{notifications?.length === 0 && <p className="border-t border-[#e5e7eb] px-5 py-6 text-[14px] text-[#6b7280]">Aucune notification pour l’instant.</p>}
+			{notifications && notifications.length > 0 && <NotificationList notifications={notifications} onOpen={onOpen} role={role} />}
+		</div>
+	);
+}
+
+type NotificationBellProps = {
+	/** Rôle connecté : pages des liens du panneau et couleurs des icônes */
+	role?: NotificationRole;
+};
+
+// Cloche de la barre de navigation (JOB-042, JOB-046) : nombre de non lues, et panneau des dernières notifications
+export default function NotificationBell({ role = "student" }: NotificationBellProps) {
 	const [count, setCount] = useState(0);
 	const [open, setOpen] = useState(false);
 	// null pendant le chargement du panneau
@@ -145,32 +182,14 @@ export default function NotificationBell() {
 					)}
 				</div>
 
-				<div className="max-h-[min(420px,60vh)] overflow-y-auto">
-					{notifications === null && !error && (
-						<p role="status" className="border-t border-[#e5e7eb] px-5 py-6 text-[14px] text-[#6b7280]">
-							Chargement des notifications…
-						</p>
-					)}
-					{error && (
-						<div role="alert" className="flex flex-col items-start gap-2 border-t border-[#e5e7eb] px-5 py-5 text-[14px]">
-							<p>{error}</p>
-							<button type="button" onClick={() => setAttempt(attempt + 1)} className={`cursor-pointer rounded-sm font-semibold text-primary underline ${focus}`}>
-								Réessayer
-							</button>
-						</div>
-					)}
-					{notifications?.length === 0 && (
-						<p className="border-t border-[#e5e7eb] px-5 py-6 text-[14px] text-[#6b7280]">Aucune notification pour l’instant.</p>
-					)}
-					{notifications && notifications.length > 0 && <NotificationList notifications={notifications} onOpen={openNotification} />}
-				</div>
+				<NotificationPanelContent notifications={notifications} error={error} onRetry={() => setAttempt(attempt + 1)} onOpen={openNotification} role={role} />
 
 				<div className="flex items-center gap-1.5 border-t border-[#e5e7eb] px-5 pt-3.5 pb-4 text-[14px]">
-					<Link to="/notifications" onClick={() => setOpen(false)} className={`rounded-sm font-semibold text-primary hover:underline ${focus}`}>
+					<Link to={ROLE_NOTIFICATIONS[role].page} onClick={() => setOpen(false)} className={`rounded-sm font-semibold text-primary hover:underline ${focus}`}>
 						Voir toutes les notifications
 					</Link>
 					<Link
-						to={`/student#${PREFERENCES_ANCHOR}`}
+						to={ROLE_NOTIFICATIONS[role].preferences}
 						onClick={() => setOpen(false)}
 						className={`ml-auto flex items-center gap-1.5 rounded-sm font-medium text-[#6b7280] hover:underline ${focus}`}
 					>
