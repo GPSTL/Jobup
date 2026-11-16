@@ -98,12 +98,34 @@ déposé », « Aucune candidature envoyée ». Aucun téléphone n'est demandé
 ni CV, et zéro candidature.
 
 « Télécharger le CV » est un lien de téléchargement, comme côté recruteur : le
-serveur donne le nom du fichier. « Suspendre le compte » n'apparaît que pour
-un compte actif ; il reste désactivé, avec la mention « La suspension sera
-bientôt disponible », tant qu'ADM-03 n'est pas livré : aucune suspension ne
-part d'un bouton provisoire. Un compte suspendu affiche en rouge « Suspendu
-le … » (ou « date non renseignée ») et aucun bouton de suspension ;
-« Rétablir le compte » relève d'ADM-04.
+serveur donne le nom du fichier.
+
+## ADM-03 / ADM-04 — Suspension et rétablissement (faits dans JOB-064)
+
+Sur un compte actif, « Suspendre le compte » ouvre une fenêtre de
+confirmation ; « Annuler » (ou Échap) la ferme sans rien changer. Après
+confirmation, la fiche et la liste affichent « Suspendu le … » en rouge. Sur
+un compte suspendu, « Rétablir le compte » remplace ce bouton, sans
+confirmation : la mention disparaît de la fiche et de la liste. Pas de motif
+enregistré.
+
+`POST /api/administration/users/:id/suspension` suspend le compte
+(`is_active` faux, `suspended_at` à la date du jour) ; `DELETE` le rétablit.
+Les deux répondent la fiche à jour (format ci-dessous), exigent le rôle admin
+(403) et un compte étudiant (404 sinon). Les rappeler ne change rien de plus :
+une deuxième suspension garde la première date.
+
+Effets d'une suspension :
+- le compte ne peut plus se connecter : `/api/login` répond 403
+  `{"error": "Account suspended"}` et la page affiche « Votre compte est
+  suspendu. », seulement si le mot de passe est bon (sinon 401, comme toujours) ;
+- sa session en cours se ferme à sa requête suivante (Django refuse un
+  utilisateur inactif) ;
+- il disparaît des cartes candidats et de la présélection des recruteurs, et ne
+  reçoit plus de notifications ;
+- ses conversations restent lisibles mais grisées chez le recruteur, avec
+  « Compte suspendu » (`suspended` dans `docs/api/recruiter-conversations.md`) ;
+  un nouveau message vers lui est refusé (409 `{"error": "Account suspended"}`).
 
 `GET /api/administration/users/:id` :
 

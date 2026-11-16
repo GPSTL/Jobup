@@ -147,6 +147,8 @@ def candidateSummary(conversation: Conversation, viewer: User) -> dict[str, Any]
         },
         "last_message": lastMessage(conversation, viewer),
         "seen_seconds_ago": secondsSinceSeen(candidate),
+        # Suspended by an administrator (ADM-03): the conversation is greyed, no new message
+        "suspended": not candidate.is_active,
     }
 
 
@@ -248,6 +250,9 @@ def conversation_messages(request: Request, id: int) -> Response:
         return Response({"error": "Conversation not found"}, status=404)
 
     if request.method == "POST":
+        # The student of the conversation is suspended (ADM-03): nobody writes to them
+        if not conversation.student.user.is_active:
+            return Response({"error": "Account suspended"}, status=409)
         files = request.FILES
         # Contrôlé pour le vérificateur de types : DRF ne type pas FILES
         upload = files.get("file") if isinstance(files, MultiValueDict) else None

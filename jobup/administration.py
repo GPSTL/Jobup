@@ -15,6 +15,7 @@ from django.db.models.expressions import OrderBy
 from django.db.models.functions import Lower
 from django.http import FileResponse
 from django.shortcuts import redirect
+from django.utils import timezone
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -224,38 +225,62 @@ def user_filters(request: Request) -> Response:
     return Response({"schools": list(schools)})
 
 
-@api_view(["GET"])
-def user_detail(request, id: int):
+def studentProfile(user: User) -> dict[str, Any]:
     # Student profile for the administrators (ADM-02, JOB-064). A student account
     # without a profile is shown too: no school, photo, CV nor application
+    student = Student.objects.select_related("school").filter(user=user).first()
+    return {
+        **user.to_dict(),
+        "date_joined": user.date_joined,
+        "is_active": user.is_active,
+        "suspended_at": user.suspended_at if not user.is_active else None,
+        "school": student.school.name if student and student.school else None,
+        "photo_url": student.photo.url if student and student.photo else None,
+        # Never asked: neither the signup (ETU-01) nor the profile (ETU-02) has a
+        # phone number, so the profile says it is not given
+        "phone": None,
+        # Sent ones only: a draft never reached a recruiter (JOB-033)
+        "applications_sent": JobApplication.objects.filter(
+            student=student, submitted_at__isnull=False
+        ).count()
+        if student
+        else 0,
+        "cv_url": f"/api/administration/users/{user.pk}/cv"
+        if student and student.resume
+        else None,
+    }
+
+
+@api_view(["GET"])
+def user_detail(request, id: int):
     if not isAdmin(request.user):
         return Response({"error": "Forbidden"}, status=403)
     user = User.objects.filter(pk=id, role=Role.STUDENT).first()
     if user is None:
         return Response({"error": "Student not found"}, status=404)
-    student = Student.objects.select_related("school").filter(user=user).first()
-    return Response(
-        {
-            **user.to_dict(),
-            "date_joined": user.date_joined,
-            "is_active": user.is_active,
-            "suspended_at": user.suspended_at if not user.is_active else None,
-            "school": student.school.name if student and student.school else None,
-            "photo_url": student.photo.url if student and student.photo else None,
-            # Never asked: neither the signup (ETU-01) nor the profile (ETU-02) has a
-            # phone number, so the profile says it is not given
-            "phone": None,
-            # Sent ones only: a draft never reached a recruiter (JOB-033)
-            "applications_sent": JobApplication.objects.filter(
-                student=student, submitted_at__isnull=False
-            ).count()
-            if student
-            else 0,
-            "cv_url": f"/api/administration/users/{user.pk}/cv"
-            if student and student.resume
-            else None,
-        }
-    )
+    return Response(studentProfile(user))
+
+
+@api_view(["POST", "DELETE"])
+def user_suspension(request, id: int):
+    # POST suspends a student account (ADM-03), DELETE gives it back (ADM-04). A
+    # suspended account can no longer log in, and its open sessions end at their next
+    # request: Django refuses an inactive user. Calling twice changes nothing more
+    # (a second suspension keeps the first date). Answers the updated profile
+    if not isAdmin(request.user):
+        return Response({"error": "Forbidden"}, status=403)
+    user = User.objects.filter(pk=id, role=Role.STUDENT).first()
+    if user is None:
+        return Response({"error": "Student not found"}, status=404)
+    if request.method == "POST" and user.is_active:
+        user.is_active = False
+        user.suspended_at = timezone.now()
+        user.save(update_fields=["is_active", "suspended_at"])
+    elif request.method == "DELETE" and not user.is_active:
+        user.is_active = True
+        user.suspended_at = None
+        user.save(update_fields=["is_active", "suspended_at"])
+    return Response(studentProfile(user))
 
 
 @api_view(["GET"])

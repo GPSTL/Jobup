@@ -19,10 +19,10 @@ export const ADMIN_ROLE = 127;
 
 export type LoginResult =
 	| { ok: true; user: User }
-	| { ok: false; reason: "invalidCredentials" | "server" | "network" };
+	| { ok: false; reason: "invalidCredentials" | "suspended" | "server" | "network" };
 
 // Django exige ce jeton pour un POST dès qu'une session est ouverte (ex. juste après l'inscription)
-async function getCsrfToken(): Promise<string | null> {
+export async function getCsrfToken(): Promise<string | null> {
 	const response = await fetch("/api/csrf", { credentials: "same-origin" });
 	if (!response.ok) return null;
 	try {
@@ -60,6 +60,8 @@ async function postCredentials(url: string, email: string, password: string): Pr
 	}
 
 	if (response.status === 401) return { ok: false, reason: "invalidCredentials" };
+	// Right password of an account suspended by an administrator (ADM-03); a 403 can also be a CSRF refusal
+	if (response.status === 403 && (await errorOf(response)) === "Account suspended") return { ok: false, reason: "suspended" };
 	if (!response.ok) return { ok: false, reason: "server" };
 
 	try {
@@ -67,6 +69,14 @@ async function postCredentials(url: string, email: string, password: string): Pr
 	} catch {
 		// Not a JSON answer: the API is not available on this server
 		return { ok: false, reason: "server" };
+	}
+}
+
+async function errorOf(response: Response): Promise<unknown> {
+	try {
+		return (await response.json())?.error;
+	} catch {
+		return undefined;
 	}
 }
 

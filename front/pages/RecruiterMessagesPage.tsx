@@ -12,6 +12,9 @@ import { MESSAGES } from "../utils/validation";
 // The list also brings the presence of the candidates: refreshed while the tab is visible
 const LIST_REFRESH_DELAY = 30_000;
 
+// Candidate suspended by an administrator (ADM-03): the conversation stays readable, greyed and closed
+const SUSPENDED = "Compte suspendu";
+
 const candidateName = ({ candidate }: RecruiterConversation) => `${candidate.first_name} ${candidate.last_name}`;
 const candidateInitials = ({ candidate }: RecruiterConversation) =>
 	`${candidate.first_name[0] ?? ""}${candidate.last_name[0] ?? ""}`.toUpperCase();
@@ -26,6 +29,7 @@ const toItem = (conversation: RecruiterConversation): ConversationItem => ({
 		? `${conversation.last_message.from_me ? "Vous : " : ""}${conversation.last_message.body}`
 		: "Aucun message pour l’instant",
 	date: conversation.last_message ? formatConversationDate(conversation.last_message.created_at) : "",
+	closed: conversation.suspended ? SUSPENDED : undefined,
 });
 
 // Messages of the recruiter (JOB-039, REC-05): their conversations with the candidates, the thread
@@ -131,10 +135,11 @@ export default function RecruiterMessagesPage() {
 							conversationId={selectedId}
 							name={selected ? candidateName(selected) : "Conversation"}
 							initials={selected ? candidateInitials(selected) : ""}
-							color={avatarColor(selectedId)}
+							color={selected?.suspended ? "bg-[#d1d5db]" : avatarColor(selectedId)}
 							backTo="/recruiter/messages"
 							onActivity={load}
-							presence={<CandidatePresence lastSeen={selected?.last_seen_at ?? null} />}
+							closed={selected?.suspended ? "Le compte de ce candidat est suspendu : vous ne pouvez plus lui écrire." : undefined}
+							presence={selected?.suspended ? <p className="text-[13px] font-medium text-[#e00000]">{SUSPENDED}</p> : <CandidatePresence lastSeen={selected?.last_seen_at ?? null} />}
 						/>
 					)}
 				</section>

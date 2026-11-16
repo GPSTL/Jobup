@@ -2,6 +2,7 @@ import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
+import ConversationList from "../front/components/ConversationList";
 import MessageThread, { ThreadMessages } from "../front/components/MessageThread";
 import { getMessages, sendMessage, type Message, type MessageAttachment } from "../front/services/messages";
 import { attachmentProblem, dayLabel, formatFileSize, formatTime, groupByDay, mergeMessages, sendError } from "../front/utils/messages";
@@ -221,4 +222,39 @@ test("rendu : le trombone n'existe que dans le fil du recruteur", () => {
 	for (const student of [render(), render(false)]) {
 		assert.doesNotMatch(student, /Joindre un fichier|type="file"/);
 	}
+});
+
+test("rendu (ADM-03) : un fil fermé reste lisible, grisé, et remplace la saisie par la raison", () => {
+	const props = { conversationId: 7, name: "Lucas Martin", initials: "LM", color: "bg-primary", backTo: "/recruiter/messages", onActivity: () => {} };
+	const html = renderToStaticMarkup(
+		<MemoryRouter>
+			<MessageThread {...props} variant="recruiter" allowAttachment closed="Le compte de ce candidat est suspendu : vous ne pouvez plus lui écrire." />
+		</MemoryRouter>,
+	);
+	assert.match(html, /role="log"[^>]*class="[^"]*grayscale/);
+	assert.match(html, /role="status"[^>]*>Le compte de ce candidat est suspendu : vous ne pouvez plus lui écrire\.</);
+	assert.doesNotMatch(html, /<textarea|<form|Joindre un fichier/);
+});
+
+test("liste (ADM-03) : conversation grisée qui dit « Compte suspendu » au lieu du dernier message", () => {
+	const item = { id: 1, to: "/recruiter/messages/1", name: "Lucas Martin", initials: "LM", color: "bg-primary", preview: "Vous : Bonjour", date: "10:00" };
+	const html = renderToStaticMarkup(
+		<MemoryRouter>
+			<ConversationList title="Candidats" searchLabel="Rechercher" query="" onQueryChange={() => {}} items={[item, { ...item, id: 2, closed: "Compte suspendu" }]} error="" onRetry={() => {}} />
+		</MemoryRouter>,
+	);
+	const [open, closed] = html.split("<li>").slice(1);
+	assert.match(open, /Vous : Bonjour/);
+	assert.doesNotMatch(open, /Compte suspendu/);
+	assert.match(closed, /text-\[#9ca3af\]/);
+	assert.match(closed, /bg-\[#d1d5db\]/);
+	assert.match(closed, /Compte suspendu/);
+	assert.doesNotMatch(closed, /Vous : Bonjour/);
+});
+
+test("envoi (ADM-03) : un 409 dit que le compte de l'étudiant est suspendu", async () => {
+	globalThis.fetch = (async (url) => (url === "/api/csrf" ? Response.json({ csrfToken: "jeton" }) : Response.json({ error: "Account suspended" }, { status: 409 }))) as typeof fetch;
+	const result = await sendMessage(7, "Bonjour");
+	assert.deepEqual(result, { ok: false, reason: "suspended" });
+	assert.equal(sendError("suspended", undefined, false), "Le message n’a pas été envoyé : le compte de cet étudiant est suspendu.");
 });

@@ -3,11 +3,11 @@ import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { AdminUsersResults, AdminUsersTable, AdminUsersToolbar } from "../front/pages/AdminUsersPage";
-import { getAdminUser, getAdminUserFilters, getAdminUsers, type AdminUser, type AdminUserDetail, type AdminUsersResult } from "../front/services/adminUsers";
+import { getAdminUser, getAdminUserFilters, getAdminUsers, setSuspension, type AdminUser, type AdminUserDetail, type AdminUsersResult } from "../front/services/adminUsers";
 import { AdminStudentProfile } from "../front/pages/AdminUserDetailPage";
 import AdminNavbar from "../front/components/AdminNavbar";
 import { AdminLoginView } from "../front/pages/AdminLoginPage";
-import { adminLogin } from "../front/services/auth";
+import { adminLogin, login } from "../front/services/auth";
 import StudentNavbar from "../front/components/StudentNavbar";
 import {
 	adminLoginLink,
@@ -182,17 +182,21 @@ test("fiche : « Télécharger le CV » est un lien de téléchargement, « CV n
 	assert.doesNotMatch(noCv, /Télécharger le CV|download=""/);
 });
 
-test("fiche : « Suspendre le compte » visible pour un compte actif, sans action avant ADM-03", () => {
+test("fiche (ADM-03) : « Suspendre le compte » pour un compte actif, avec une fenêtre de confirmation", () => {
 	const active = render(<AdminStudentProfile user={profile} />);
-	assert.match(active, /<button type="button" disabled="" aria-describedby="suspend-later"[^>]*>Suspendre le compte<\/button>/);
-	assert.match(active, /La suspension sera bientôt disponible/);
-	assert.doesNotMatch(active, /Suspendu le/);
+	assert.match(active, /<button type="button" class="[^"]*bg-\[#e00000\][^"]*">Suspendre le compte<\/button>/);
+	// The confirmation window, closed until the click
+	assert.match(active, /<dialog [^>]*>/);
+	assert.doesNotMatch(active, /<dialog [^>]*open/);
+	for (const text of ["Suspendre le compte de Alice Martin ?", "ne pourra plus se connecter", "Annuler"]) assert.ok(active.includes(text), text);
+	assert.doesNotMatch(active, /Suspendu le|Rétablir le compte/);
 });
 
-test("fiche : compte suspendu, date en rouge et plus de bouton de suspension", () => {
+test("fiche (ADM-04) : compte suspendu, date en rouge et « Rétablir le compte » à la place", () => {
 	const suspended = render(<AdminStudentProfile user={{ ...profile, is_active: false, suspended_at: "2026-10-15T12:00:00Z", school: null }} />);
 	assert.match(suspended, /text-\[#e00000\]">Suspendu le <time dateTime="2026-10-15T12:00:00Z">15\/10\/2026<\/time>/);
-	assert.doesNotMatch(suspended, /Suspendre le compte/);
+	assert.match(suspended, />Rétablir le compte<\/button>/);
+	assert.doesNotMatch(suspended, /Suspendre le compte|<dialog/);
 	assert.match(suspended, /École non renseignée/);
 	assert.match(render(<AdminStudentProfile user={{ ...profile, is_active: false }} />), /Compte suspendu, date non renseignée/);
 });
@@ -293,4 +297,39 @@ test("API connexion admin : jeton CSRF, identifiants refusés, serveur et résea
 	}
 	globalThis.fetch = async () => { throw new TypeError("offline"); };
 	assert.deepEqual(await adminLogin("admin@example.fr", "Secret123"), { ok: false, reason: "network" });
+});
+
+test("API suspension : POST pour suspendre, DELETE pour rétablir, avec le jeton CSRF", async () => {
+	const calls: { url: string; method?: string; token?: string }[] = [];
+	globalThis.fetch = (async (url, init) => {
+		if (url === "/api/csrf") return Response.json({ csrfToken: "jeton" });
+		calls.push({ url: String(url), method: init?.method, token: (init?.headers as Record<string, string>)["X-CSRFToken"] });
+		return Response.json({ ...profile, is_active: init?.method === "DELETE" });
+	}) as typeof fetch;
+	assert.equal((await setSuspension(1, true)).ok, true);
+	const restored = await setSuspension(1, false);
+	assert.ok(restored.ok && restored.user.is_active);
+	assert.deepEqual(calls, [
+		{ url: "/api/administration/users/1/suspension", method: "POST", token: "jeton" },
+		{ url: "/api/administration/users/1/suspension", method: "DELETE", token: "jeton" },
+	]);
+	for (const [status, reason] of [[403, "forbidden"], [404, "notFound"], [500, "server"]] as const) {
+		globalThis.fetch = (async (url) => (url === "/api/csrf" ? Response.json({ csrfToken: "jeton" }) : new Response("", { status }))) as typeof fetch;
+		assert.deepEqual(await setSuspension(1, true), { ok: false, reason });
+	}
+	globalThis.fetch = async () => { throw new TypeError("offline"); };
+	assert.deepEqual(await setSuspension(1, true), { ok: false, reason: "network" });
+});
+
+test("connexion : « Votre compte est suspendu » seulement pour la réponse du compte suspendu", async () => {
+	const answer = (response: () => Response) => {
+		globalThis.fetch = (async (url) => (url === "/api/csrf" ? Response.json({ csrfToken: "jeton" }) : response())) as typeof fetch;
+	};
+	answer(() => Response.json({ error: "Account suspended" }, { status: 403 }));
+	assert.deepEqual(await login("alice@example.fr", "Secret123"), { ok: false, reason: "suspended" });
+	// Another 403 (e.g. CSRF refusal) stays a server error
+	answer(() => Response.json({ detail: "CSRF Failed" }, { status: 403 }));
+	assert.deepEqual(await login("alice@example.fr", "Secret123"), { ok: false, reason: "server" });
+	answer(() => new Response("", { status: 401 }));
+	assert.deepEqual(await login("alice@example.fr", "Secret123"), { ok: false, reason: "invalidCredentials" });
 });

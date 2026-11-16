@@ -1,11 +1,12 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 
 import AdminNavbar from "../components/AdminNavbar";
 import { CandidateAvatar } from "../components/CandidateIdentity";
 import DownloadIcon from "../components/DownloadIcon";
 import GraduationCapIcon from "../components/GraduationCapIcon";
-import { getAdminUser, type AdminUserDetail, type AdminUserDetailResult } from "../services/adminUsers";
+import SuspendAccountDialog from "../components/SuspendAccountDialog";
+import { getAdminUser, setSuspension, type AdminUserDetail, type AdminUserDetailResult } from "../services/adminUsers";
 import { adminLoginLink, adminUsersLink, formatDate } from "../utils/adminUsers";
 import { focus } from "../utils/searchPageStyles";
 
@@ -35,9 +36,49 @@ export function applicationsLabel(count: number) {
 	return count === 1 ? "1 candidature envoyée" : `${count} candidatures envoyées`;
 }
 
+const ACTION_ERRORS = {
+	forbidden: "Accès interdit ou session expirée. Reconnectez-vous.",
+	notFound: "Cet étudiant est introuvable.",
+	server: "Une erreur est survenue, veuillez réessayer.",
+	network: "Connexion au serveur impossible. Vérifiez votre connexion et réessayez.",
+};
+
+type AdminStudentProfileProps = {
+	user: AdminUserDetail;
+	/** The account was suspended or given back: the page shows the updated profile */
+	onChange?: (user: AdminUserDetail) => void;
+};
+
 // Profile of a student for the administrators (ADM-02): school, phone, e-mail, applications sent,
-// signup date, the CV and, for an active account, « Suspendre le compte » (the action itself is ADM-03)
-export function AdminStudentProfile({ user }: { user: AdminUserDetail }) {
+// signup date, the CV, then « Suspendre le compte » after a confirmation (ADM-03) for an active
+// account, or « Rétablir le compte » (ADM-04) for a suspended one
+export function AdminStudentProfile({ user, onChange }: AdminStudentProfileProps) {
+	const [confirming, setConfirming] = useState(false);
+	const [pending, setPending] = useState(false);
+	// Updated at once, unlike the state: a double click sends one request
+	const pendingRef = useRef(false);
+	const [error, setError] = useState("");
+	const [done, setDone] = useState("");
+	const name = `${user.first_name} ${user.last_name}`;
+
+	const change = async (suspended: boolean) => {
+		if (pendingRef.current) return;
+		pendingRef.current = true;
+		setPending(true);
+		setError("");
+		setDone("");
+		const result = await setSuspension(user.id, suspended);
+		pendingRef.current = false;
+		setPending(false);
+		if (!result.ok) {
+			setError(ACTION_ERRORS[result.reason]);
+			return;
+		}
+		setConfirming(false);
+		setDone(suspended ? "Le compte est suspendu." : "Le compte est rétabli.");
+		onChange?.(result.user);
+	};
+
 	return (
 		<section aria-labelledby="student-name" className="mx-auto max-w-[786px] rounded-[24px] bg-surface px-6 pt-6 pb-10 shadow-[0_4px_12px_rgba(0,0,0,0.1)] sm:px-12">
 			<h1 id="student-name" className="text-center text-2xl font-semibold text-[#111827]">
@@ -78,16 +119,44 @@ export function AdminStudentProfile({ user }: { user: AdminUserDetail }) {
 						) : (
 							<p className="text-base font-normal text-[#6b7280]">CV non déposé</p>
 						)}
-						{/* Only for an active account. No suspension from a temporary button (ADM-03 does it) */}
-						{user.is_active && (
-							<>
-								<button type="button" disabled aria-describedby="suspend-later" className="cursor-not-allowed rounded-lg bg-[#e00000] px-4 py-2 text-white opacity-60">
-									Suspendre le compte
-								</button>
-								<p id="suspend-later" className="text-sm font-normal text-[#6b7280]">La suspension sera bientôt disponible.</p>
-							</>
+						{user.is_active ? (
+							<button
+								type="button"
+								onClick={() => {
+									setError("");
+									setDone("");
+									setConfirming(true);
+								}}
+								className={`cursor-pointer rounded-lg bg-[#e00000] px-4 py-2 text-white hover:bg-[#c00000] ${focus}`}
+							>
+								Suspendre le compte
+							</button>
+						) : (
+							<button
+								type="button"
+								onClick={() => change(false)}
+								disabled={pending}
+								className={`cursor-pointer rounded-lg px-4 py-2 text-primary inset-ring inset-ring-primary hover:bg-[#dae8ff] disabled:cursor-wait disabled:opacity-70 ${focus}`}
+							>
+								{pending ? "Rétablissement…" : "Rétablir le compte"}
+							</button>
 						)}
+						{/* Outside the window: the error of « Rétablir le compte » */}
+						{error && !confirming && <p role="alert" className="text-sm font-medium text-[#DC2626]">{error}</p>}
+						<p role="status" className="text-sm font-normal text-[#6b7280]">{done}</p>
 					</div>
+					{user.is_active && <SuspendAccountDialog
+						open={confirming}
+						name={name}
+						pending={pending}
+						error={confirming ? error : ""}
+						onCancel={() => {
+							if (pendingRef.current) return;
+							setConfirming(false);
+							setError("");
+						}}
+						onConfirm={() => change(true)}
+					/>}
 				</div>
 			</div>
 		</section>
@@ -128,7 +197,7 @@ export default function AdminUserDetailPage() {
 				{!result ? (
 					<p role="status" className="py-12 text-center">Chargement de la fiche…</p>
 				) : result.ok ? (
-					<AdminStudentProfile key={result.user.id} user={result.user} />
+					<AdminStudentProfile key={result.user.id} user={result.user} onChange={(user) => setLoaded({ id, attempt, result: { ok: true, user } })} />
 				) : (
 					<div className="rounded-3xl bg-surface p-10 text-center">
 						<p role="alert">{ERRORS[result.reason]}</p>

@@ -364,6 +364,91 @@ class AdminStudentDetailTests(APITestCase):
         self.assertEqual(self.client.post(f"{self.path}/cv", {}).status_code, 405)
 
 
+class SuspensionTests(APITestCase):
+    # ADM-03 (suspension) and ADM-04 (restoration) of a student account
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            "admin@example.fr",
+            "Password123",
+            first_name="Jean",
+            last_name="Taire",
+            role=Role.ADMIN,
+        )
+        self.alice = User.objects.create_user(
+            "alice@example.fr",
+            "Password123",
+            first_name="Alice",
+            last_name="Martin",
+            role=Role.STUDENT,
+        )
+        Student.objects.create(user=self.alice)
+        self.path = f"{URL}/{self.alice.pk}/suspension"
+
+    def log_in(self, client, email, password="Password123"):
+        return client.post(
+            "/api/login", {"email": email, "password": password}, format="json"
+        )
+
+    def test_suspend_then_restore(self):
+        self.client.force_login(self.admin)
+        data = self.client.post(self.path).json()
+        self.assertFalse(data["is_active"])
+        self.assertIsNotNone(data["suspended_at"])
+        self.alice.refresh_from_db()
+        self.assertFalse(self.alice.is_active)
+        # Shown in the list with its date
+        row = self.client.get(URL, {"status": "suspended"}).json()["results"][0]
+        self.assertEqual(row["id"], self.alice.pk)
+        self.assertIsNotNone(row["suspended_at"])
+
+        data = self.client.delete(self.path).json()
+        self.assertTrue(data["is_active"])
+        self.assertIsNone(data["suspended_at"])
+        self.alice.refresh_from_db()
+        self.assertTrue(self.alice.is_active)
+        self.assertIsNone(self.alice.suspended_at)
+
+    def test_calling_twice_keeps_the_first_date(self):
+        self.client.force_login(self.admin)
+        first = self.client.post(self.path).json()["suspended_at"]
+        self.assertEqual(self.client.post(self.path).json()["suspended_at"], first)
+        self.client.delete(self.path)
+        self.assertTrue(self.client.delete(self.path).json()["is_active"])
+
+    def test_suspended_student_is_logged_out_and_told_why(self):
+        student = self.client_class()
+        self.assertEqual(self.log_in(student, "alice@example.fr").status_code, 200)
+        self.client.force_login(self.admin)
+        self.client.post(self.path)
+        # The open session ends at its next request
+        self.assertEqual(student.get("/api/me").status_code, 403)
+        response = self.log_in(student, "alice@example.fr")
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json(), {"error": "Account suspended"})
+        # Without the right password, nothing tells the account is suspended
+        response = self.log_in(student, "alice@example.fr", "Wrong12345")
+        self.assertEqual(response.status_code, 401)
+        self.client.delete(self.path)
+        self.assertEqual(self.log_in(student, "alice@example.fr").status_code, 200)
+
+    def test_rights_and_targets(self):
+        for user in (None, self.alice):
+            self.client.logout()
+            if user:
+                self.client.force_login(user)
+            for method in (self.client.post, self.client.delete):
+                self.assertEqual(method(self.path).status_code, 403)
+        self.client.force_login(self.admin)
+        recruiter = account("rh@example.fr", role=Role.RECRUITER)
+        for id in (999999, self.admin.pk, recruiter.pk):
+            self.assertEqual(
+                self.client.post(f"{URL}/{id}/suspension").status_code, 404
+            )
+        self.assertEqual(self.client.get(self.path).status_code, 405)
+        self.alice.refresh_from_db()
+        self.assertTrue(self.alice.is_active)
+
+
 class AdminLoginTests(APITestCase):
     def setUp(self):
         self.admin = User.objects.create_user(

@@ -16,6 +16,8 @@ export type ConversationItem = {
 	color: string;
 	preview: string;
 	date: string;
+	/** Conversation closed, e.g. « Compte suspendu » (ADM-03): the line is greyed and says it instead of the last message */
+	closed?: string;
 };
 
 type ConversationListProps = {
@@ -81,9 +83,9 @@ export default function ConversationList({ title, searchLabel, query, onQueryCha
 									<Link
 										to={item.to}
 										aria-current={selected ? "page" : undefined}
-										className={`flex items-center gap-3 px-4 py-3.5 ${selected ? "bg-[#dae8ff]" : "hover:bg-[#f3f4f6]"} ${focus}`}
+										className={`flex items-center gap-3 px-4 py-3.5 ${selected ? "bg-[#dae8ff]" : "hover:bg-[#f3f4f6]"} ${item.closed ? "text-[#9ca3af]" : ""} ${focus}`}
 									>
-										<span aria-hidden="true" className={`flex size-11 shrink-0 items-center justify-center rounded-full text-[15px] font-bold text-white ${item.color}`}>
+										<span aria-hidden="true" className={`flex size-11 shrink-0 items-center justify-center rounded-full text-[15px] font-bold text-white ${item.closed ? "bg-[#d1d5db]" : item.color}`}>
 											{item.initials}
 										</span>
 										<span className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -91,7 +93,11 @@ export default function ConversationList({ title, searchLabel, query, onQueryCha
 												<span className="truncate text-[15px] font-semibold">{item.name}</span>
 												<span className="shrink-0 text-[12px] text-[#6b7280]">{item.date}</span>
 											</span>
-											<span className="truncate text-[13px] text-[#6b7280]">{item.preview}</span>
+											{item.closed ? (
+												<span className="truncate text-[13px] font-medium text-[#e00000]">{item.closed}</span>
+											) : (
+												<span className="truncate text-[13px] text-[#6b7280]">{item.preview}</span>
+											)}
 										</span>
 									</Link>
 								</li>
