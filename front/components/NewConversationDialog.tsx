@@ -18,16 +18,20 @@ export default function NewConversationDialog({ onClose, onConversationCreated }
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
 	const [startingId, setStartingId] = useState<number | null>(null);
+	const [settledQuery, setSettledQuery] = useState("");
 	const inputRef = useRef<HTMLInputElement>(null);
 	const previousFocusRef = useRef<HTMLElement | null>(null);
 	const dialogRef = useRef<HTMLElement>(null);
+	// Keep the latest onClose without re-running the focus/keydown effect on every parent render
+	const onCloseRef = useRef(onClose);
+	onCloseRef.current = onClose;
 
 	useEffect(() => {
 		previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 		inputRef.current?.focus();
 		const onKeyDown = (event: KeyboardEvent) => {
 			if (event.key === "Escape") {
-				onClose();
+				onCloseRef.current();
 				return;
 			}
 			if (event.key !== "Tab") return;
@@ -50,7 +54,7 @@ export default function NewConversationDialog({ onClose, onConversationCreated }
 			document.removeEventListener("keydown", onKeyDown);
 			previousFocusRef.current?.focus();
 		};
-	}, [onClose]);
+	}, []);
 
 	useEffect(() => {
 		const trimmed = query.trim();
@@ -66,9 +70,13 @@ export default function NewConversationDialog({ onClose, onConversationCreated }
 			setLoading(true);
 			setError("");
 			void searchConversationRecipients(trimmed, controller.signal).then((result) => {
+				if (result.ok) {
+					setRecipients(result.recipients);
+					setSettledQuery(trimmed);
+				} else setError(result.reason === "noSession" ? "Votre session a expiré." : "Impossible de rechercher les candidats. Réessayez.");
+			}).catch(() => {
 				if (controller.signal.aborted) return;
-				if (result.ok) setRecipients(result.recipients);
-				else setError(result.reason === "noSession" ? "Votre session a expiré." : "Impossible de rechercher les candidats. Réessayez.");
+				setError("Impossible de rechercher les candidats. Réessayez.");
 			}).finally(() => {
 				if (!controller.signal.aborted) setLoading(false);
 			});
@@ -105,7 +113,7 @@ export default function NewConversationDialog({ onClose, onConversationCreated }
 					{query.trim().length < 2 && <p className="py-5 text-sm text-gray-500">Saisissez au moins deux caractères pour rechercher.</p>}
 					{loading && <p className="py-5 text-sm text-gray-500" aria-busy="true">Recherche des candidats…</p>}
 					{error && <p role="alert" className="py-5 text-sm text-red-700">{error}</p>}
-					{!loading && !error && query.trim().length >= 2 && recipients.length === 0 && <p className="py-5 text-sm text-gray-500">Aucun candidat trouvé.</p>}
+					{!loading && !error && query.trim().length >= 2 && settledQuery === query.trim() && recipients.length === 0 && <p className="py-5 text-sm text-gray-500">Aucun candidat trouvé.</p>}
 					{recipients.length > 0 && <ul className="divide-y divide-gray-100">
 						{recipients.map((recipient) => (
 							<li key={recipient.id}>

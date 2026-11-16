@@ -47,8 +47,6 @@ export default function RecruiterMessagesPage() {
 	const [noSession, setNoSession] = useState(false);
 	const [query, setQuery] = useState("");
 	const [showRecipientDialog, setShowRecipientDialog] = useState(false);
-	// Incremented by « Réessayer » to load the list again
-	const [attempt, setAttempt] = useState(0);
 
 	// Also called by the thread after a message is sent or received, to update the list.
 	// isCurrent ignores a response that arrives after leaving the page.
@@ -73,7 +71,7 @@ export default function RecruiterMessagesPage() {
 			current = false;
 			clearInterval(timer);
 		};
-	}, [load, attempt]);
+	}, [load]);
 
 	// Session expired during the visit: back to the login
 	if (noSession) return <Navigate to="/login" replace />;
@@ -91,7 +89,7 @@ export default function RecruiterMessagesPage() {
 	const filtered = conversations?.filter((conversation) => candidateName(conversation).toLocaleLowerCase("fr").includes(search));
 
 	return (
-		<div className="flex h-dvh flex-col gap-6 bg-[#f0f0f0] px-4 pt-4 pb-6 md:gap-10 md:px-6 md:pt-14 md:pb-12">
+		<div className="flex h-dvh flex-col gap-6 bg-[#f0f0f0] px-4 pt-4 pb-6 md:gap-10 md:px-6 md:pt-4 md:pb-12">
 			<header className="mx-auto w-full max-w-[1236px]">
 				<RecruiterNavbar />
 			</header>
@@ -106,7 +104,7 @@ export default function RecruiterMessagesPage() {
 						error={error}
 						onRetry={() => {
 							setError("");
-							setAttempt((value) => value + 1);
+							void load();
 						}}
 						selectedId={selectedId}
 						action={
@@ -160,6 +158,8 @@ export default function RecruiterMessagesPage() {
 					onClose={() => setShowRecipientDialog(false)}
 					onConversationCreated={(conversationId) => {
 						setShowRecipientDialog(false);
+						// Reload the list so the new conversation (and its header name) is available
+						void load();
 						navigate(`/recruiter/messages/${conversationId}`);
 					}}
 				/>
