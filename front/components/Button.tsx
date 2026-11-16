@@ -14,6 +14,7 @@ type ButtonProps = {
 	variant?: "primary" | "secondary" | "outline";
 	/** No effect on a link. */
 	disabled?: boolean;
+	title?: string;
 	/** Gives access to the <button>, e.g. to focus it. No effect on a link. */
 	ref?: Ref<HTMLButtonElement>;
 	/** Extra classes */
@@ -51,6 +52,7 @@ export default function Button({
 	size = "md",
 	variant = "primary",
 	disabled = false,
+	title,
 	ref,
 	className = "",
 	ariaLabel,
@@ -66,7 +68,7 @@ export default function Button({
 	}
 
 	return (
-		<button ref={ref} type={type} onClick={onClick} disabled={disabled} aria-label={ariaLabel} className={classes}>
+		<button ref={ref} type={type} onClick={onClick} disabled={disabled} aria-label={ariaLabel} title={title} className={classes}>
 			{children}
 		</button>
 	);

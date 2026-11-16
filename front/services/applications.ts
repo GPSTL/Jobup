@@ -14,6 +14,7 @@ export type ApplicationSummary = {
 
 export type ApplicationDetail = ApplicationSummary & {
 	message: string;
+	decision_message: string;
 	/** URL de téléchargement, null quand le document n'existe pas */
 	documents: { resume: string | null; cover_letter: string | null };
 };

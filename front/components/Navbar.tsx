@@ -35,7 +35,7 @@ type NavbarLinkProps = {
 	className?: string;
 };
 
-const linkBase = [
+export const navbarItemClass = [
 	"inline-flex items-center whitespace-nowrap rounded-full px-3 py-2 -mx-3 -my-2",
 	"motion-safe:transition-colors motion-safe:duration-200",
 	"focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary",
@@ -50,7 +50,7 @@ const linkStates = {
 /** Text link of a navigation bar. Highlighted when it leads to the current page. */
 export function NavbarLink({ children, to, className = "" }: NavbarLinkProps) {
 	return (
-		<NavLink to={to} className={({ isActive }) => `${linkBase} ${linkStates[isActive ? "active" : "idle"]} ${className}`}>
+		<NavLink to={to} className={({ isActive }) => `${navbarItemClass} ${linkStates[isActive ? "active" : "idle"]} ${className}`}>
 			{children}
 		</NavLink>
 	);

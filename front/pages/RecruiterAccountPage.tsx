@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useLocation } from "react-router-dom";
 
 import Button from "../components/Button";
 import ChevronDownIcon from "../components/ChevronDownIcon";
@@ -7,11 +7,13 @@ import CompanyLogo from "../components/CompanyLogo";
 import EyeIcon from "../components/EyeIcon";
 import LogoCropDialog from "../components/LogoCropDialog";
 import MapPinIcon from "../components/MapPinIcon";
+import NotificationSettings from "../components/NotificationSettings";
 import RecruiterNavbar from "../components/RecruiterNavbar";
 import UploadIcon from "../components/UploadIcon";
 import { getOwnCompany, saveOwnCompany, type CompanyForm, type CompanyFormField, type OwnCompany, type OwnCompanyResult } from "../services/companies";
 import { SECTOR_OPTIONS, sectorLabel } from "../utils/companies";
 import { activeOffersLabel, COMPANY_LIMITS, formFromCompany, trimmedForm, validateCompanyForm, validateLogo } from "../utils/companyForm";
+import { PREFERENCES_ANCHOR } from "../utils/notifications";
 import { focus } from "../utils/searchPageStyles";
 import { REQUEST_ERRORS } from "../utils/validation";
 
@@ -23,6 +25,11 @@ const fieldBox = (error?: string) =>
 	`w-full rounded-[12px] border bg-white px-4 py-2.5 text-[15px] text-[#111827] outline-none placeholder:text-[#9ca3af] focus:border-primary ${
 		error ? "border-[#dc2626]" : "border-[#d1d5db]"
 	}`;
+
+// Onglet « Compte et abonnement » : #compte, ou #notifications pour le lien « Préférences e-mail » de la cloche (JOB-046)
+const ACCOUNT_TAB = "#compte";
+const tabClass = (active: boolean) =>
+	`rounded-full border px-4 py-1.5 text-[14px] ${active ? "border-primary bg-[#dae8ff] font-semibold text-primary" : "border-[#d1d5db] bg-white text-[#111827] hover:bg-slate-50"} ${focus}`;
 
 type CompanyPreviewProps = {
 	form: CompanyForm;
@@ -66,8 +73,10 @@ export function NoCompany() {
 	);
 }
 
-// « Mon espace » recruteur (JOB-066, REC-25) : onglet « Page entreprise »
+// « Mon espace » recruteur : onglets « Page entreprise » (JOB-066, REC-25) et « Compte et abonnement » (JOB-046, REC-32)
 export default function RecruiterAccountPage() {
+	const { hash } = useLocation();
+	const accountTab = hash === ACCOUNT_TAB || hash === `#${PREFERENCES_ANCHOR}`;
 	// null pendant le chargement
 	const [loaded, setLoaded] = useState<OwnCompanyResult | null>(null);
 	// Incrémenté par « Réessayer » pour recharger l'entreprise
@@ -193,24 +202,32 @@ export default function RecruiterAccountPage() {
 						<p className="text-[#6b7280]">Présentez votre entreprise aux étudiants.</p>
 					</div>
 
-					{/* Onglets de la maquette : « Compte et abonnement » relève de REC-28, hors de JOB-066 */}
-					<div className="flex flex-wrap gap-2">
-						<span aria-current="page" className="rounded-full border border-primary bg-[#dae8ff] px-4 py-1.5 text-[14px] font-semibold text-primary">
+					{/* Onglets de la maquette. « Compte et abonnement » n'a encore que le bloc « Notifications » (JOB-046) :
+					    l'abonnement, les factures et le compte relèvent de REC-28. */}
+					<nav aria-label="Onglets de Mon espace" className="flex flex-wrap gap-2">
+						<Link to="/recruiter/account" aria-current={accountTab ? undefined : "page"} className={tabClass(!accountTab)}>
 							Page entreprise
-						</span>
-						<span className="rounded-full border border-[#d1d5db] px-4 py-1.5 text-[14px] text-[#9ca3af]">
-							Compte et abonnement<span className="sr-only"> (bientôt disponible)</span>
-						</span>
-					</div>
+						</Link>
+						<Link to={`/recruiter/account${ACCOUNT_TAB}`} aria-current={accountTab ? "page" : undefined} className={tabClass(accountTab)}>
+							Compte et abonnement
+						</Link>
+					</nav>
 
+					{accountTab && (
+						<div className="grid gap-6 lg:grid-cols-2">
+							<NotificationSettings role="recruiter" />
+						</div>
+					)}
+
+					{/* Onglet « Page entreprise » (JOB-066) */}
 					<p role="status" className="sr-only">
-						{loaded === null ? "Chargement de votre page entreprise…" : ""}
+						{loaded === null && !accountTab ? "Chargement de votre page entreprise…" : ""}
 					</p>
-					{loaded === null && <div className="h-72 rounded-2xl bg-[#f1f3f6] motion-safe:animate-pulse" />}
+					{loaded === null && !accountTab && <div className="h-72 rounded-2xl bg-[#f1f3f6] motion-safe:animate-pulse" />}
 
-					{loaded?.ok === false && loaded.reason === "noCompany" && <NoCompany />}
+					{!accountTab && loaded?.ok === false && loaded.reason === "noCompany" && <NoCompany />}
 
-					{loaded?.ok === false && loaded.reason !== "noCompany" && loaded.reason !== "invalid" && loaded.reason !== "unauthenticated" && (
+					{!accountTab && loaded?.ok === false && loaded.reason !== "noCompany" && loaded.reason !== "invalid" && loaded.reason !== "unauthenticated" && (
 						<div role="alert" className="flex flex-col items-center gap-4 py-10 text-center">
 							<p>{REQUEST_ERRORS[loaded.reason]}</p>
 							<Button
@@ -224,7 +241,7 @@ export default function RecruiterAccountPage() {
 						</div>
 					)}
 
-					{company && (
+					{!accountTab && company && (
 						<div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
 							<form noValidate onSubmit={submit} className="flex flex-col gap-4">
 								<div className="flex flex-wrap items-center gap-4">
