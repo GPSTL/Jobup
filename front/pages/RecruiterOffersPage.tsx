@@ -34,7 +34,7 @@ export function RecruiterOfferList({ offers }: { offers: OfferSummary[] }) {
 			{offers.map((offer) => (
 				<li key={offer.id} className="flex flex-col items-center gap-[15px] rounded-[25px] bg-surface px-6 py-10 shadow-[0_4px_12px_rgba(0,0,0,0.1)] sm:px-[50px]">
 					<h2 className="text-center text-[36px] leading-tight font-semibold">{offer.title}</h2>
-					<img src="/static/img/recruiter-offers/offer.jpg" alt="" loading="lazy" className="aspect-[4096/2731] w-full rounded-[15px] object-cover" />
+					<img src="/static/img/recruiter-offers/offer.webp" alt="" loading="lazy" className="aspect-[4096/2731] w-full rounded-[15px] object-cover" />
 					<p className="self-stretch whitespace-pre-line text-xl">{offer.description}</p>
 					<p className="self-stretch text-[#6b7280]">{offer.applicant_count} candidature{offer.applicant_count === 1 ? "" : "s"} • {offer.is_active ? "Publiée" : "Clôturée"}<br />Créée le {formatDate(offer.created_at)}</p>
 					<Link to={`/recruiter/offers/${offer.id}/applicants`} className={`mt-auto rounded-[14px] bg-primary px-4 py-4 text-center text-lg font-semibold text-on-primary hover:bg-primary/90 ${focus}`}>

@@ -10,10 +10,12 @@ export const interlocutorName = ({ interlocutor }: ConversationSummary) =>
 export const interlocutorInitials = ({ interlocutor }: ConversationSummary) =>
 	`${interlocutor.first_name[0] ?? ""}${interlocutor.last_name[0] ?? ""}`.toUpperCase();
 
-// Aperçu du dernier message, précédé de « Vous : » quand c'est l'étudiant qui l'a envoyé
+// Aperçu du dernier message, précédé de « Vous : » quand c'est l'étudiant qui l'a envoyé.
+// Un message qui ne contient qu'un fichier (JOB-043) montre le nom du fichier.
 export const lastMessagePreview = ({ last_message }: ConversationSummary) => {
 	if (last_message === null) return "Aucun message pour l’instant";
-	return last_message.from_me ? `Vous : ${last_message.body}` : last_message.body;
+	const text = last_message.body || `Pièce jointe : ${last_message.attachment ?? ""}`;
+	return last_message.from_me ? `Vous : ${text}` : text;
 };
 
 const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();

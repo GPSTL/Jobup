@@ -58,6 +58,21 @@ test("filtre conservé dans l’URL, READ et IN_REVIEW regroupés, filtre inconn
 	assert.equal((render(<OfferApplicantsContent data={data} />, "?status=unknown").match(/<li /g) ?? []).length, 5);
 });
 
+test("retour du profil : conserver la recherche de candidats ou revenir à l’offre selon le point d’entrée", () => {
+	const profile = { ...candidate, region: "", study_degree: null, available_from: null, skills: [], experiences: [], exchanges: [] };
+	const profileFrom = (search: string, candidatesSearch: unknown) => renderToStaticMarkup(
+		<MemoryRouter initialEntries={[{ pathname: "/recruiter/candidates/7", search, state: { candidatesSearch } }]}>
+			<CandidateProfile candidate={profile} />
+		</MemoryRouter>,
+	);
+	const filtered = profileFrom("", "?region=Paris&skill=Java");
+	assert.match(filtered, /href="\/recruiter\/candidates\?region=Paris&amp;skill=Java&amp;candidate=7"/);
+	const offerProfile = profileFrom("?offer=12", "?region=Paris");
+	assert.match(offerProfile, /href="\/recruiter\/offers\/12\/applicants"/);
+	assert.match(offerProfile, /Retour aux candidats de l’offre/);
+	assert.match(profileFrom("?offer=invalid", null), /href="\/recruiter\/candidates\?candidate=7"/);
+});
+
 test("états aucune candidature et aucun résultat distincts", () => {
 	assert.match(render(<OfferApplicantsContent data={{ ...data, applications: [] }} />), /Aucune candidature pour cette offre/);
 	assert.match(render(<OfferApplicantsContent data={{ ...data, applications: data.applications.slice(0, 1) }} />, "?status=accepted"), /Aucune candidature avec ce statut/);

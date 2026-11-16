@@ -1,13 +1,20 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any, ClassVar
+import re
+from typing import TYPE_CHECKING, Any, ClassVar, Self
+from uuid import uuid4
 
+from django.conf import settings
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
 from django.core.files import File
+from django.core.files.storage import FileSystemStorage
+from django.core.files.uploadedfile import UploadedFile
 from django.core.validators import RegexValidator
 from django.db import models, transaction
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -142,6 +149,9 @@ class User(AbstractBaseUser, PermissionsMixin):  # pyright: ignore[reportIncompa
     is_active = models.BooleanField(default=True)
     email_confirmed = models.BooleanField(default=True)
     date_joined = models.DateTimeField(auto_now_add=True)
+    # Last request of the logged-in user, for the presence (JOB-039, jobup/presence.py);
+    # null until the first one
+    last_seen_at = models.DateTimeField(null=True, blank=True)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS: ClassVar = ["first_name", "last_name", "role"]
@@ -169,6 +179,8 @@ class Student(models.Model):
         default=StudentSubscription.FREE,
     )
     resume = models.FileField(upload_to="CVs", blank=True)
+    # Date of the last import of the CV
+    resume_updated_at = models.DateTimeField(null=True, blank=True)
     photo = models.ImageField(upload_to="photos", blank=True)
     desired_position = models.CharField(max_length=100, blank=True)
     description = models.CharField(max_length=500, blank=True)
@@ -296,6 +308,42 @@ class JobApplication(models.Model):
         }
 
 
+# Présélection du recruteur (JOB-037, REC-03) : les candidats retenus avec ♥.
+# Elle appartient au recruteur, pas à son entreprise ; un candidat n'y figure qu'une fois.
+class Shortlist(models.Model):
+    recruiter = models.ForeignKey(Recruiter, models.CASCADE, related_name="shortlist")
+    student = models.ForeignKey(Student, models.CASCADE, related_name="shortlisted_by")
+    # Offre pour laquelle le candidat est retenu (« Pour : … » de la maquette) :
+    # prévue pour les filtres de JOB-036, vide tant qu'aucun écran ne permet de la choisir
+    offer = models.ForeignKey(
+        Offer, models.SET_NULL, null=True, blank=True, related_name="shortlisted"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["recruiter", "student"], name="unique_recruiter_shortlist"
+            )
+        ]
+
+
+# Candidats écartés avec 🚫 (JOB-038, REC-04). Portée retenue en attendant la décision de l'équipe :
+# le recruteur seul, sans limite de durée, toutes recherches confondues. Comme la présélection, elle
+# n'est jamais partagée avec les collègues de l'entreprise. Ne touche ni aux candidatures ni à la présélection.
+class Exclusion(models.Model):
+    recruiter = models.ForeignKey(Recruiter, models.CASCADE, related_name="exclusions")
+    student = models.ForeignKey(Student, models.CASCADE, related_name="excluded_by")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["recruiter", "student"], name="unique_recruiter_exclusion"
+            )
+        ]
+
+
 class Contract(models.Model):
     school = models.ForeignKey(School, models.PROTECT)
     company = models.ForeignKey(Company, models.PROTECT)
@@ -328,6 +376,7 @@ class Conversation(models.Model):
         last_at: Any
         last_body: Any
         last_sender: Any
+        last_attachment: Any
 
     class Meta:
         constraints = [
@@ -357,6 +406,78 @@ class Message(models.Model):
 
     if TYPE_CHECKING:
         sender_id: int
+        conversation_id: int
+        attachment: MessageAttachment
+
+
+# Stockage des pièces jointes (JOB-043) : un dossier à part, hors de MEDIA_ROOT. Aucune URL
+# publique n'en est déduite (url() échoue) : le téléchargement passe par l'API, qui vérifie
+# que l'utilisateur participe à la conversation. Lu à chaque appel pour suivre les réglages.
+class PrivateStorage(FileSystemStorage):
+    @property
+    def base_location(self) -> str:  # type: ignore[override]
+        return str(settings.PRIVATE_MEDIA_ROOT)
+
+    @property
+    def location(self) -> str:  # type: ignore[override]
+        return os.path.abspath(self.base_location)
+
+    @property
+    def base_url(self) -> None:  # type: ignore[override]
+        return None
+
+
+# Dossier créé pour chaque pièce jointe : message_attachments/<32 chiffres hexadécimaux>
+ATTACHMENT_FOLDER = re.compile(r"message_attachments/[0-9a-f]{32}")
+
+
+# Pièce jointe d'un message (JOB-043, REC-14), dans le socle commun de la messagerie : elle suit
+# son message, donc la conversation et ses participants. Un fichier au plus par message ; la
+# politique (formats, taille) est dans attachments.py.
+class MessageAttachment(models.Model):
+    message = models.OneToOneField(Message, models.CASCADE, related_name="attachment")
+    file = models.FileField(
+        upload_to="message_attachments", storage=PrivateStorage(), max_length=255
+    )
+    # Taille en octets, mesurée à l'envoi
+    size = models.PositiveIntegerField()
+
+    if TYPE_CHECKING:
+        message_id: int
+
+    @property
+    def name(self) -> str:
+        return os.path.basename(self.file.name)  # type: ignore
+
+    @classmethod
+    def store(cls, message: Message, upload: UploadedFile, name: str) -> Self:
+        attachment = cls(message=message, size=upload.size)
+        # Un nouveau dossier par envoi : le fichier garde son nom, sans écraser un autre
+        attachment.file.save(f"{uuid4().hex}/{name}", upload, save=False)
+        try:
+            attachment.save()
+        except Exception:
+            # Le message n'existera pas : le fichier est inutile
+            attachment.discard_file()
+            raise
+        return attachment
+
+    def discard_file(self) -> None:
+        storage, name = self.file.storage, self.file.name
+        if not name:
+            return
+        storage.delete(name)
+        # Son dossier aussi, maintenant vide : jamais message_attachments lui-même
+        folder = os.path.dirname(name)
+        if ATTACHMENT_FOLDER.fullmatch(folder):
+            storage.delete(folder)
+
+
+# Un message supprimé (avec sa conversation ou son étudiant) emporte son fichier, une fois la
+# suppression validée en base : Django ne supprime jamais les fichiers lui-même.
+@receiver(post_delete, sender=MessageAttachment)
+def delete_attachment_file(instance: MessageAttachment, **_: Any) -> None:
+    transaction.on_commit(instance.discard_file)
 
 
 # Utilities #
@@ -448,12 +569,33 @@ class DraftSerializer(serializers.Serializer):
 
 
 class MessageSerializer(serializers.Serializer):
-    body = serializers.CharField(max_length=MESSAGE_MAX_LENGTH)
+    # Le texte peut être vide quand le message porte un fichier (JOB-043) : has_file, dans le
+    # contexte, est donné par la vue, qui lit le fichier à part
+    body = serializers.CharField(
+        max_length=MESSAGE_MAX_LENGTH, required=False, allow_blank=True
+    )
 
     if TYPE_CHECKING:
         validated_data: dict[str, Any]  # type: ignore
 
-    def save_message(self, conversation: Conversation, sender: User) -> Message:
-        return Message.objects.create(
-            conversation=conversation, sender=sender, body=self.validated_data["body"]
-        )
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        if not attrs.get("body") and not self.context.get("has_file"):
+            raise ValidationError({"body": "This field may not be blank."})
+        return attrs
+
+    def save_message(
+        self,
+        conversation: Conversation,
+        sender: User,
+        attachment: tuple[UploadedFile, str] | None = None,
+    ) -> Message:
+        # Le message et son fichier sont enregistrés ensemble, ou pas du tout
+        with transaction.atomic():
+            message = Message.objects.create(
+                conversation=conversation,
+                sender=sender,
+                body=self.validated_data.get("body", ""),
+            )
+            if attachment is not None:
+                MessageAttachment.store(message, *attachment)
+        return message

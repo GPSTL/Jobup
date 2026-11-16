@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useParams, useSearchParams } from "react-router-dom";
 
 import Button from "../components/Button";
 import CalendarIcon from "../components/CalendarIcon";
@@ -10,6 +10,7 @@ import MapPinIcon from "../components/MapPinIcon";
 import MessageIcon from "../components/MessageIcon";
 import RecruiterNavbar from "../components/RecruiterNavbar";
 import { getCandidate, type Candidate, type CandidateResult } from "../services/candidates";
+import { candidatesLink } from "../utils/candidateFilters";
 import { availability, degreeLabel, exchangeDate, exchangeText, fullName } from "../utils/candidates";
 import { focus } from "../utils/searchPageStyles";
 import { REQUEST_ERRORS } from "../utils/validation";
@@ -21,14 +22,17 @@ const metaItem = "flex items-center gap-1.5";
 const action = `flex items-center justify-center gap-2 rounded-[14px] px-[22px] py-3 text-[16px] font-semibold ${focus}`;
 const outlineAction = `${action} border border-[#d1d5db] bg-surface text-[#111827] hover:bg-slate-50`;
 
-// Back to the cards, on the card of this candidate when there is one
+// Back to the cards, on the card of this candidate when there is one, with the criteria of the
+// search when the profile was opened from a card (JOB-036)
 function BackToCandidates({ id }: { id?: number }) {
 	const [params] = useSearchParams();
 	const offer = params.get("offer");
 	const fromOffer = offer !== null && /^[1-9]\d*$/.test(offer);
+	const state = useLocation().state as { candidatesSearch?: unknown } | null;
+	const search = typeof state?.candidatesSearch === "string" ? state.candidatesSearch : "";
 	return (
 		<Link
-			to={fromOffer ? `/recruiter/offers/${offer}/applicants` : id === undefined ? "/recruiter/candidates" : `/recruiter/candidates?candidate=${id}`}
+			to={fromOffer ? `/recruiter/offers/${offer}/applicants` : candidatesLink(search, id)}
 			className={`flex w-fit items-center gap-2 rounded-[14px] py-1 text-[16px] font-semibold text-primary ${focus}`}
 		>
 			<img src="/static/img/applications/back.svg" width={18} height={18} alt="" />
@@ -74,8 +78,8 @@ export function CandidateProfile({ candidate }: { candidate: Candidate }) {
 					</ul>
 				</div>
 				<div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-					{/* TODO JOB-039: open the conversation with this candidate, or start it */}
-					<Link to="/recruiter/messages" className={outlineAction}>
+					{/* Opens the conversation with this candidate (JOB-039); starting one when there is none: JOB-041 */}
+					<Link to={`/recruiter/messages?candidate=${candidate.id}`} className={outlineAction}>
 						<MessageIcon width={18} height={18} />
 						Message
 					</Link>
@@ -145,8 +149,8 @@ export function CandidateProfile({ candidate }: { candidate: Candidate }) {
 									</li>
 								))}
 							</ol>
-							{/* TODO JOB-039: open the conversation with this candidate */}
-							<Link to="/recruiter/messages" className={outlineAction}>
+							{/* Opens the conversation with this candidate (JOB-039) */}
+							<Link to={`/recruiter/messages?candidate=${candidate.id}`} className={outlineAction}>
 								<MessageIcon width={18} height={18} />
 								Ouvrir la conversation
 							</Link>

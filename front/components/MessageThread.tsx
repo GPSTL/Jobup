@@ -1,13 +1,29 @@
-import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type ChangeEvent, type FormEvent, type KeyboardEvent } from "react";
 import { Link, Navigate } from "react-router-dom";
 
 import ArrowLeftIcon from "./ArrowLeftIcon";
 import Button from "./Button";
-import { getMessages, sendMessage, type Message } from "../services/messages";
-import { groupByDay, formatTime, MAX_MESSAGE_LENGTH, mergeMessages, REFRESH_DELAY, SEND_ERRORS, type MessageDay } from "../utils/messages";
+import DownloadIcon from "./DownloadIcon";
+import FileIcon from "./FileIcon";
+import PaperclipIcon from "./PaperclipIcon";
+import { getMessages, sendMessage, type Message, type MessageAttachment } from "../services/messages";
+import {
+	ATTACHMENT_ACCEPT,
+	attachmentProblem,
+	formatFileSize,
+	groupByDay,
+	formatTime,
+	MAX_MESSAGE_LENGTH,
+	mergeMessages,
+	REFRESH_DELAY,
+	sendError as sendErrorText,
+	type MessageDay,
+} from "../utils/messages";
 import { MESSAGES } from "../utils/validation";
 
 type MessageThreadProps = {
+	variant?: "student" | "recruiter";
+	presence?: ReactNode;
 	conversationId: number;
 	/** Interlocuteur, préparé par la page comme pour la liste */
 	name: string;
@@ -17,42 +33,73 @@ type MessageThreadProps = {
 	backTo: string;
 	/** Un message a été envoyé ou reçu : la page met à jour l'aperçu de la liste */
 	onActivity: () => void;
+	/** Trombone et choix d'un fichier : réservé au fil du recruteur (JOB-043). Les participants téléchargent toujours. */
+	allowAttachment?: boolean;
 };
 
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
 
+// Fichier joint à un message : un lien de téléchargement, ouvert par les deux participants (maquette Messages)
+function AttachmentCard({ attachment, author }: { attachment: MessageAttachment; author?: string }) {
+	return (
+		<a
+			href={attachment.url}
+			download={attachment.name}
+			className={`flex items-center gap-3 rounded-xl bg-white px-3 py-2.5 text-[#111827] hover:bg-[#f9fafb] ${focus}`}
+		>
+			<FileIcon width={24} height={24} className="shrink-0 text-primary" />
+			<span className="flex min-w-0 flex-1 flex-col">
+				<span className="truncate text-[13px] font-semibold [overflow-wrap:anywhere]">
+					{author && <span className="sr-only">{author} : </span>}
+					<span className="sr-only">Télécharger </span>
+					{attachment.name}
+				</span>
+				<span className="text-[12px] text-[#6b7280]">
+					{attachment.extension.toUpperCase()} • {formatFileSize(attachment.size)}
+				</span>
+			</span>
+			<DownloadIcon width={20} height={20} className="shrink-0 text-primary" />
+		</a>
+	);
+}
+
 // Les messages groupés par jour, chaque jour introduit par sa pastille de date (maquette Messages)
-export function ThreadMessages({ days, name }: { days: MessageDay[]; name: string }) {
+export function ThreadMessages({ days, name, variant = "student" }: { days: MessageDay[]; name: string; variant?: "student" | "recruiter" }) {
 	return days.map((day) => (
 		<section key={day.key} aria-label={day.label} className="flex flex-col gap-4">
 			<h3 className="flex justify-center">
-				<span className="rounded-xl bg-[#e5e7eb] px-3 py-1 text-[12px] font-medium text-[#6b7280]">{day.label}</span>
+				<span className={`rounded-full px-3 py-1 text-[12px] font-medium text-[#6b7280] ${variant === "recruiter" ? "border border-gray-200 bg-white" : "bg-[#e5e7eb]"}`}>{day.label}</span>
 			</h3>
 			<ul className="flex flex-col gap-4">
-				{day.messages.map((message) => (
-					<li key={message.id} className={`flex ${message.from_me ? "justify-end" : ""}`}>
-						<div
-							className={`flex max-w-[min(700px,85%)] flex-col gap-1 rounded-2xl px-4 py-3 ${
-								message.from_me ? "rounded-br-[4px] bg-[#dcedfc]" : "rounded-bl-[4px] bg-[#e5e7eb]"
-							}`}
-						>
-							<p className="text-[14px] leading-5 whitespace-pre-wrap text-[#111827] [overflow-wrap:anywhere]">
-								<span className="sr-only">{message.from_me ? "Vous" : name} : </span>
-								{message.body}
-							</p>
-							<time dateTime={message.created_at} className="self-end text-[11px] text-[#6b7280]">
-								{formatTime(message.created_at)}
-							</time>
-						</div>
-					</li>
-				))}
+{day.messages.map((message) => {
+					const author = message.from_me ? "Vous" : name;
+					const isRecruiter = variant === "recruiter";
+					return (
+						<li key={message.id} className={`flex ${message.from_me ? "justify-end" : ""}`}>
+							<div
+								className={`flex flex-col gap-1 px-4 py-3 ${isRecruiter ? `w-fit max-w-[min(440px,85%)] rounded-[18px] ${message.from_me ? "bg-primary text-on-primary" : "border border-gray-200 bg-white text-[#111827]"}` : `max-w-[min(700px,85%)] rounded-2xl ${message.from_me ? "rounded-br-[4px] bg-[#dcedfc]" : "rounded-bl-[4px] bg-[#e5e7eb]"}`}`}
+							>
+								{message.body && (
+									<p className="text-[14px] leading-5 whitespace-pre-wrap [overflow-wrap:anywhere]">
+										<span className="sr-only">{author} : </span>
+										{message.body}
+									</p>
+								)}
+								{message.attachment && <AttachmentCard attachment={message.attachment} author={message.body ? undefined : author} />}
+								<time dateTime={message.created_at} className={`text-[11px] ${variant === "recruiter" ? message.from_me ? "text-white/90" : "text-gray-500" : "self-end text-[#6b7280]"}`}>
+									{formatTime(message.created_at)}
+								</time>
+							</div>
+						</li>
+					);
+				})}
 			</ul>
 		</section>
 	));
 }
 
 // Fil d'une conversation et champ d'envoi (JOB-034, ETU-15). À monter avec key={conversationId}.
-export default function MessageThread({ conversationId, name, initials, color, backTo, onActivity }: MessageThreadProps) {
+export default function MessageThread({ conversationId, name, initials, color, backTo, onActivity, presence, variant = "student", allowAttachment = false }: MessageThreadProps) {
 	const [messages, setMessages] = useState<Message[] | null>(null);
 	const [hasMore, setHasMore] = useState(false);
 	const [loadError, setLoadError] = useState("");
@@ -64,6 +111,9 @@ export default function MessageThread({ conversationId, name, initials, color, b
 	const [draft, setDraft] = useState("");
 	const [sending, setSending] = useState(false);
 	const [sendError, setSendError] = useState("");
+	// Fichier choisi avec le trombone, envoyé avec le prochain message (JOB-043)
+	const [file, setFile] = useState<File | null>(null);
+	const fileInput = useRef<HTMLInputElement>(null);
 
 	const scroller = useRef<HTMLDivElement>(null);
 	// Défilement à appliquer après l'affichage : en bas, ou à la même distance du bas après l'ajout de l'historique
@@ -154,23 +204,40 @@ export default function MessageThread({ conversationId, name, initials, color, b
 
 	const body = draft.trim();
 	const tooLong = body.length > MAX_MESSAGE_LENGTH;
-	const canSend = body !== "" && !tooLong && !sending && loaded;
+	// Avec un fichier, le texte peut rester vide
+	const canSend = (body !== "" || file !== null) && !tooLong && !sending && loaded;
+
+	const chooseFile = (event: ChangeEvent<HTMLInputElement>) => {
+		const chosen = event.target.files?.[0];
+		// Vidé pour pouvoir choisir de nouveau le même fichier après l'avoir retiré
+		event.target.value = "";
+		if (!chosen) return;
+		const problem = attachmentProblem(chosen);
+		setSendError(problem ? `« ${chosen.name} » n’a pas été ajouté. ${problem}` : "");
+		if (!problem) setFile(chosen);
+	};
+
+	const removeFile = () => {
+		setFile(null);
+		setSendError("");
+	};
 
 	const send = async (event: FormEvent) => {
 		event.preventDefault();
 		if (!canSend) return;
 		setSending(true);
 		setSendError("");
-		const result = await sendMessage(conversationId, body);
+		const result = await sendMessage(conversationId, body, file ?? undefined);
 		setSending(false);
 		if (result.ok) {
-			// La saisie n'est vidée qu'une fois le message enregistré : en cas d'échec, elle reste pour réessayer
+			// La saisie et le fichier ne sont vidés qu'une fois le message enregistré : en cas d'échec, ils restent pour réessayer
 			setDraft("");
+			setFile(null);
 			pendingScroll.current = "bottom";
 			setMessages((current) => mergeMessages(current ?? [], [result.message]));
 			onActivity();
 		} else if (result.reason === "noSession") setNoSession(true);
-		else setSendError(SEND_ERRORS[result.reason]);
+		else setSendError(sendErrorText(result.reason, result.message, file !== null));
 	};
 
 	// Entrée envoie, Maj+Entrée va à la ligne
@@ -196,11 +263,11 @@ export default function MessageThread({ conversationId, name, initials, color, b
 						{initials}
 					</span>
 				)}
-				<h2 className="truncate text-[16px] font-semibold">{name}</h2>
+				<div className="min-w-0"><h2 className="truncate text-[16px] font-semibold">{name}</h2>{presence}</div>
 			</div>
 
 			{/* relative : les textes sr-only (en position absolue) restent dans la zone qui défile au lieu d'allonger la page */}
-			<div ref={scroller} role="log" aria-label={`Messages avec ${name}`} className="relative flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto bg-[#f0f0f0] p-4">
+			<div ref={scroller} role="log" aria-label={`Messages avec ${name}`} className={`relative flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 ${variant === "recruiter" ? "bg-[#f8f9fb] md:p-6" : "bg-[#f0f0f0]"}`}>
 				{!loaded && !loadError && <p aria-busy="true" className="m-auto text-[15px] text-[#6b7280]">Chargement des messages…</p>}
 				{loadError && (
 					<div role="alert" className="m-auto flex flex-col items-center gap-3 text-center">
@@ -224,7 +291,7 @@ export default function MessageThread({ conversationId, name, initials, color, b
 				{messages?.length === 0 && (
 					<p className="m-auto px-6 text-center text-[15px] text-[#6b7280]">Aucun message pour l’instant. Écrivez le premier ci-dessous.</p>
 				)}
-				{messages && <ThreadMessages days={groupByDay(messages)} name={name} />}
+				{messages && <ThreadMessages days={groupByDay(messages)} name={name} variant={variant} />}
 			</div>
 
 			<form onSubmit={send} className="shrink-0 border-t border-[#e5e7eb] bg-white px-4 py-4">
@@ -234,7 +301,38 @@ export default function MessageThread({ conversationId, name, initials, color, b
 						{MAX_MESSAGE_LENGTH} caractères maximum ({body.length} actuellement).
 					</p>
 				)}
+				{file && (
+					<div className="mb-3 flex">
+						<span className="flex min-w-0 max-w-full items-center gap-2 rounded-full bg-[#dae8ff] py-1 pr-1 pl-3 text-[12px] font-medium text-primary">
+							<span className="sr-only">Fichier joint : </span>
+							<span className="truncate">{file.name}</span>
+							<button
+								type="button"
+								onClick={removeFile}
+								disabled={sending}
+								className={`flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-full hover:bg-white/60 disabled:cursor-default disabled:opacity-50 ${focus}`}
+							>
+								<img src="/static/img/candidates/x.svg" width={12} height={12} alt="" />
+								<span className="sr-only">Retirer le fichier joint</span>
+							</button>
+						</span>
+					</div>
+				)}
 				<div className="flex items-end gap-3">
+					{allowAttachment && (
+						<>
+							<input ref={fileInput} id="new-message-file" type="file" accept={ATTACHMENT_ACCEPT} onChange={chooseFile} tabIndex={-1} className="sr-only" />
+							<button
+								type="button"
+								onClick={() => fileInput.current?.click()}
+								disabled={sending}
+								aria-label="Joindre un fichier"
+								className={`flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-primary hover:bg-[#f3f4f6] disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent ${focus}`}
+							>
+								<PaperclipIcon width={22} height={22} />
+							</button>
+						</>
+					)}
 					<label htmlFor="new-message" className="sr-only">Écrire un message à {name}</label>
 					<textarea
 						id="new-message"
@@ -243,19 +341,19 @@ export default function MessageThread({ conversationId, name, initials, color, b
 						onChange={(event) => setDraft(event.target.value)}
 						onKeyDown={onKeyDown}
 						readOnly={sending}
-						placeholder="Écrire un message..."
+						placeholder={variant === "recruiter" ? `Écrivez à ${name.split(" ")[0]}…` : "Écrire un message..."}
 						aria-invalid={tooLong}
 						aria-describedby={tooLong ? "new-message-help new-message-length" : "new-message-help"}
-						className="max-h-32 min-h-10 min-w-0 flex-1 resize-none rounded-[20px] bg-[#f3f4f6] px-4 py-2.5 text-[14px] leading-5 outline-none [field-sizing:content] placeholder:text-[#9ca3af] focus:ring-2 focus:ring-primary"
+						className={`max-h-32 min-h-10 min-w-0 flex-1 resize-none px-4 py-2.5 text-[14px] leading-5 outline-none [field-sizing:content] placeholder:text-[#9ca3af] focus:ring-2 focus:ring-primary ${variant === "recruiter" ? "rounded-xl border border-gray-200 bg-[#f8f9fb]" : "rounded-[20px] bg-[#f3f4f6]"}`}
 					/>
 					<p id="new-message-help" className="sr-only">Entrée pour envoyer, Maj+Entrée pour aller à la ligne.</p>
 					<button
 						type="submit"
 						disabled={!canSend}
 						aria-label={sending ? "Envoi en cours" : "Envoyer le message"}
-						className={`flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full hover:bg-[#f3f4f6] disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent ${focus}`}
+						className={`flex size-11 shrink-0 cursor-pointer items-center justify-center disabled:cursor-default disabled:opacity-40 ${variant === "recruiter" ? "rounded-xl bg-primary text-on-primary enabled:hover:bg-primary/90" : "rounded-full hover:bg-[#f3f4f6] disabled:hover:bg-transparent"} ${focus}`}
 					>
-						<img src="/static/img/messages/send.svg" width={24} height={24} alt="" />
+						{variant === "recruiter" ? <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4 20-7ZM22 2 11 13" /></svg> : <img src="/static/img/messages/send.svg" width={24} height={24} alt="" />}
 					</button>
 				</div>
 			</form>

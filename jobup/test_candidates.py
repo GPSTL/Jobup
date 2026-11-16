@@ -12,8 +12,10 @@ from rest_framework.test import APITestCase
 
 from .models import (
     Company,
+    Conversation,
     JobApplication,
     JobCategory,
+    Message,
     Offer,
     Recruiter,
     School,
@@ -195,6 +197,46 @@ class CandidateDetailTests(CandidateTestCase):
         COLLEAGUE.login(self)
         exchanges = self.client.get(detail(self.alice)).json()["exchanges"]
         self.assertEqual([e["id"] for e in exchanges], [other.pk])
+
+    def test_exchanges_include_the_messages_of_their_conversation(self):
+        recruiter = Recruiter.objects.get(user__email=USERS[3].email)
+        colleague = Recruiter.objects.get(user__email=COLLEAGUE.email)
+        conversation = Conversation.objects.create(
+            student=self.alice, recruiter=recruiter
+        )
+        question = Message.objects.create(
+            conversation=conversation, sender=recruiter.user, body="Bonjour Alice"
+        )
+        Message.objects.filter(pk=question.pk).update(
+            created_at=timezone.now() - timedelta(days=3)
+        )
+        application = self.sent(self.offers[0], days_ago=2)
+        answer = Message.objects.create(
+            conversation=conversation, sender=self.alice.user, body="Bonjour !"
+        )
+        # The conversation of a colleague is never shown
+        private = Conversation.objects.create(student=self.alice, recruiter=colleague)
+        Message.objects.create(
+            conversation=private, sender=colleague.user, body="Message d'un collègue"
+        )
+
+        USERS[3].login(self)
+        exchanges = self.client.get(detail(self.alice)).json()["exchanges"]
+        # Oldest first, applications and messages mixed
+        self.assertEqual(
+            [(e["kind"], e["id"]) for e in exchanges],
+            [
+                ("message", question.pk),
+                ("application", application.pk),
+                ("message", answer.pk),
+            ],
+        )
+        self.assertEqual(
+            (exchanges[0]["from_me"], exchanges[0]["body"]), (True, "Bonjour Alice")
+        )
+        self.assertEqual(
+            (exchanges[2]["from_me"], exchanges[2]["body"]), (False, "Bonjour !")
+        )
 
 
 class CandidateCvTests(CandidateTestCase):

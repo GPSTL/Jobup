@@ -15,6 +15,38 @@ export const SEND_ERRORS = {
 	network: "Le message n’a pas été envoyé : impossible de joindre le serveur. Vérifiez votre connexion et réessayez.",
 };
 
+// Pièces jointes (JOB-043). Politique à valider par l'équipe, la même que dans jobup/attachments.py :
+// le serveur décide, ces valeurs ne servent qu'à prévenir avant l'envoi.
+export const ATTACHMENT_MAX_SIZE = 10 * 1024 * 1024;
+export const ATTACHMENT_EXTENSIONS = ["pdf", "docx", "doc"];
+// Pour le sélecteur de fichier
+export const ATTACHMENT_ACCEPT = ATTACHMENT_EXTENSIONS.map((extension) => `.${extension}`).join(",");
+
+// Raison pour laquelle le fichier choisi n'est pas ajouté, ou null s'il peut l'être. Seul le nom est
+// vérifié ici : le contenu l'est par le serveur, qui répond avec la même formulation s'il refuse.
+export function attachmentProblem(file: { name: string; size: number }) {
+	if (file.size === 0) return "Le fichier est vide.";
+	if (file.size > ATTACHMENT_MAX_SIZE) return "Le fichier ne doit pas dépasser 10 Mo.";
+	const extension = file.name.slice(file.name.lastIndexOf(".") + 1).toLowerCase();
+	if (!file.name.includes(".") || !ATTACHMENT_EXTENSIONS.includes(extension)) return "Le fichier doit être au format PDF, DOCX ou DOC.";
+	return null;
+}
+
+// Erreur affichée quand l'envoi échoue : celle du serveur si elle concerne le fichier, sinon la phrase générale.
+// Le fichier choisi reste en place pour réessayer.
+export function sendError(reason: keyof typeof SEND_ERRORS, message: string | undefined, withFile: boolean) {
+	if (message) return message;
+	return withFile && reason === "invalid" ? "Le message n’a pas été envoyé : le fichier ou le texte a été refusé." : SEND_ERRORS[reason];
+}
+
+// « 220 Ko », « 1,5 Mo » : tailles à la française, comme la maquette
+export function formatFileSize(bytes: number) {
+	const format = (value: number, unit: string) => `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(value)} ${unit}`;
+	if (bytes < 1024) return `${bytes} o`;
+	if (bytes < 1024 * 1024) return format(bytes / 1024, "Ko");
+	return format(bytes / (1024 * 1024), "Mo");
+}
+
 // Ajoute des messages au fil sans doublon (un rafraîchissement peut renvoyer un message déjà affiché après son envoi),
 // dans l'ordre d'enregistrement par le serveur
 export function mergeMessages(current: Message[], incoming: Message[]) {

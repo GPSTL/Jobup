@@ -3,6 +3,7 @@ import { Navigate } from "react-router-dom";
 
 import Button from "./Button";
 import { getSession, STUDENT_ROLE, type SessionResult, type User } from "../services/auth";
+import { startHeartbeat } from "../services/presence";
 import { MESSAGES } from "../utils/validation";
 
 type RequireStudentProps = {
@@ -27,6 +28,9 @@ export default function RequireStudent({ children }: RequireStudentProps) {
 		document.addEventListener("visibilitychange", onVisible);
 		return () => document.removeEventListener("visibilitychange", onVisible);
 	}, [check]);
+
+	// Présence (JOB-039) : tant qu'une page de l'espace étudiant est visible, les recruteurs le voient « En ligne »
+	useEffect(() => startHeartbeat(), []);
 
 	if (session === null) {
 		return (

@@ -9,8 +9,13 @@ import { REQUEST_ERRORS } from "../utils/validation";
 // "12 mars 2026"
 const formatDate = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 
+type CvSectionProps = {
+	/** Account id of the logged-in student, given by RequireStudent through "Mon espace" */
+	userId: number;
+};
+
 // CV block of "Mon espace" (JOB-019). Loads its own data, so it does not depend on the profile.
-export default function CvSection() {
+export default function CvSection({ userId }: CvSectionProps) {
 	// null when the student has not imported a CV yet
 	const [cv, setCv] = useState<Cv | null>(null);
 	const [loading, setLoading] = useState(true);
@@ -25,7 +30,7 @@ export default function CvSection() {
 	useEffect(() => {
 		// Ignores the answer if the page was left in the meantime
 		let ignore = false;
-		getCv().then((result) => {
+		getCv(userId).then((result) => {
 			if (ignore) return;
 			setLoading(false);
 			if (result.ok) setCv(result.cv);
@@ -34,7 +39,7 @@ export default function CvSection() {
 		return () => {
 			ignore = true;
 		};
-	}, [attempt]);
+	}, [userId, attempt]);
 
 	const retry = () => {
 		setLoadError(null);
@@ -48,7 +53,7 @@ export default function CvSection() {
 	};
 
 	const onImport = async (file: File) => {
-		const result = await uploadCv(file);
+		const result = await uploadCv(userId, file);
 		if (!result.ok) return result.reason === "invalid" ? result.message : REQUEST_ERRORS[result.reason];
 		setCv(result.cv);
 		setSaved(true);

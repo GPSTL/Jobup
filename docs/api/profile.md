@@ -1,6 +1,6 @@
 # Student profile API
 
-Contract between the profile API (JOB-008) and the “Mon espace” page (JOB-017): reading and updating the photo, the personal description and the desired position. The CV has its own API (JOB-018).
+Contract between the profile API (JOB-008) and the “Mon espace” page (JOB-017): reading and updating the photo, the personal description and the desired position. The CV has its own API (JOB-018): see [resume.md](resume.md).
 
 ## Authentication
 
