@@ -81,22 +81,56 @@ Exécuter `make migrate` avant de charger la liste après cette modification.
 Les migrations restent générées localement et ignorées par Git. Ne pas exécuter
 `make init` : cette cible supprime la base.
 
+## ADM-02 — Fiche étudiant (JOB-064)
+
 La flèche ouvre `/administration/users/:id`, une fiche étudiant dédiée aux
 administrateurs ; « Retour à la liste » retrouve le tableau tel qu'il était
-(recherche, filtres, tri et page). La fiche affiche
-le nom, l'école, l'e-mail, la date d'inscription et le nombre de candidatures
-ayant un `submitted_at` (les brouillons sont exclus). Aucun téléphone n'est
-actuellement stocké : `phone: null`, affiché « Téléphone non renseigné ».
-L'absence de profil étudiant associé ne masque pas le compte : école et CV
-sont absents, et le compteur vaut zéro.
+(recherche, filtres, tri et page).
 
-`GET /api/administration/users/:id` fournit ces données, le statut du compte
-et `cv_url`. `GET /api/administration/users/:id/cv` télécharge le CV comme pièce
-jointe, sans exposer de chemin de stockage. Les deux API exigent le rôle admin,
-acceptent les étudiants inactifs et répondent 404 pour un compte inconnu ou
-d'un autre rôle. Un CV absent ou un fichier supprimé répond aussi 404.
-La fiche utilise la navigation partagée. Le bouton de suspension reste
-indisponible en attendant confirmation du périmètre des opérations de suspension.
+La fiche affiche le nom, la photo du profil (ou les initiales), l'école,
+le téléphone, l'e-mail, le nombre de candidatures envoyées et la date
+d'inscription. Seules les candidatures ayant un `submitted_at` comptent : un
+brouillon n'a jamais été reçu par un recruteur (JOB-033). Un champ absent est
+écrit : « École non renseignée », « Téléphone non renseigné », « CV non
+déposé », « Aucune candidature envoyée ». Aucun téléphone n'est demandé, ni
+à l'inscription (ETU-01) ni dans le profil (ETU-02) : `phone` vaut toujours
+`null`. Un compte étudiant sans profil reste consultable : ni école, ni photo,
+ni CV, et zéro candidature.
+
+« Télécharger le CV » est un lien de téléchargement, comme côté recruteur : le
+serveur donne le nom du fichier. « Suspendre le compte » n'apparaît que pour
+un compte actif ; il reste désactivé, avec la mention « La suspension sera
+bientôt disponible », tant qu'ADM-03 n'est pas livré : aucune suspension ne
+part d'un bouton provisoire. Un compte suspendu affiche en rouge « Suspendu
+le … » (ou « date non renseignée ») et aucun bouton de suspension ;
+« Rétablir le compte » relève d'ADM-04.
+
+`GET /api/administration/users/:id` :
+
+```json
+{
+  "id": 7,
+  "first_name": "Alice",
+  "last_name": "Martin",
+  "email": "alice@example.fr",
+  "role": 1,
+  "date_joined": "2026-10-09T12:00:00Z",
+  "is_active": true,
+  "suspended_at": null,
+  "school": "Université Paris",
+  "photo_url": "/media/photos/alice.png",
+  "phone": null,
+  "applications_sent": 3,
+  "cv_url": "/api/administration/users/7/cv"
+}
+```
+
+`GET /api/administration/users/:id/cv` télécharge le CV comme pièce jointe,
+sans exposer de chemin de stockage. Les deux API exigent le rôle admin (403
+sinon), acceptent les étudiants suspendus et répondent 404 pour un compte
+inconnu ou d'un autre rôle. Un CV absent ou un fichier supprimé répond aussi
+404. Une session expirée sur la fiche propose de se reconnecter sur
+`/administration`, qui ramène ensuite à la fiche.
 
 ## Connexion des administrateurs (ADM-13)
 

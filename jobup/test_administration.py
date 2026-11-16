@@ -292,7 +292,18 @@ class AdminStudentDetailTests(APITestCase):
         self.assertIsNone(data["phone"])
         self.assertEqual(data["applications_sent"], 1)
         self.assertEqual(data["cv_url"], f"{self.path}/cv")
+        self.assertIsNone(data["photo_url"])
+        self.assertTrue(data["is_active"])
+        self.assertIsNone(data["suspended_at"])
         self.assertNotIn("password", data)
+
+    def test_photo(self):
+        self.student.photo = SimpleUploadedFile(
+            "alice.png", b"\x89PNG demo", content_type="image/png"
+        )
+        self.student.save()
+        photo_url = self.client.get(self.path).json()["photo_url"]
+        self.assertTrue(photo_url.startswith("/media/photos/alice"), photo_url)
 
     def test_access_for_detail_download_and_page(self):
         for user in (None, self.user):
@@ -326,6 +337,7 @@ class AdminStudentDetailTests(APITestCase):
         self.assertFalse(data["is_active"])
         self.assertIsNotNone(data["suspended_at"])
         self.assertIsNone(data["school"])
+        self.assertIsNone(data["photo_url"])
         self.assertIsNone(data["cv_url"])
         self.assertEqual(data["applications_sent"], 0)
         self.assertEqual(self.client.get(f"{self.path}/cv").status_code, 404)

@@ -10,6 +10,7 @@ import { AdminLoginView } from "../front/pages/AdminLoginPage";
 import { adminLogin } from "../front/services/auth";
 import StudentNavbar from "../front/components/StudentNavbar";
 import {
+	adminLoginLink,
 	adminReturnTo,
 	adminUsersLink,
 	DEFAULT_QUERY,
@@ -97,7 +98,7 @@ test("résultats : chargement, erreurs, liste vide, aucun résultat et paginatio
 	assert.match(view(null), /Chargement/);
 	for (const reason of ["network", "server", "forbidden", "notFound"] as const) assert.match(view({ ok: false, reason }), /role="alert"/);
 	assert.match(view({ ok: false, reason: "notFound" }), /Revenir à la première page/);
-	assert.match(view({ ok: false, reason: "forbidden" }), /href="\/login"/);
+	assert.match(view({ ok: false, reason: "forbidden" }), /href="\/administration\?next=%2Fadministration%2Fusers"/);
 	const empty: AdminUsersResult = { ok: true, results: [], count: 0, page: 1, page_size: 10, total_pages: 1 };
 	assert.match(view(empty), /Aucun étudiant inscrit/);
 	const noMatch = view(empty, { ...DEFAULT_QUERY, status: "suspended" });
@@ -155,17 +156,50 @@ test("libellés : plage affichée et retour vers la liste", () => {
 	}
 });
 
-const profile: AdminUserDetail = { ...user, school: "Université Paris", phone: null, applications_sent: 7, cv_url: "/api/administration/users/1/cv" };
+const profile: AdminUserDetail = { ...user, school: "Université Paris", photo_url: null, phone: null, applications_sent: 7, cv_url: "/api/administration/users/1/cv" };
 
-test("profil : données réelles, champs absents explicites, CV et suspension", () => {
+test("fiche (ADM-02) : école, téléphone, e-mail, candidatures envoyées et date d'inscription", () => {
 	const html = render(<AdminStudentProfile user={profile} />);
-	for (const text of ["Alice", "Martin", "Université Paris", "Téléphone non renseigné", "alice@example.fr", "7 candidatures envoyées", "09/10/2026", "Télécharger le CV", "Suspendre le compte"]) assert.ok(html.includes(text), text);
-	assert.doesNotMatch(html, /67 candidatures/);
-	const empty = render(<AdminStudentProfile user={{ ...profile, school: null, cv_url: null, applications_sent: 0, is_active: false }} />);
-	assert.match(empty, /École non renseignée/);
-	assert.match(empty, /Aucun CV disponible/);
-	assert.match(empty, /Compte suspendu/);
-	assert.match(empty, /disabled=""/);
+	for (const text of ["Alice Martin", "Université Paris", "Téléphone non renseigné", "alice@example.fr", "7 candidatures envoyées", "Inscription le", "09/10/2026"]) assert.ok(html.includes(text), text);
+	// Labels of the icons, for screen readers
+	for (const label of ["École", "Téléphone", "E-mail", "Candidatures", "Inscription"]) assert.match(html, new RegExp(`<span class="sr-only">${label}</span>`));
+	assert.match(render(<AdminStudentProfile user={{ ...profile, applications_sent: 1 }} />), /1 candidature envoyée</);
+	assert.match(render(<AdminStudentProfile user={{ ...profile, applications_sent: 0 }} />), /Aucune candidature envoyée/);
+});
+
+test("fiche : photo du profil, ou initiales sans photo", () => {
+	assert.match(render(<AdminStudentProfile user={{ ...profile, photo_url: "/media/photos/alice.png" }} />), /<img src="\/media\/photos\/alice.png"/);
+	const noPhoto = render(<AdminStudentProfile user={profile} />);
+	assert.doesNotMatch(noPhoto, /<img/);
+	assert.match(noPhoto, />AM</);
+});
+
+test("fiche : « Télécharger le CV » est un lien de téléchargement, « CV non déposé » sans CV", () => {
+	const html = render(<AdminStudentProfile user={profile} />);
+	assert.match(html, /<a href="\/api\/administration\/users\/1\/cv" download=""[^>]*>.*Télécharger le CV<\/a>/);
+	const noCv = render(<AdminStudentProfile user={{ ...profile, cv_url: null }} />);
+	assert.match(noCv, /CV non déposé/);
+	assert.doesNotMatch(noCv, /Télécharger le CV|download=""/);
+});
+
+test("fiche : « Suspendre le compte » visible pour un compte actif, sans action avant ADM-03", () => {
+	const active = render(<AdminStudentProfile user={profile} />);
+	assert.match(active, /<button type="button" disabled="" aria-describedby="suspend-later"[^>]*>Suspendre le compte<\/button>/);
+	assert.match(active, /La suspension sera bientôt disponible/);
+	assert.doesNotMatch(active, /Suspendu le/);
+});
+
+test("fiche : compte suspendu, date en rouge et plus de bouton de suspension", () => {
+	const suspended = render(<AdminStudentProfile user={{ ...profile, is_active: false, suspended_at: "2026-10-15T12:00:00Z", school: null }} />);
+	assert.match(suspended, /text-\[#e00000\]">Suspendu le <time dateTime="2026-10-15T12:00:00Z">15\/10\/2026<\/time>/);
+	assert.doesNotMatch(suspended, /Suspendre le compte/);
+	assert.match(suspended, /École non renseignée/);
+	assert.match(render(<AdminStudentProfile user={{ ...profile, is_active: false }} />), /Compte suspendu, date non renseignée/);
+});
+
+test("fiche : session expirée, retour à la connexion admin puis à la fiche", () => {
+	assert.equal(adminLoginLink("/administration/users/7"), "/administration?next=%2Fadministration%2Fusers%2F7");
+	assert.equal(adminReturnTo(new URLSearchParams(adminLoginLink("/administration/users/7").split("?")[1]).get("next")), "/administration/users/7");
 });
 
 test("profil API : session, fiche inconnue, refus, serveur et réseau", async () => {

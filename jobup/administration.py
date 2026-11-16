@@ -226,6 +226,8 @@ def user_filters(request: Request) -> Response:
 
 @api_view(["GET"])
 def user_detail(request, id: int):
+    # Student profile for the administrators (ADM-02, JOB-064). A student account
+    # without a profile is shown too: no school, photo, CV nor application
     if not isAdmin(request.user):
         return Response({"error": "Forbidden"}, status=403)
     user = User.objects.filter(pk=id, role=Role.STUDENT).first()
@@ -239,8 +241,11 @@ def user_detail(request, id: int):
             "is_active": user.is_active,
             "suspended_at": user.suspended_at if not user.is_active else None,
             "school": student.school.name if student and student.school else None,
-            # No phone field is collected or stored by the current student model.
+            "photo_url": student.photo.url if student and student.photo else None,
+            # Never asked: neither the signup (ETU-01) nor the profile (ETU-02) has a
+            # phone number, so the profile says it is not given
             "phone": None,
+            # Sent ones only: a draft never reached a recruiter (JOB-033)
             "applications_sent": JobApplication.objects.filter(
                 student=student, submitted_at__isnull=False
             ).count()

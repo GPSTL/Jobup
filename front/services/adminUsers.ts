@@ -23,6 +23,8 @@ export type AdminSchool = { id: number; name: string };
 export type AdminUserFiltersResult = { ok: true; schools: AdminSchool[] } | { ok: false };
 
 export type AdminUserDetail = Omit<AdminUser, "detail_url"> & {
+	/** Photo of the profile, null when none was imported */
+	photo_url: string | null;
 	phone: string | null;
 	applications_sent: number;
 	cv_url: string | null;
