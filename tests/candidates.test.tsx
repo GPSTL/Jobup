@@ -168,7 +168,7 @@ test("barre recruteur : liens de la maquette, « Candidats » actif sur le profi
 	const html = render(<RecruiterNavbar />, "/recruiter/candidates/7");
 	const labels = [...html.matchAll(/<a [^>]*>([^<]+)<\/a>/g)].map((match) => match[1]);
 	// Barre des grands écrans, puis menu des petits écrans
-	const expected = ["Mon espace", "Filtrer", "Candidats", "Vos offres", "Messages"];
+	const expected = ["Mon espace", "Candidats", "Vos offres", "Messages"];
 	assert.deepEqual(labels, [...expected, ...expected]);
 	const active = [...html.matchAll(/<a [^>]*aria-current="page"[^>]*>([^<]+)<\/a>/g)].map((match) => match[1]);
 	assert.deepEqual(active, ["Candidats", "Candidats"]);
