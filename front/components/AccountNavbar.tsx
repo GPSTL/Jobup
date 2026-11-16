@@ -11,6 +11,7 @@ type AccountNavbarProps = {
 	showBell?: boolean;
 	/** Bell with the unread count and the panel of the notifications (JOB-042) */
 	notifications?: boolean;
+	variant?: "glass" | "solid";
 };
 
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary";
@@ -31,7 +32,7 @@ export default function AccountNavbar({ links, showBell = false, notifications =
 	};
 
 	return (
-		<Navbar>
+		<Navbar variant={variant}>
 			<div className="relative ml-auto flex items-center gap-12" onKeyDown={onKeyDown}>
 				{/* Large screens: the links are in the bar */}
 				<div className="hidden gap-12 lg:flex">

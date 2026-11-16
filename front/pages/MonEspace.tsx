@@ -57,7 +57,7 @@ export default function MonEspace({ user }: MonEspaceProps) {
 
 	return (
 		<div className="min-h-dvh bg-[#f0f0f0]">
-			<header className="p-4">
+			<header className="px-4 pt-4 md:px-6 md:pt-6">
 				<StudentNavbar />
 			</header>
 

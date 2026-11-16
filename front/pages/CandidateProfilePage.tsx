@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, Navigate, useLocation, useParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useParams, useSearchParams } from "react-router-dom";
 
 import Button from "../components/Button";
 import CalendarIcon from "../components/CalendarIcon";
@@ -25,15 +25,18 @@ const outlineAction = `${action} border border-[#d1d5db] bg-surface text-[#11182
 // Back to the cards, on the card of this candidate when there is one, with the criteria of the
 // search when the profile was opened from a card (JOB-036)
 function BackToCandidates({ id }: { id?: number }) {
+	const [params] = useSearchParams();
+	const offer = params.get("offer");
+	const fromOffer = offer !== null && /^[1-9]\d*$/.test(offer);
 	const state = useLocation().state as { candidatesSearch?: unknown } | null;
 	const search = typeof state?.candidatesSearch === "string" ? state.candidatesSearch : "";
 	return (
 		<Link
-			to={candidatesLink(search, id)}
+			to={fromOffer ? `/recruiter/offers/${offer}/applicants` : candidatesLink(search, id)}
 			className={`flex w-fit items-center gap-2 rounded-[14px] py-1 text-[16px] font-semibold text-primary ${focus}`}
 		>
 			<img src="/static/img/applications/back.svg" width={18} height={18} alt="" />
-			Retour aux candidats
+			{fromOffer ? "Retour aux candidats de l’offre" : "Retour aux candidats"}
 		</Link>
 	);
 }
