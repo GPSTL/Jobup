@@ -20,7 +20,6 @@ from pydantic import BaseModel, Field, ValidationError, model_validator
 from rest_framework.decorators import api_view
 from rest_framework.request import Request
 from rest_framework.response import Response
-from .presence import secondsSinceSeen
 
 from .attachments import (
     ATTACHMENT_TYPES,
@@ -36,6 +35,7 @@ from .models import (
     Role,
     User,
 )
+from .presence import secondsSinceSeen
 
 
 class MessagePage(BaseModel):
@@ -145,8 +145,7 @@ def candidateSummary(conversation: Conversation, viewer: User) -> dict[str, Any]
             "first_name": candidate.first_name,
             "last_name": candidate.last_name,
         },
-        "last_message": 
-      (conversation, viewer),
+        "last_message": (conversation, viewer),
         "seen_seconds_ago": secondsSinceSeen(candidate),
     }
 
@@ -172,6 +171,7 @@ def student_conversations(request: Request) -> Response:
         ]
     return Response([summary(conversation, user) for conversation in results])
 
+
 @api_view(["GET"])
 def recruiter_conversations(request: Request) -> Response:
     user: User = request.user
@@ -190,6 +190,7 @@ def recruiter_conversations(request: Request) -> Response:
         ]
     )
 
+
 def attachmentDict(message: Message) -> dict[str, Any] | None:
     # Jamais le chemin de stockage : seulement l'adresse de l'API qui contrôle l'accès
     attachment: MessageAttachment | None = getattr(message, "attachment", None)
@@ -201,6 +202,7 @@ def attachmentDict(message: Message) -> dict[str, Any] | None:
         "extension": os.path.splitext(attachment.name)[1].removeprefix(".").lower(),
         "url": f"/api/conversations/{message.conversation_id}/messages/{message.pk}/attachment",
     }
+
 
 def messageDict(message: Message, viewer: User) -> dict[str, Any]:
     return {
