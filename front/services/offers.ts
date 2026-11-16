@@ -8,6 +8,21 @@ export type PublicOffer = {
 	company: { id: number; name: string; city: string } | null;
 };
 
+export type PublicOfferFilters = { query: string; city: string; sector: string };
+
+export function filterPublicOffers(offers: PublicOffer[], filters: PublicOfferFilters) {
+	const query = filters.query.trim().toLocaleLowerCase("fr");
+	const city = filters.city.trim().toLocaleLowerCase("fr");
+	return offers.filter((offer) => {
+		const searchable = [offer.title, offer.description, offer.requirements, offer.company?.name ?? ""]
+			.join(" ")
+			.toLocaleLowerCase("fr");
+		return (!query || searchable.includes(query))
+			&& (!city || (offer.company?.city ?? "").toLocaleLowerCase("fr").includes(city))
+			&& (!filters.sector || String(offer.category) === filters.sector);
+	});
+}
+
 export type PublicOfferResult<T> = { ok: true; data: T } | { ok: false; reason: "server" | "network" | "notFound" };
 
 async function read<T>(url: string): Promise<PublicOfferResult<T>> {
