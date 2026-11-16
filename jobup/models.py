@@ -129,12 +129,15 @@ class Company(models.Model):
     employees = models.PositiveIntegerField(null=True, blank=True)
     website = models.URLField(blank=True)
     description = models.CharField(max_length=2048, blank=True)
+    # Logo modifié depuis « Mon espace » recruteur (JOB-066) : JPG ou PNG, 2 Mo maximum
+    logo = models.ImageField(upload_to="logos", blank=True)
 
     # Seuls ces champs sont publics : le SIRET et les recruteurs ne sont jamais exposés
     def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.pk,
             "name": self.name,
+            "logo_url": self.logo.url if self.logo else None,
             "sector": self.sector,
             "city": self.city,
             "employees": self.employees,

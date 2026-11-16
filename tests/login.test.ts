@@ -1,6 +1,6 @@
 import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
-import { getSession, login } from "../front/services/auth";
+import { getSession, login, logout } from "../front/services/auth";
 
 const realFetch = globalThis.fetch;
 const student = { id: 1, name: "Durand", first_name: "Élodie", role: 1 };
@@ -21,6 +21,22 @@ const loginCall = (calls: { url: string; init?: RequestInit }[]) => calls.find((
 
 afterEach(() => {
 	globalThis.fetch = realFetch;
+});
+
+test("logout posts with the session cookie and CSRF token", async () => {
+	const calls = mockFetch((url) => url === "/api/logout" ? new Response(null, { status: 204 }) : Response.json({ csrfToken: "test-token" }));
+	assert.deepEqual(await logout(), { ok: true });
+	assert.deepEqual(calls.map(({ url }) => url), ["/api/csrf", "/api/logout"]);
+	assert.equal(calls[1].init?.method, "POST");
+	assert.equal((calls[1].init?.headers as Record<string, string>)["X-CSRFToken"], "test-token");
+	assert.equal(calls[1].init?.credentials, "same-origin");
+});
+
+test("logout reports server and network failures", async () => {
+	globalThis.fetch = (async (url: string) => url === "/api/csrf" ? Response.json({ csrfToken: "test-token" }) : new Response(null, { status: 500 })) as typeof fetch;
+	assert.deepEqual(await logout(), { ok: false, reason: "server" });
+	globalThis.fetch = (async () => { throw new TypeError("offline"); }) as typeof fetch;
+	assert.deepEqual(await logout(), { ok: false, reason: "network" });
 });
 
 test("connexion réussie : renvoie l'utilisateur et envoie les identifiants avec le cookie de session", async () => {
