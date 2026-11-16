@@ -111,7 +111,7 @@ Once running, access the application at `http://127.0.0.1:8000/`.
 
 ## Demo data
 
-After `make migrate`, `make seed` (or `python manage.py seed_demo`) creates a recruiter, its candidates, offers, applications, shortlist, an excluded candidate and conversations, including a message with a PDF attachment (JOB-043) and one with a Word document. It refuses to run when `DEBUG` is off, and running it again creates nothing new.
+After `make migrate`, `make seed` (or `python manage.py seed_demo`) creates a recruiter, its candidates, offers, applications, shortlist, an excluded candidate and conversations, including a message with a PDF attachment (JOB-043) and one with a Word document. It also fills the companies directory (JOB-021, `/companies`): ten companies, some with a demo recruiter and job offers (`recrutement+NN@demo.jobup`, same password). It refuses to run when `DEBUG` is off, and running it again creates nothing new.
 
 | Account | Email | Password | To see |
 |---|---|---|---|
