@@ -97,6 +97,13 @@ export function ApplicationDetailView({ application, submitted = false }: Applic
 			{resume && <SentDocument label="CV" downloadLabel="Télécharger le CV" url={resume} />}
 			{coverLetter && <SentDocument label="Lettre de motivation" downloadLabel="Télécharger la lettre de motivation" url={coverLetter} />}
 
+			{application.decision_message && (application.status === STATUS.ACCEPTED || application.status === STATUS.REFUSED) && (
+				<section aria-label="Réponse du recruteur" className="flex flex-col gap-2">
+					<h2 className={sectionTitle}>Message du recruteur</h2>
+					<p className="whitespace-pre-line text-[16px] text-[#6b7280]">{application.decision_message}</p>
+				</section>
+			)}
+
 			{application.message && (
 				<>
 					<h2 className={sectionTitle}>Présentation envoyée</h2>

@@ -189,6 +189,13 @@ def notifyStatusChange(application_id: int, status: int) -> Notification | None:
         body = f"{company} n’a pas retenu votre candidature « {title} »."
     else:
         return None
+    if (
+        status in (ApplicationStatus.ACCEPTED, ApplicationStatus.REFUSED)
+        and application.decision_message
+    ):
+        body = (
+            f"{body}\n\nMessage du recruteur : " + excerpt(application.decision_message)
+        )[:300]
     return notify(
         student,
         kind,

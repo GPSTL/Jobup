@@ -77,9 +77,11 @@ stores the selected filter in `?status=all|submitted|review|accepted|refused`.
 the student application status mapping. Unknown filters default to “Toutes”.
 Filter counts always describe the complete returned application set.
 
-Viewing or filtering does not change application statuses. Decisions,
-notifications and contract upload belong to subsequent tickets. No schema or
-database migration is required.
+Viewing or filtering the **list** does not change application statuses. Opening an
+individual application and recording its decision are handled by
+[JOB-044](recruiter-decisions.md), which adds a separate endpoint and migration.
+Contract upload remains outside this scope. The JOB-040 list itself remains
+read-only.
 
 ## Design references
 

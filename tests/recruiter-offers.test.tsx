@@ -39,6 +39,7 @@ test("candidats : contexte de l’offre, statuts, dates, identité partagée et 
 	assert.match(html, /École non renseignée/);
 	assert.match(html, /Reçue le/);
 	assert.match(html, /href="\/recruiter\/candidates\/7\?offer=12"/);
+	assert.match(html, /href="\/recruiter\/applications\/1"/);
 	assert.equal((html.match(/<li /g) ?? []).length, 5);
 	// Decision controls belong to JOB-044; viewing applicants must remain read-only.
 	assert.doesNotMatch(html, />Accepter<|>Refuser<|Déposer le contrat/);
