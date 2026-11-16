@@ -513,6 +513,8 @@ class NotificationKind(models.TextChoices):
     APPLICATION_UPDATE = "application_update", "Application updated"
     APPLICATION_ACCEPTED = "application_accepted", "Application accepted"
     APPLICATION_REFUSED = "application_refused", "Application refused"
+    # Recruteur (JOB-046, REC-32) : candidature reçue sur une de ses offres
+    NEW_APPLICATION = "new_application", "New application"
 
 
 class Notification(models.Model):
@@ -536,20 +538,24 @@ class Notification(models.Model):
         ]
 
 
-# Préférences d'un utilisateur, créées à la première lecture. Valeurs initiales de la maquette
-# « Mon espace » : les deux types de notifications actifs, l'e-mail désactivé.
+# Préférences d'un utilisateur, créées à la première lecture (preferencesOf, notifications.py).
+# Valeurs initiales des maquettes « Mon espace » : tous les types de notifications actifs ;
+# l'e-mail désactivé pour l'étudiant, activé pour le recruteur.
 class NotificationPreference(models.Model):
     user = models.OneToOneField(
         User, models.CASCADE, related_name="notification_preference"
     )
-    # Recevoir une notification pour chaque type d'événement, dans l'application
+    # Recevoir une notification pour chaque type d'événement, dans l'application.
+    # Chaque rôle n'affiche que les siens : messages et statuts pour l'étudiant,
+    # nouvelles candidatures et messages pour le recruteur.
     messages = models.BooleanField(default=True)
     application_status = models.BooleanField(default=True)
+    new_applications = models.BooleanField(default=True)
     # Recevoir aussi un e-mail pour ces notifications ; sans effet sur l'application
     email = models.BooleanField(default=False)
 
 
-# Événements des notifications (JOB-042), branchés sur les modèles pour qu'aucun écran ne les
+# Événements des notifications (JOB-042, JOB-046), branchés sur les modèles pour qu'aucun écran ne les
 # oublie. Ils s'exécutent une fois l'enregistrement validé en base : un fichier joint au message
 # est alors connu, et un échec de la notification n'annule jamais le message ou la candidature.
 # Un changement de statut fait avec QuerySet.update() ne passe pas par save() et n'est pas notifié.
@@ -572,7 +578,12 @@ def remember_application_status(instance: JobApplication, **_: Any) -> None:
 def notify_status_change(instance: JobApplication, created: bool, **_: Any) -> None:
     previous = instance.__dict__.get("_saved_status")
     instance.__dict__["_saved_status"] = instance.status
-    if created or previous == instance.status:
+    # Une candidature créée ne compte qu'une fois envoyée (en général créée en brouillon,
+    # puis envoyée par submit()) ; une candidature existante, quand son statut change
+    if created:
+        if instance.status != ApplicationStatus.SUBMITTED:
+            return
+    elif previous == instance.status:
         return
     from .notifications import notifyStatusChange
 

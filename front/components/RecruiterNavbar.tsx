@@ -11,7 +11,7 @@ const links = [
 	{ label: "Messages", to: "/recruiter/messages" },
 ];
 
-// Shared by every page of the logged-in recruiter
+// Shared by every page of the logged-in recruiter, with the bell of the notifications (JOB-046)
 export default function RecruiterNavbar({ variant }: Props) {
-	return <AccountNavbar links={links} showBell variant={variant} />;
+	return <AccountNavbar links={links} variant={variant} notifications="recruiter" />;
 }

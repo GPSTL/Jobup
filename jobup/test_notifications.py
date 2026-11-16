@@ -114,8 +114,9 @@ class MessageEventTests(NotificationTestCase):
         )
 
     def test_the_student_is_not_notified_of_their_own_message(self):
+        # Le recruteur l'est : test_recruiter_notifications.py
         self.send(self.student, "Merci !")
-        self.assertEqual(Notification.objects.count(), 0)
+        self.assertEqual(self.notificationsOf(self.student), [])
 
     def test_long_message_and_file_only_message(self):
         self.send(self.lea.user, "x " * 200)
@@ -199,8 +200,9 @@ class StatusEventTests(NotificationTestCase):
         self.assertEqual(len(self.notificationsOf(self.student)), 1)
 
     def test_submitting_is_the_student_own_action(self):
+        # Le recruteur de l'offre l'est : test_recruiter_notifications.py
         self.setStatus(ApplicationStatus.SUBMITTED)
-        self.assertEqual(Notification.objects.count(), 0)
+        self.assertEqual(self.notificationsOf(self.student), [])
 
     def test_saving_without_a_status_change_notifies_nothing(self):
         self.setStatus(ApplicationStatus.READ)
@@ -228,7 +230,12 @@ class PreferenceTests(NotificationTestCase):
         self.login(self.student)
         self.assertEqual(
             self.client.get(f"{LIST}/preferences").json(),
-            {"messages": True, "application_status": True, "email": False},
+            {
+                "messages": True,
+                "application_status": True,
+                "new_applications": True,
+                "email": False,
+            },
         )
 
     def test_each_kind_can_be_turned_off(self):
@@ -274,7 +281,12 @@ class PreferenceTests(NotificationTestCase):
         )
         self.assertEqual(
             response.json(),
-            {"messages": True, "application_status": True, "email": True},
+            {
+                "messages": True,
+                "application_status": True,
+                "new_applications": True,
+                "email": True,
+            },
         )
         # Conservé après rechargement
         self.assertTrue(NotificationPreference.objects.get(user=self.student).email)
@@ -283,7 +295,12 @@ class PreferenceTests(NotificationTestCase):
         )
         self.assertEqual(
             response.json(),
-            {"messages": False, "application_status": True, "email": True},
+            {
+                "messages": False,
+                "application_status": True,
+                "new_applications": True,
+                "email": True,
+            },
         )
 
     def test_invalid_value(self):

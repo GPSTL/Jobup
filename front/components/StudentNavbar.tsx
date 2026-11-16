@@ -13,5 +13,5 @@ const links = [
 
 // Shared by every page of the logged-in student, with the bell of the notifications (JOB-042)
 export default function StudentNavbar({ variant }: Props) {
-	return <AccountNavbar links={links} variant={variant} notifications />;
+	return <AccountNavbar links={links} variant={variant} notifications="student" />;
 }

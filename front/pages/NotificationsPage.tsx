@@ -3,14 +3,20 @@ import { Link, Navigate } from "react-router-dom";
 
 import Button from "../components/Button";
 import NotificationList from "../components/NotificationList";
+import RecruiterNavbar from "../components/RecruiterNavbar";
 import StudentNavbar from "../components/StudentNavbar";
 import { getNotifications, markAllRead, markRead, type AppNotification } from "../services/notifications";
-import { PREFERENCES_ANCHOR } from "../utils/notifications";
+import { ROLE_NOTIFICATIONS, type NotificationRole } from "../utils/notifications";
 import { focus } from "../utils/searchPageStyles";
 import { REQUEST_ERRORS } from "../utils/validation";
 
-// Toutes les notifications de l'étudiant (JOB-042) : « Voir toutes les notifications » du panneau de la cloche
-export default function NotificationsPage() {
+type NotificationsPageProps = {
+	/** Rôle connecté, vérifié par RequireStudent ou RequireRecruiter */
+	role?: NotificationRole;
+};
+
+// Toutes les notifications de l'étudiant (JOB-042) ou du recruteur (JOB-046) : « Voir toutes les notifications » du panneau de la cloche
+export default function NotificationsPage({ role = "student" }: NotificationsPageProps) {
 	// null pendant le premier chargement
 	const [notifications, setNotifications] = useState<AppNotification[] | null>(null);
 	const [hasMore, setHasMore] = useState(false);
@@ -75,18 +81,16 @@ export default function NotificationsPage() {
 
 	return (
 		<div className="min-h-dvh bg-[#f0f0f0] text-[#111827]">
-			<header className="p-4">
-				<StudentNavbar />
-			</header>
+			<header className="p-4">{role === "recruiter" ? <RecruiterNavbar /> : <StudentNavbar />}</header>
 			<main className="px-4 pt-6 pb-16 md:px-6 md:pt-9">
 				<div className="mx-auto flex max-w-[1000px] flex-col gap-5 rounded-[25px] bg-white px-4 pt-8 pb-9 leading-[normal] shadow-[0_4px_12px_rgba(0,0,0,0.1)] md:px-10">
 					<div className="flex flex-wrap items-end gap-3">
 						<div className="flex flex-col gap-1.5">
 							<h1 className="text-[32px] font-semibold">Notifications</h1>
-							<p className="text-[16px] text-[#6b7280]">Les nouveaux messages et les changements de vos candidatures.</p>
+							<p className="text-[16px] text-[#6b7280]">{ROLE_NOTIFICATIONS[role].description}</p>
 						</div>
 						<div className="ml-auto flex items-center gap-4 text-[14px]">
-							<Link to={`/student#${PREFERENCES_ANCHOR}`} className={`flex items-center gap-1.5 rounded-sm font-medium text-[#6b7280] hover:underline ${focus}`}>
+							<Link to={ROLE_NOTIFICATIONS[role].preferences} className={`flex items-center gap-1.5 rounded-sm font-medium text-[#6b7280] hover:underline ${focus}`}>
 								<img src="/static/img/notifications/settings.svg" width={16} height={16} alt="" />
 								Préférences e-mail
 							</Link>
@@ -112,7 +116,7 @@ export default function NotificationsPage() {
 					{notifications?.length === 0 && <p className="text-[16px] text-[#6b7280]">Aucune notification pour l’instant.</p>}
 					{notifications && notifications.length > 0 && (
 						<div className="overflow-hidden rounded-2xl border border-[#e5e7eb] [&>ul>li:first-child>*]:border-t-0">
-							<NotificationList notifications={notifications} onOpen={open} />
+							<NotificationList notifications={notifications} onOpen={open} role={role} />
 						</div>
 					)}
 					{hasMore && (
