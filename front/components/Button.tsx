@@ -19,6 +19,7 @@ type ButtonProps = {
 	ref?: Ref<HTMLButtonElement>;
 	/** Extra classes */
 	className?: string;
+	ariaLabel?: string;
 };
 
 const base = [
@@ -54,6 +55,7 @@ export default function Button({
 	title,
 	ref,
 	className = "",
+	ariaLabel,
 }: ButtonProps) {
 	const classes = `${base} ${variants[variant]} ${sizes[size]} ${className}`;
 
@@ -66,7 +68,7 @@ export default function Button({
 	}
 
 	return (
-		<button ref={ref} type={type} onClick={onClick} disabled={disabled} title={title} className={classes}>
+		<button ref={ref} type={type} onClick={onClick} disabled={disabled} aria-label={ariaLabel} title={title} className={classes}>
 			{children}
 		</button>
 	);

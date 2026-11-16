@@ -195,6 +195,141 @@ class PresenceTests(RecruiterMessagingTestCase):
         self.assertEqual(secondsSinceSeen(user, now), 90)
 
 
+class RecruiterRecipientSearchTests(RecruiterMessagingTestCase):
+    SEARCH = "/api/recruiter/conversation-recipients"
+
+    def test_only_recruiters_can_search_recipients(self):
+        self.assertEqual(self.client.get(self.SEARCH, {"q": "Lu"}).status_code, 403)
+        self.login("lucas@example.fr")
+        self.assertEqual(self.client.get(self.SEARCH, {"q": "Lu"}).status_code, 403)
+
+    def test_search_is_accent_and_case_insensitive_and_marks_existing_threads(self):
+        self.login()
+        response = self.client.get(self.SEARCH, {"q": "lUcAs mArTiN"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            [
+                {
+                    "id": self.lucas.user_id,
+                    "first_name": "Lucas",
+                    "last_name": "Martin",
+                    "has_conversation": True,
+                }
+            ],
+        )
+
+    def test_search_does_not_return_inactive_or_non_student_accounts(self):
+        inactive = self.makeStudent("inactive@example.fr", "Luc", "Inactive")
+        inactive.user.is_active = False
+        inactive.user.save(update_fields=["is_active"])
+        self.makeUser(
+            "recruiter-student@example.fr", "Luc", "Recruiter", Role.RECRUITER
+        )
+        self.login()
+        response = self.client.get(self.SEARCH, {"q": "Luc"})
+        ids = [item["id"] for item in response.json()]
+        self.assertNotIn(inactive.user_id, ids)
+        self.assertIn(self.lucas.user_id, ids)
+
+    def test_search_requires_two_characters(self):
+        self.login()
+        self.assertEqual(self.client.get(self.SEARCH, {"q": "L"}).json(), [])
+
+    def test_recruiter_without_recruiter_profile_cannot_search(self):
+        user = self.makeUser("orphan@example.fr", "Orphan", "Recruiter", Role.RECRUITER)
+        self.login(user.email)
+        self.assertEqual(self.client.get(self.SEARCH, {"q": "Lucas"}).status_code, 403)
+
+    def test_search_only_returns_candidates_visible_through_the_student_profile_scope(
+        self,
+    ):
+        # The candidate endpoint's visibility rule is active student accounts.
+        hidden = self.makeStudent("hidden@example.fr", "Hidden", "Candidate")
+        hidden.user.is_active = False
+        hidden.user.save(update_fields=["is_active"])
+        self.login()
+        ids = [
+            item["id"] for item in self.client.get(self.SEARCH, {"q": "Hidden"}).json()
+        ]
+        self.assertNotIn(hidden.user_id, ids)
+
+
+class StartRecruiterConversationTests(RecruiterMessagingTestCase):
+    def start(self, candidate_id):
+        return self.client.post(LIST, {"candidate_id": candidate_id}, format="json")
+
+    def test_only_recruiters_can_start_conversations(self):
+        self.assertEqual(self.start(self.lucas.user_id).status_code, 403)
+        self.login("lucas@example.fr")
+        self.assertEqual(self.start(self.lucas.user_id).status_code, 403)
+
+    def test_creates_a_conversation_for_an_active_candidate(self):
+        candidate = self.makeStudent("new@example.fr", "Nina", "Durand")
+        self.login()
+        response = self.start(candidate.user_id)
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertTrue(data["created"])
+        self.assertEqual(
+            data["candidate"],
+            {
+                "id": candidate.user_id,
+                "first_name": "Nina",
+                "last_name": "Durand",
+            },
+        )
+        self.assertTrue(
+            Conversation.objects.filter(
+                pk=data["id"], student=candidate, recruiter=self.lea
+            ).exists()
+        )
+
+    def test_existing_conversation_is_reused_without_a_duplicate(self):
+        self.login()
+        response = self.start(self.lucas.user_id)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()["created"])
+        self.assertEqual(response.json()["id"], self.with_lucas.pk)
+        self.assertEqual(
+            Conversation.objects.filter(student=self.lucas, recruiter=self.lea).count(),
+            1,
+        )
+
+    def test_missing_inactive_and_non_student_candidates_are_indistinguishable(self):
+        inactive = self.makeStudent("inactive2@example.fr", "Inactive", "Student")
+        inactive.user.is_active = False
+        inactive.user.save(update_fields=["is_active"])
+        self.login()
+        for candidate_id in (999999, inactive.user_id):
+            response = self.start(candidate_id)
+            self.assertEqual(response.status_code, 404)
+            self.assertEqual(response.json(), {"error": "Candidate not found"})
+
+    def test_invalid_candidate_id_is_rejected(self):
+        self.login()
+        for candidate_id in (None, "12", True, 0, -1):
+            response = self.start(candidate_id)
+            self.assertEqual(response.status_code, 400)
+
+    def test_recruiter_does_not_reuse_colleagues_conversation(self):
+        self.login("rh@acme.fr")
+        response = self.start(self.lucas.user_id)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["id"], self.colleagues.pk)
+        self.assertFalse(response.json()["created"])
+
+
+class RecruiterConversationSearchTests(RecruiterMessagingTestCase):
+    def test_list_search_filters_only_the_logged_in_recruiters_conversations(self):
+        self.login()
+        response = self.client.get(LIST, {"q": "sArAh"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([item["id"] for item in response.json()], [self.with_sarah.pk])
+        response = self.client.get(LIST, {"q": "missing"})
+        self.assertEqual(response.json(), [])
+
+
 class SuspendedCandidateTests(RecruiterMessagingTestCase):
     # ADM-03: the conversations with a suspended student are greyed and closed
     def test_list_says_the_candidate_is_suspended(self):

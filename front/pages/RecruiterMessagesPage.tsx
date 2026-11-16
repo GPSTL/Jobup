@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import CandidatePresence from "../components/CandidatePresence";
 import ConversationList, { type ConversationItem } from "../components/ConversationList";
 import MessageThread from "../components/MessageThread";
+import NewConversationDialog from "../components/NewConversationDialog";
+import Button from "../components/Button";
 import RecruiterNavbar from "../components/RecruiterNavbar";
 import { getRecruiterConversations, type RecruiterConversation } from "../services/recruiterConversations";
 import { avatarColor, formatConversationDate } from "../utils/conversations";
@@ -36,6 +38,7 @@ const toItem = (conversation: RecruiterConversation): ConversationItem => ({
 // of the selected one (shared with the student, JOB-034) and the presence of the candidate.
 // Search on the server and starting a conversation ("+"): JOB-041.
 export default function RecruiterMessagesPage() {
+	const navigate = useNavigate();
 	const { id } = useParams();
 	const [params] = useSearchParams();
 	const selectedId = id === undefined ? undefined : Number(id);
@@ -43,8 +46,7 @@ export default function RecruiterMessagesPage() {
 	const [error, setError] = useState("");
 	const [noSession, setNoSession] = useState(false);
 	const [query, setQuery] = useState("");
-	// Incremented by « Réessayer » to load the list again
-	const [attempt, setAttempt] = useState(0);
+	const [showRecipientDialog, setShowRecipientDialog] = useState(false);
 
 	// Also called by the thread after a message is sent or received, to update the list.
 	// isCurrent ignores a response that arrives after leaving the page.
@@ -69,7 +71,7 @@ export default function RecruiterMessagesPage() {
 			current = false;
 			clearInterval(timer);
 		};
-	}, [load, attempt]);
+	}, [load]);
 
 	// Session expired during the visit: back to the login
 	if (noSession) return <Navigate to="/login" replace />;
@@ -102,9 +104,16 @@ export default function RecruiterMessagesPage() {
 						error={error}
 						onRetry={() => {
 							setError("");
-							setAttempt((value) => value + 1);
+							void load();
 						}}
 						selectedId={selectedId}
+						action={
+							<Button ariaLabel="Nouvelle conversation" onClick={() => setShowRecipientDialog(true)} className="size-9">
+								<span className="text-[22px] translate-y-[2px]">
+									+
+								</span>
+							</Button>
+						}
 					/>
 				</div>
 				<section aria-label="Conversation" className={`min-h-0 min-w-0 flex-1 flex-col md:flex ${showThread ? "flex" : "hidden"}`}>
@@ -144,6 +153,17 @@ export default function RecruiterMessagesPage() {
 					)}
 				</section>
 			</main>
+			{showRecipientDialog && (
+				<NewConversationDialog
+					onClose={() => setShowRecipientDialog(false)}
+					onConversationCreated={(conversationId) => {
+						setShowRecipientDialog(false);
+						// Reload the list so the new conversation (and its header name) is available
+						void load();
+						navigate(`/recruiter/messages/${conversationId}`);
+					}}
+				/>
+			)}
 		</div>
 	);
 }

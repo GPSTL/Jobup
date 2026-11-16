@@ -95,3 +95,42 @@ test("présence de l'étudiant : une requête par minute, seulement quand l'ongl
 	mock.timers.tick(HEARTBEAT_DELAY);
 	assert.equal(urls.length, 1);
 });
+
+import { searchConversationRecipients, startRecruiterConversation } from "../front/services/recruiterConversations";
+
+test("recherche des destinataires : transmet le nom et retourne les candidats autorisés", async () => {
+	const urls = mockFetch(() => Response.json([
+		{ id: 12, first_name: "Lucas", last_name: "Martin", has_conversation: false },
+	]));
+	const result = await searchConversationRecipients("Lucas Martin");
+	assert.deepEqual(urls, ["/api/recruiter/conversation-recipients?q=Lucas+Martin"]);
+	assert.deepEqual(result, {
+		ok: true,
+		recipients: [{ id: 12, first_name: "Lucas", last_name: "Martin", has_conversation: false }],
+	});
+});
+
+test("recherche des destinataires : distingue session expirée, serveur et réseau", async () => {
+	mockFetch(() => new Response(null, { status: 403 }));
+	assert.deepEqual(await searchConversationRecipients("Lucas"), { ok: false, reason: "noSession" });
+	mockFetch(() => new Response(null, { status: 500 }));
+	assert.deepEqual(await searchConversationRecipients("Lucas"), { ok: false, reason: "server" });
+	mockFetch(() => Promise.reject(new TypeError("Failed to fetch")));
+	assert.deepEqual(await searchConversationRecipients("Lucas"), { ok: false, reason: "network" });
+});
+
+test("démarrage : récupère le CSRF et crée ou reprend une conversation", async () => {
+	const urls: string[] = [];
+	const bodies: string[] = [];
+	globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+		urls.push(String(url));
+		if (init?.body) bodies.push(String(init.body));
+		if (String(url) === "/api/csrf") return Response.json({ csrfToken: "csrf-test" });
+		assert.equal(init?.method, "POST");
+		assert.equal((init?.headers as Record<string, string>)["X-CSRFToken"], "csrf-test");
+		return Response.json({ id: 42, created: false, candidate: { id: 12, first_name: "Lucas", last_name: "Martin" } });
+	}) as typeof fetch;
+	assert.deepEqual(await startRecruiterConversation(12), { ok: true, id: 42, created: false });
+	assert.deepEqual(urls, ["/api/csrf", "/api/recruiter/conversations"]);
+	assert.deepEqual(bodies, ['{"candidate_id":12}']);
+});
