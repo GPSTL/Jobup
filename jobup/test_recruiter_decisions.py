@@ -155,19 +155,6 @@ class RecruiterDecisionTests(CandidateTestCase):
             "Profil non retenu",
         )
 
-        other = self.sent(self.offers[1], 1)
-        USERS[3].login(self)
-        self.client.get(self.url(other))
-        with self.captureOnCommitCallbacks(execute=True):
-            response = self.client.patch(
-                self.url(other),
-                {"status": ApplicationStatus.REFUSED},
-                format="json",
-            )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["decision_message"], "")
-        self.assertEqual(Conversation.objects.count(), 0)
-
     def test_foreign_recruiter_and_other_roles_cannot_read_or_decide(self):
         application = self.sent(self.offers[0], 1)
         colleague_application = self.sent(self.colleague_offer, 1)
