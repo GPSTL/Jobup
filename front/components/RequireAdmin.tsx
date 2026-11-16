@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { ADMIN_ROLE, getSession, type SessionResult } from "../services/auth";
+import { adminLoginLink } from "../utils/adminUsers";
 
 export default function RequireAdmin({ children }: { children: ReactNode }) {
 	const location = useLocation();
@@ -17,7 +18,7 @@ export default function RequireAdmin({ children }: { children: ReactNode }) {
 	if (!session) return <main className="p-12 text-center" aria-busy="true">Chargement…</main>;
 	if (!session.ok) {
 		// The admin login, then back to this page
-		if (session.reason === "noSession") return <Navigate to={`/administration?${new URLSearchParams({ next: location.pathname + location.search })}`} replace />;
+		if (session.reason === "noSession") return <Navigate to={adminLoginLink(location.pathname + location.search)} replace />;
 		return <main className="p-12 text-center"><p role="alert">Impossible de vérifier votre session.</p><button className="mt-4 cursor-pointer text-primary underline" onClick={() => setAttempt(attempt + 1)}>Réessayer</button></main>;
 	}
 	// ADM-13: an account of another role goes back to the home page, as with the server

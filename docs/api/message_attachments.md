@@ -23,6 +23,8 @@ Not done, to decide with the policy: images (the signature check is the same kin
 
 `POST /api/conversations/<id>/messages` as `multipart/form-data` with the fields `body` (text, optional when there is a file) and `file`. The JSON request without a file is unchanged.
 
+When the student of the conversation is suspended by an administrator (ADM-03), every new message is refused with 409 `{"error": "Account suspended"}`; reading the thread and downloading its files still work.
+
 - `201` and the saved message (see below).
 - `400` and `{ "errors": { "file": "French message" } }` when the file is refused: empty (`Le fichier est vide.`), over the size limit, or neither PDF, DOCX nor DOC. Nothing is stored. A text that is too long, or no text and no file, gives the usual `400` of the thread.
 - `403` when the user takes part in the conversation but is not its recruiter (a `file` field is never accepted from a student or a school employee). `403` without a session, like the rest of the thread.

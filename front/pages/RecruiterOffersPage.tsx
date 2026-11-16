@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useLocation } from "react-router-dom";
 
 import Button from "../components/Button";
 import RecruiterNavbar from "../components/RecruiterNavbar";
@@ -34,7 +34,8 @@ export function RecruiterOfferList({ offers }: { offers: OfferSummary[] }) {
 			{offers.map((offer) => (
 				<li key={offer.id} className="flex flex-col items-center gap-[15px] rounded-[25px] bg-surface px-6 py-10 shadow-[0_4px_12px_rgba(0,0,0,0.1)] sm:px-[50px]">
 					<h2 className="text-center text-[36px] leading-tight font-semibold">{offer.title}</h2>
-					<img src="/static/img/recruiter-offers/offer.webp" alt="" loading="lazy" className="aspect-[4096/2731] w-full rounded-[15px] object-cover" />
+					{/* Image choisie à la création (JOB-065), sinon l'image de la maquette */}
+					<img src={offer.image_url || "/static/img/recruiter-offers/offer.webp"} alt="" loading="lazy" className="aspect-[4096/2731] w-full rounded-[15px] object-cover" />
 					<p className="self-stretch whitespace-pre-line text-xl">{offer.description}</p>
 					<p className="self-stretch text-[#6b7280]">{offer.applicant_count} candidature{offer.applicant_count === 1 ? "" : "s"} • {offer.is_active ? "Publiée" : "Clôturée"}<br />Créée le {formatDate(offer.created_at)}</p>
 					<Link to={`/recruiter/offers/${offer.id}/applicants`} className={`mt-auto rounded-[14px] bg-primary px-4 py-4 text-center text-lg font-semibold text-on-primary hover:bg-primary/90 ${focus}`}>
@@ -48,6 +49,8 @@ export function RecruiterOfferList({ offers }: { offers: OfferSummary[] }) {
 
 // Read-only entry for JOB-040 while offer authoring remains in JOB-022.
 export default function RecruiterOffersPage() {
+	// Titre de l'offre qui vient d'être publiée depuis « Créer une offre » (JOB-065)
+	const created = (useLocation().state as { offerCreated?: string } | null)?.offerCreated;
 	const [result, setResult] = useState<OfferResult<OfferSummary[]> | null>(null);
 	const [attempt, setAttempt] = useState(0);
 	useEffect(() => {
@@ -57,7 +60,16 @@ export default function RecruiterOffersPage() {
 	}, [attempt]);
 	return (
 		<RecruiterOffersLayout>
-			<h1 className="mx-auto mb-6 max-w-[1332px] text-3xl font-semibold">Vos offres</h1>
+			<div className="mx-auto mb-6 flex max-w-[1332px] flex-wrap items-center justify-between gap-4">
+				<h1 className="text-3xl font-semibold">Vos offres</h1>
+				{/* Bouton de la maquette « Liste d'offres » (JOB-065) */}
+				<Button to="/recruiter/offers/new" className="px-5 py-2">
+					Créer une offre
+				</Button>
+			</div>
+			<p role="status" className="mx-auto mb-6 max-w-[1332px] rounded-[12px] bg-[#ecfdf3] px-4 py-3 font-medium text-[#15803d] empty:hidden">
+				{created ? `Votre offre « ${created} » est publiée.` : ""}
+			</p>
 			{result?.ok ? <RecruiterOfferList offers={result.data} /> : <div className={offerPanel}><OfferRequestState result={result} retry={() => { setResult(null); setAttempt(attempt + 1); }} /></div>}
 		</RecruiterOffersLayout>
 	);

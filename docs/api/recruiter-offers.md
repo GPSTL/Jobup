@@ -22,15 +22,16 @@ Returns an array, newest offer first (`created_at DESC`, then `id DESC`):
     "description": "Une alternance de 12 mois.",
     "created_at": "2026-10-10T09:00:00Z",
     "is_active": true,
+    "image_url": "",
     "applicant_count": 2
   }
 ]
 ```
 
 Recruiters without an associated profile or offers receive `[]`. Closed offers
-remain available for consulting their received applications. This supplies a
-read-only entry while offer creation, editing and deletion remain in JOB-022.
-The model does not store offer images; the cards use the decorative Figma image.
+remain available for consulting their received applications. Offers are created with
+`POST` on the same route (JOB-065, below); editing and deletion remain in JOB-022 / JOB-023.
+`image_url` is the image chosen at creation, or `""`: the cards then use the decorative Figma image.
 
 ## GET `/api/recruiter/offers/:id/applicants`
 
@@ -83,10 +84,62 @@ individual application and recording its decision are handled by
 Contract upload remains outside this scope. The JOB-040 list itself remains
 read-only.
 
+## POST `/api/recruiter/offers` — publish an offer (JOB-065 / REC-22)
+
+Integrates the “Créer une offre” form of JOB-051 (PR #25, branch `JOB-23`). The
+offer is published immediately (`is_active: true`) and appears in the `GET` above.
+Like every write, the request needs the `X-CSRFToken` header.
+
+**Company:** the offer always belongs to the company of the logged-in recruiter,
+set by the server. There is no company field: `company`, `company_id`,
+`recruiter`, `is_active`, `id`… in the body are refused with
+`Ce champ ne peut pas être défini.` A recruiter without a profile or a company
+gets `404` `{"error": "No company"}`; other roles get `403`.
+
+| Field | Rule |
+| --- | --- |
+| `title` | Required, 128 characters maximum, spaces around removed |
+| `description` | Required, 2048 characters maximum, spaces around removed |
+| `category` | Required, a value of `JobCategory` |
+| `requirements` | Optional, 256 characters maximum |
+| `image_url` | Optional, `http` or `https` URL, 200 characters maximum |
+| `contract_type` | Optional: `alternance`, `stage`, `cdd`, `cdi` |
+| `duration` | Optional, 64 characters maximum (e.g. `12 mois`) |
+| `start_date` | Optional, `YYYY-MM-DD` |
+| `location` | Optional, 128 characters maximum |
+
+Errors are `400` with a list of French messages per field, displayed under the
+fields of the form: `{"title": ["Ce champ est obligatoire."]}`. Nothing is saved.
+
+Success is `201` with the **published offer**. This format is the reading
+contract shared with JOB-068 (student offer page):
+
+```json
+{
+  "id": 12,
+  "title": "Développeur Python",
+  "description": "Construire une application.",
+  "requirements": "Python, Django",
+  "category": 1,
+  "image_url": "https://example.com/image.webp",
+  "contract_type": "alternance",
+  "duration": "12 mois",
+  "start_date": "2027-01-01",
+  "location": "Paris",
+  "company": { "id": 4, "name": "Atelier" },
+  "is_active": true,
+  "created_at": "2026-11-16T15:00:00Z"
+}
+```
+
+The new `Offer` columns (`image_url`, `contract_type`, `duration`, `start_date`,
+`location`) need `make migrate` on an existing checkout (never `make init`).
+
 ## Design references
 
 - [Vos offres](https://www.figma.com/design/nHHBagsmfJK4TVHwNGFfks/JobUp?node-id=1-783)
 - [Candidats d’une offre](https://www.figma.com/design/nHHBagsmfJK4TVHwNGFfks/JobUp?node-id=8-725)
+- [Créer une offre](https://www.figma.com/design/nHHBagsmfJK4TVHwNGFfks/JobUp?node-id=1-961)
 
 The implementation reuses the account navigation, candidate identity and status
 components. The shared navigation’s existing notification placeholder is outside

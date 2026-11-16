@@ -59,6 +59,10 @@ def api_login(request: Request) -> Response:
         return Response({"error": "Invalid payload"}, status=400)
     user = authenticate(request._request, username=creds.email, password=creds.password)
     if not isinstance(user, User):
+        # A suspended account (ADM-03) is told so, only with its right password
+        suspended = User.objects.filter(email=creds.email, is_active=False).first()
+        if suspended is not None and suspended.check_password(creds.password):
+            return Response({"error": "Account suspended"}, status=403)
         return Response({"error": "Invalid credentials"}, status=401)
     login(request._request, user)
     return Response(user.to_dict())

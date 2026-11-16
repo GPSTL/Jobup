@@ -7,6 +7,7 @@ import Pagination from "../components/Pagination";
 import SearchIcon from "../components/SearchIcon";
 import { getAdminUserFilters, getAdminUsers, type AdminSchool, type AdminUser, type AdminUsersResult } from "../services/adminUsers";
 import {
+	adminLoginLink,
 	formatDate,
 	hasCriteria,
 	nextSort,
@@ -214,7 +215,7 @@ export function AdminUsersResults({ result, loading, query, onChange, onRetry, o
 			<div className="py-20 text-center">
 				<p role="alert">{ERRORS[result.reason]}</p>
 				{result.reason === "forbidden" ? (
-					<Link to="/login" className="mt-4 inline-block text-primary underline">Se connecter</Link>
+					<Link to={adminLoginLink("/administration/users")} className="mt-4 inline-block text-primary underline">Se connecter</Link>
 				) : (
 					<button type="button" onClick={result.reason === "notFound" ? () => onChange({ page: 1 }) : onRetry} className="mt-4 cursor-pointer text-primary underline">
 						{result.reason === "notFound" ? "Revenir à la première page" : "Réessayer"}

@@ -35,6 +35,8 @@ type MessageThreadProps = {
 	onActivity: () => void;
 	/** Trombone et choix d'un fichier : réservé au fil du recruteur (JOB-043). Les participants téléchargent toujours. */
 	allowAttachment?: boolean;
+	/** Conversation fermée, ex. interlocuteur suspendu (ADM-03) : l'historique reste lisible, grisé, et ce texte remplace la saisie */
+	closed?: string;
 };
 
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
@@ -99,7 +101,7 @@ export function ThreadMessages({ days, name, variant = "student" }: { days: Mess
 }
 
 // Fil d'une conversation et champ d'envoi (JOB-034, ETU-15). À monter avec key={conversationId}.
-export default function MessageThread({ conversationId, name, initials, color, backTo, onActivity, presence, variant = "student", allowAttachment = false }: MessageThreadProps) {
+export default function MessageThread({ conversationId, name, initials, color, backTo, onActivity, presence, variant = "student", allowAttachment = false, closed }: MessageThreadProps) {
 	const [messages, setMessages] = useState<Message[] | null>(null);
 	const [hasMore, setHasMore] = useState(false);
 	const [loadError, setLoadError] = useState("");
@@ -267,7 +269,7 @@ export default function MessageThread({ conversationId, name, initials, color, b
 			</div>
 
 			{/* relative : les textes sr-only (en position absolue) restent dans la zone qui défile au lieu d'allonger la page */}
-			<div ref={scroller} role="log" aria-label={`Messages avec ${name}`} className={`relative flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 ${variant === "recruiter" ? "bg-[#f8f9fb] md:p-6" : "bg-[#f0f0f0]"}`}>
+			<div ref={scroller} role="log" aria-label={`Messages avec ${name}`} className={`relative flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 ${variant === "recruiter" ? "bg-[#f8f9fb] md:p-6" : "bg-[#f0f0f0]"} ${closed ? "opacity-60 grayscale" : ""}`}>
 				{!loaded && !loadError && <p aria-busy="true" className="m-auto text-[15px] text-[#6b7280]">Chargement des messages…</p>}
 				{loadError && (
 					<div role="alert" className="m-auto flex flex-col items-center gap-3 text-center">
@@ -294,69 +296,75 @@ export default function MessageThread({ conversationId, name, initials, color, b
 				{messages && <ThreadMessages days={groupByDay(messages)} name={name} variant={variant} />}
 			</div>
 
-			<form onSubmit={send} className="shrink-0 border-t border-[#e5e7eb] bg-white px-4 py-4">
-				{sendError && <p role="alert" className="mb-2 text-[13px] font-medium text-[#DC2626]">{sendError}</p>}
-				{tooLong && (
-					<p id="new-message-length" className="mb-2 text-[13px] font-medium text-[#DC2626]">
-						{MAX_MESSAGE_LENGTH} caractères maximum ({body.length} actuellement).
-					</p>
-				)}
-				{file && (
-					<div className="mb-3 flex">
-						<span className="flex min-w-0 max-w-full items-center gap-2 rounded-full bg-[#dae8ff] py-1 pr-1 pl-3 text-[12px] font-medium text-primary">
-							<span className="sr-only">Fichier joint : </span>
-							<span className="truncate">{file.name}</span>
-							<button
-								type="button"
-								onClick={removeFile}
-								disabled={sending}
-								className={`flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-full hover:bg-white/60 disabled:cursor-default disabled:opacity-50 ${focus}`}
-							>
-								<img src="/static/img/candidates/x.svg" width={12} height={12} alt="" />
-								<span className="sr-only">Retirer le fichier joint</span>
-							</button>
-						</span>
-					</div>
-				)}
-				<div className="flex items-end gap-3">
-					{allowAttachment && (
-						<>
-							<input ref={fileInput} id="new-message-file" type="file" accept={ATTACHMENT_ACCEPT} onChange={chooseFile} tabIndex={-1} className="sr-only" />
-							<button
-								type="button"
-								onClick={() => fileInput.current?.click()}
-								disabled={sending}
-								aria-label="Joindre un fichier"
-								className={`flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-primary hover:bg-[#f3f4f6] disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent ${focus}`}
-							>
-								<PaperclipIcon width={22} height={22} />
-							</button>
-						</>
+			{closed ? (
+				<p role="status" className="shrink-0 border-t border-[#e5e7eb] bg-[#f3f4f6] px-4 py-4 text-center text-[14px] font-medium text-[#6b7280]">
+					{closed}
+				</p>
+			) : (
+				<form onSubmit={send} className="shrink-0 border-t border-[#e5e7eb] bg-white px-4 py-4">
+					{sendError && <p role="alert" className="mb-2 text-[13px] font-medium text-[#DC2626]">{sendError}</p>}
+					{tooLong && (
+						<p id="new-message-length" className="mb-2 text-[13px] font-medium text-[#DC2626]">
+							{MAX_MESSAGE_LENGTH} caractères maximum ({body.length} actuellement).
+						</p>
 					)}
-					<label htmlFor="new-message" className="sr-only">Écrire un message à {name}</label>
-					<textarea
-						id="new-message"
-						rows={1}
-						value={draft}
-						onChange={(event) => setDraft(event.target.value)}
-						onKeyDown={onKeyDown}
-						readOnly={sending}
-						placeholder={variant === "recruiter" ? `Écrivez à ${name.split(" ")[0]}…` : "Écrire un message..."}
-						aria-invalid={tooLong}
-						aria-describedby={tooLong ? "new-message-help new-message-length" : "new-message-help"}
-						className={`max-h-32 min-h-10 min-w-0 flex-1 resize-none px-4 py-2.5 text-[14px] leading-5 outline-none [field-sizing:content] placeholder:text-[#9ca3af] focus:ring-2 focus:ring-primary ${variant === "recruiter" ? "rounded-xl border border-gray-200 bg-[#f8f9fb]" : "rounded-[20px] bg-[#f3f4f6]"}`}
-					/>
-					<p id="new-message-help" className="sr-only">Entrée pour envoyer, Maj+Entrée pour aller à la ligne.</p>
-					<button
-						type="submit"
-						disabled={!canSend}
-						aria-label={sending ? "Envoi en cours" : "Envoyer le message"}
-						className={`flex size-11 shrink-0 cursor-pointer items-center justify-center disabled:cursor-default disabled:opacity-40 ${variant === "recruiter" ? "rounded-xl bg-primary text-on-primary enabled:hover:bg-primary/90" : "rounded-full hover:bg-[#f3f4f6] disabled:hover:bg-transparent"} ${focus}`}
-					>
-						{variant === "recruiter" ? <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4 20-7ZM22 2 11 13" /></svg> : <img src="/static/img/messages/send.svg" width={24} height={24} alt="" />}
-					</button>
-				</div>
-			</form>
+					{file && (
+						<div className="mb-3 flex">
+							<span className="flex min-w-0 max-w-full items-center gap-2 rounded-full bg-[#dae8ff] py-1 pr-1 pl-3 text-[12px] font-medium text-primary">
+								<span className="sr-only">Fichier joint : </span>
+								<span className="truncate">{file.name}</span>
+								<button
+									type="button"
+									onClick={removeFile}
+									disabled={sending}
+									className={`flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-full hover:bg-white/60 disabled:cursor-default disabled:opacity-50 ${focus}`}
+								>
+									<img src="/static/img/candidates/x.svg" width={12} height={12} alt="" />
+									<span className="sr-only">Retirer le fichier joint</span>
+								</button>
+							</span>
+						</div>
+					)}
+					<div className="flex items-end gap-3">
+						{allowAttachment && (
+							<>
+								<input ref={fileInput} id="new-message-file" type="file" accept={ATTACHMENT_ACCEPT} onChange={chooseFile} tabIndex={-1} className="sr-only" />
+								<button
+									type="button"
+									onClick={() => fileInput.current?.click()}
+									disabled={sending}
+									aria-label="Joindre un fichier"
+									className={`flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-primary hover:bg-[#f3f4f6] disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent ${focus}`}
+								>
+									<PaperclipIcon width={22} height={22} />
+								</button>
+							</>
+						)}
+						<label htmlFor="new-message" className="sr-only">Écrire un message à {name}</label>
+						<textarea
+							id="new-message"
+							rows={1}
+							value={draft}
+							onChange={(event) => setDraft(event.target.value)}
+							onKeyDown={onKeyDown}
+							readOnly={sending}
+							placeholder={variant === "recruiter" ? `Écrivez à ${name.split(" ")[0]}…` : "Écrire un message..."}
+							aria-invalid={tooLong}
+							aria-describedby={tooLong ? "new-message-help new-message-length" : "new-message-help"}
+							className={`max-h-32 min-h-10 min-w-0 flex-1 resize-none px-4 py-2.5 text-[14px] leading-5 outline-none [field-sizing:content] placeholder:text-[#9ca3af] focus:ring-2 focus:ring-primary ${variant === "recruiter" ? "rounded-xl border border-gray-200 bg-[#f8f9fb]" : "rounded-[20px] bg-[#f3f4f6]"}`}
+						/>
+						<p id="new-message-help" className="sr-only">Entrée pour envoyer, Maj+Entrée pour aller à la ligne.</p>
+						<button
+							type="submit"
+							disabled={!canSend}
+							aria-label={sending ? "Envoi en cours" : "Envoyer le message"}
+							className={`flex size-11 shrink-0 cursor-pointer items-center justify-center disabled:cursor-default disabled:opacity-40 ${variant === "recruiter" ? "rounded-xl bg-primary text-on-primary enabled:hover:bg-primary/90" : "rounded-full hover:bg-[#f3f4f6] disabled:hover:bg-transparent"} ${focus}`}
+						>
+							{variant === "recruiter" ? <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4 20-7ZM22 2 11 13" /></svg> : <img src="/static/img/messages/send.svg" width={24} height={24} alt="" />}
+						</button>
+					</div>
+				</form>
+			)}
 		</>
 	);
 }

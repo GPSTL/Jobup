@@ -8,6 +8,8 @@ export type RecruiterConversation = {
 	last_message: { body: string; created_at: string; from_me: boolean } | null;
 	/** Last request of the candidate, in the clock of the browser. null = never seen. */
 	last_seen_at: string | null;
+	/** Account suspended by an administrator (ADM-03): greyed, no new message */
+	suspended: boolean;
 };
 
 // As sent by the API: an age rather than a date, so that the clock of the browser,

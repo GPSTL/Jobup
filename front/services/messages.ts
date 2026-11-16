@@ -34,7 +34,7 @@ export type MessagesResult =
 
 export type SendResult =
 	| { ok: true; message: Message }
-	| { ok: false; reason: "noSession" | "notFound" | "invalid" | "server" | "network"; message?: string };
+	| { ok: false; reason: "noSession" | "notFound" | "invalid" | "suspended" | "server" | "network"; message?: string };
 
 type Cursor = { before: number } | { after: number };
 
@@ -95,6 +95,8 @@ export async function sendMessage(conversationId: number, body: string, file?: F
 		});
 		if (response.status === 401 || response.status === 403) return { ok: false, reason: "noSession" };
 		if (response.status === 404) return { ok: false, reason: "notFound" };
+		// Étudiant suspendu par un administrateur (ADM-03) : plus de nouveau message
+		if (response.status === 409) return { ok: false, reason: "suspended" };
 		// Fichier refusé (format, taille) : le serveur dit pourquoi
 		if (response.status === 400 || response.status === 413) {
 			const message = file === undefined ? undefined : await fileError(response);

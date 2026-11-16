@@ -3,13 +3,14 @@ import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { AdminUsersResults, AdminUsersTable, AdminUsersToolbar } from "../front/pages/AdminUsersPage";
-import { getAdminUser, getAdminUserFilters, getAdminUsers, type AdminUser, type AdminUserDetail, type AdminUsersResult } from "../front/services/adminUsers";
+import { getAdminUser, getAdminUserFilters, getAdminUsers, setSuspension, type AdminUser, type AdminUserDetail, type AdminUsersResult } from "../front/services/adminUsers";
 import { AdminStudentProfile } from "../front/pages/AdminUserDetailPage";
 import AdminNavbar from "../front/components/AdminNavbar";
 import { AdminLoginView } from "../front/pages/AdminLoginPage";
-import { adminLogin } from "../front/services/auth";
+import { adminLogin, login } from "../front/services/auth";
 import StudentNavbar from "../front/components/StudentNavbar";
 import {
+	adminLoginLink,
 	adminReturnTo,
 	adminUsersLink,
 	DEFAULT_QUERY,
@@ -97,7 +98,7 @@ test("résultats : chargement, erreurs, liste vide, aucun résultat et paginatio
 	assert.match(view(null), /Chargement/);
 	for (const reason of ["network", "server", "forbidden", "notFound"] as const) assert.match(view({ ok: false, reason }), /role="alert"/);
 	assert.match(view({ ok: false, reason: "notFound" }), /Revenir à la première page/);
-	assert.match(view({ ok: false, reason: "forbidden" }), /href="\/login"/);
+	assert.match(view({ ok: false, reason: "forbidden" }), /href="\/administration\?next=%2Fadministration%2Fusers"/);
 	const empty: AdminUsersResult = { ok: true, results: [], count: 0, page: 1, page_size: 10, total_pages: 1 };
 	assert.match(view(empty), /Aucun étudiant inscrit/);
 	const noMatch = view(empty, { ...DEFAULT_QUERY, status: "suspended" });
@@ -155,17 +156,54 @@ test("libellés : plage affichée et retour vers la liste", () => {
 	}
 });
 
-const profile: AdminUserDetail = { ...user, school: "Université Paris", phone: null, applications_sent: 7, cv_url: "/api/administration/users/1/cv" };
+const profile: AdminUserDetail = { ...user, school: "Université Paris", photo_url: null, phone: null, applications_sent: 7, cv_url: "/api/administration/users/1/cv" };
 
-test("profil : données réelles, champs absents explicites, CV et suspension", () => {
+test("fiche (ADM-02) : école, téléphone, e-mail, candidatures envoyées et date d'inscription", () => {
 	const html = render(<AdminStudentProfile user={profile} />);
-	for (const text of ["Alice", "Martin", "Université Paris", "Téléphone non renseigné", "alice@example.fr", "7 candidatures envoyées", "09/10/2026", "Télécharger le CV", "Suspendre le compte"]) assert.ok(html.includes(text), text);
-	assert.doesNotMatch(html, /67 candidatures/);
-	const empty = render(<AdminStudentProfile user={{ ...profile, school: null, cv_url: null, applications_sent: 0, is_active: false }} />);
-	assert.match(empty, /École non renseignée/);
-	assert.match(empty, /Aucun CV disponible/);
-	assert.match(empty, /Compte suspendu/);
-	assert.match(empty, /disabled=""/);
+	for (const text of ["Alice Martin", "Université Paris", "Téléphone non renseigné", "alice@example.fr", "7 candidatures envoyées", "Inscription le", "09/10/2026"]) assert.ok(html.includes(text), text);
+	// Labels of the icons, for screen readers
+	for (const label of ["École", "Téléphone", "E-mail", "Candidatures", "Inscription"]) assert.match(html, new RegExp(`<span class="sr-only">${label}</span>`));
+	assert.match(render(<AdminStudentProfile user={{ ...profile, applications_sent: 1 }} />), /1 candidature envoyée</);
+	assert.match(render(<AdminStudentProfile user={{ ...profile, applications_sent: 0 }} />), /Aucune candidature envoyée/);
+});
+
+test("fiche : photo du profil, ou initiales sans photo", () => {
+	assert.match(render(<AdminStudentProfile user={{ ...profile, photo_url: "/media/photos/alice.png" }} />), /<img src="\/media\/photos\/alice.png"/);
+	const noPhoto = render(<AdminStudentProfile user={profile} />);
+	assert.doesNotMatch(noPhoto, /<img/);
+	assert.match(noPhoto, />AM</);
+});
+
+test("fiche : « Télécharger le CV » est un lien de téléchargement, « CV non déposé » sans CV", () => {
+	const html = render(<AdminStudentProfile user={profile} />);
+	assert.match(html, /<a href="\/api\/administration\/users\/1\/cv" download=""[^>]*>.*Télécharger le CV<\/a>/);
+	const noCv = render(<AdminStudentProfile user={{ ...profile, cv_url: null }} />);
+	assert.match(noCv, /CV non déposé/);
+	assert.doesNotMatch(noCv, /Télécharger le CV|download=""/);
+});
+
+test("fiche (ADM-03) : « Suspendre le compte » pour un compte actif, avec une fenêtre de confirmation", () => {
+	const active = render(<AdminStudentProfile user={profile} />);
+	assert.match(active, /<button type="button" class="[^"]*bg-\[#e00000\][^"]*">Suspendre le compte<\/button>/);
+	// The confirmation window, closed until the click
+	assert.match(active, /<dialog [^>]*>/);
+	assert.doesNotMatch(active, /<dialog [^>]*open/);
+	for (const text of ["Suspendre le compte de Alice Martin ?", "ne pourra plus se connecter", "Annuler"]) assert.ok(active.includes(text), text);
+	assert.doesNotMatch(active, /Suspendu le|Rétablir le compte/);
+});
+
+test("fiche (ADM-04) : compte suspendu, date en rouge et « Rétablir le compte » à la place", () => {
+	const suspended = render(<AdminStudentProfile user={{ ...profile, is_active: false, suspended_at: "2026-10-15T12:00:00Z", school: null }} />);
+	assert.match(suspended, /text-\[#e00000\]">Suspendu le <time dateTime="2026-10-15T12:00:00Z">15\/10\/2026<\/time>/);
+	assert.match(suspended, />Rétablir le compte<\/button>/);
+	assert.doesNotMatch(suspended, /Suspendre le compte|<dialog/);
+	assert.match(suspended, /École non renseignée/);
+	assert.match(render(<AdminStudentProfile user={{ ...profile, is_active: false }} />), /Compte suspendu, date non renseignée/);
+});
+
+test("fiche : session expirée, retour à la connexion admin puis à la fiche", () => {
+	assert.equal(adminLoginLink("/administration/users/7"), "/administration?next=%2Fadministration%2Fusers%2F7");
+	assert.equal(adminReturnTo(new URLSearchParams(adminLoginLink("/administration/users/7").split("?")[1]).get("next")), "/administration/users/7");
 });
 
 test("profil API : session, fiche inconnue, refus, serveur et réseau", async () => {
@@ -259,4 +297,39 @@ test("API connexion admin : jeton CSRF, identifiants refusés, serveur et résea
 	}
 	globalThis.fetch = async () => { throw new TypeError("offline"); };
 	assert.deepEqual(await adminLogin("admin@example.fr", "Secret123"), { ok: false, reason: "network" });
+});
+
+test("API suspension : POST pour suspendre, DELETE pour rétablir, avec le jeton CSRF", async () => {
+	const calls: { url: string; method?: string; token?: string }[] = [];
+	globalThis.fetch = (async (url, init) => {
+		if (url === "/api/csrf") return Response.json({ csrfToken: "jeton" });
+		calls.push({ url: String(url), method: init?.method, token: (init?.headers as Record<string, string>)["X-CSRFToken"] });
+		return Response.json({ ...profile, is_active: init?.method === "DELETE" });
+	}) as typeof fetch;
+	assert.equal((await setSuspension(1, true)).ok, true);
+	const restored = await setSuspension(1, false);
+	assert.ok(restored.ok && restored.user.is_active);
+	assert.deepEqual(calls, [
+		{ url: "/api/administration/users/1/suspension", method: "POST", token: "jeton" },
+		{ url: "/api/administration/users/1/suspension", method: "DELETE", token: "jeton" },
+	]);
+	for (const [status, reason] of [[403, "forbidden"], [404, "notFound"], [500, "server"]] as const) {
+		globalThis.fetch = (async (url) => (url === "/api/csrf" ? Response.json({ csrfToken: "jeton" }) : new Response("", { status }))) as typeof fetch;
+		assert.deepEqual(await setSuspension(1, true), { ok: false, reason });
+	}
+	globalThis.fetch = async () => { throw new TypeError("offline"); };
+	assert.deepEqual(await setSuspension(1, true), { ok: false, reason: "network" });
+});
+
+test("connexion : « Votre compte est suspendu » seulement pour la réponse du compte suspendu", async () => {
+	const answer = (response: () => Response) => {
+		globalThis.fetch = (async (url) => (url === "/api/csrf" ? Response.json({ csrfToken: "jeton" }) : response())) as typeof fetch;
+	};
+	answer(() => Response.json({ error: "Account suspended" }, { status: 403 }));
+	assert.deepEqual(await login("alice@example.fr", "Secret123"), { ok: false, reason: "suspended" });
+	// Another 403 (e.g. CSRF refusal) stays a server error
+	answer(() => Response.json({ detail: "CSRF Failed" }, { status: 403 }));
+	assert.deepEqual(await login("alice@example.fr", "Secret123"), { ok: false, reason: "server" });
+	answer(() => new Response("", { status: 401 }));
+	assert.deepEqual(await login("alice@example.fr", "Secret123"), { ok: false, reason: "invalidCredentials" });
 });

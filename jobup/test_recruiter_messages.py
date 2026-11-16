@@ -328,3 +328,31 @@ class RecruiterConversationSearchTests(RecruiterMessagingTestCase):
         self.assertEqual([item["id"] for item in response.json()], [self.with_sarah.pk])
         response = self.client.get(LIST, {"q": "missing"})
         self.assertEqual(response.json(), [])
+
+
+class SuspendedCandidateTests(RecruiterMessagingTestCase):
+    # ADM-03: the conversations with a suspended student are greyed and closed
+    def test_list_says_the_candidate_is_suspended(self):
+        User.objects.filter(pk=self.lucas.user.pk).update(is_active=False)
+        self.login()
+        suspended = {
+            conversation["candidate"]["first_name"]: conversation["suspended"]
+            for conversation in self.client.get(LIST).json()
+        }
+        self.assertEqual(suspended, {"Lucas": True, "Sarah": False})
+
+    def test_no_new_message_to_a_suspended_candidate(self):
+        User.objects.filter(pk=self.lucas.user.pk).update(is_active=False)
+        self.login()
+        thread = f"/api/conversations/{self.with_lucas.pk}/messages"
+        response = self.client.post(thread, {"body": "Bonjour"}, format="json")
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json(), {"error": "Account suspended"})
+        self.assertFalse(Message.objects.exists())
+        # The history stays readable
+        self.assertEqual(self.client.get(thread).status_code, 200)
+        other = f"/api/conversations/{self.with_sarah.pk}/messages"
+        self.assertEqual(
+            self.client.post(other, {"body": "Bonjour"}, format="json").status_code,
+            201,
+        )
