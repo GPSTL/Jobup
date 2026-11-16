@@ -1,10 +1,12 @@
 # ADM-01 — Liste d’utilisateurs
 
 Page React : `/administration/users`. Le préfixe `/admin/` reste réservé à
-Django Admin. Un compte de rôle `127` arrive sur cette liste après connexion
-via `/login`. Le serveur protège aussi l'accès direct à la page : un visiteur
-part vers `/login`, un compte d'un autre rôle vers l'accueil (ADM-13) ; l'API
-vérifie indépendamment le rôle. Un superutilisateur d'un autre rôle n'a pas accès.
+Django Admin. Les administrateurs se connectent sur `/administration` (voir
+« Connexion des administrateurs ») et arrivent sur cette liste. Le serveur
+protège aussi l'accès direct à la page : un visiteur part vers
+`/administration?next=…`, puis revient sur la page demandée après la connexion ;
+un compte d'un autre rôle part vers l'accueil (ADM-13). L'API vérifie
+indépendamment le rôle. Un superutilisateur d'un autre rôle n'a pas accès.
 
 La liste est un tableau de données (data table) : recherche pendant la saisie,
 filtres par statut et par école, tri par colonne, pagination et nombre de
@@ -96,10 +98,28 @@ d'un autre rôle. Un CV absent ou un fichier supprimé répond aussi 404.
 La fiche utilise la navigation partagée. Le bouton de suspension reste
 indisponible en attendant confirmation du périmètre des opérations de suspension.
 
-ADM-13 : l'authentification existante est réutilisée. Sont ajoutés la
-destination de connexion du rôle admin et le renvoi vers l'accueil d'un compte
-d'un autre rôle qui ouvre une page admin. Cette fonctionnalité ne configure ni
-Django Admin ni `is_staff`, et ne crée aucun compte automatiquement.
+## Connexion des administrateurs (ADM-13)
+
+`/administration` affiche le formulaire de connexion des administrateurs, sans
+lien d'inscription ni « Mot de passe oublié ». Un administrateur déjà connecté
+passe directement à la liste (ou à la page `next`). « Déconnexion », dans le
+menu du compte, ramène à ce formulaire.
+
+`POST /api/administration/login` (`{"email", "password"}`, jeton CSRF comme
+`/api/login`) n'ouvre une session que pour un compte de rôle `127` et répond
+comme `/api/login` : 200 avec l'utilisateur, 400 si le corps est invalide. Un
+mauvais mot de passe, un compte inconnu, inactif ou d'un autre rôle reçoivent
+tous la même réponse, 401 `{"error": "Invalid credentials"}`, sans ouvrir de
+session : le formulaire ne révèle pas le rôle d'un compte.
+
+Aucun compte administrateur n'est créé par l'inscription publique :
+`/api/signup` refuse le rôle `127` (400 sur `role`). Le compte partagé par
+l'équipe est créé, ou son mot de passe mis à jour, par
+`python manage.py create_admin`, qui lit `JOBUP_ADMIN_EMAIL` et
+`JOBUP_ADMIN_PASSWORD` dans l'environnement (le `.env` local, jamais versionné)
+ou les options `--email` et `--password`. Rien ne configure Django Admin ni
+`is_staff`. Reste à faire pour ADM-13 : la fermeture de session après
+30 minutes d'inactivité.
 
 Les autres rubriques de la maquette sont affichées comme indisponibles, sans
 liens fictifs ni compteur de notifications de démonstration.

@@ -6,8 +6,11 @@ import { AdminUsersResults, AdminUsersTable, AdminUsersToolbar } from "../front/
 import { getAdminUser, getAdminUserFilters, getAdminUsers, type AdminUser, type AdminUserDetail, type AdminUsersResult } from "../front/services/adminUsers";
 import { AdminStudentProfile } from "../front/pages/AdminUserDetailPage";
 import AdminNavbar from "../front/components/AdminNavbar";
+import { AdminLoginView } from "../front/pages/AdminLoginPage";
+import { adminLogin } from "../front/services/auth";
 import StudentNavbar from "../front/components/StudentNavbar";
 import {
+	adminReturnTo,
 	adminUsersLink,
 	DEFAULT_QUERY,
 	hasCriteria,
@@ -221,4 +224,39 @@ test("API filtres : écoles proposées, erreur et réponse invalide", async () =
 	assert.deepEqual(await getAdminUserFilters(), { ok: false });
 	globalThis.fetch = async () => { throw new TypeError("offline"); };
 	assert.deepEqual(await getAdminUserFilters(), { ok: false });
+});
+
+test("connexion admin : formulaire sans lien d'inscription ni mot de passe oublié", () => {
+	const html = render(<AdminLoginView onLoggedIn={noop} />);
+	for (const text of ["Espace administrateur", "Adresse mail", "Mot de passe", "Se connecter"]) assert.ok(html.includes(text), text);
+	assert.match(html, /type="password"/);
+	assert.doesNotMatch(html, /href="\/signup"|Mot de passe oublié/);
+});
+
+test("connexion admin : retour vers la page d'administration demandée, jamais ailleurs", () => {
+	assert.equal(adminReturnTo("/administration/users/7"), "/administration/users/7");
+	assert.equal(adminReturnTo("/administration/users?q=alice&page=2"), "/administration/users?q=alice&page=2");
+	for (const other of [null, "", "/administration", "/administration/", "/student", "https://example.com", "//example.com", "/administration//example.com", 3]) {
+		assert.equal(adminReturnTo(other), "/administration/users", String(other));
+	}
+});
+
+test("API connexion admin : jeton CSRF, identifiants refusés, serveur et réseau", async () => {
+	const admin = { id: 1, first_name: "Jean", last_name: "Taire", role: 127 };
+	globalThis.fetch = (async (url, init) => {
+		if (url === "/api/csrf") return Response.json({ csrfToken: "jeton" });
+		assert.equal(url, "/api/administration/login");
+		assert.equal(init?.method, "POST");
+		assert.equal(init?.credentials, "same-origin");
+		assert.equal((init?.headers as Record<string, string>)["X-CSRFToken"], "jeton");
+		assert.deepEqual(JSON.parse(String(init?.body)), { email: "admin@example.fr", password: "Secret123" });
+		return Response.json(admin);
+	}) as typeof fetch;
+	assert.deepEqual(await adminLogin("admin@example.fr", "Secret123"), { ok: true, user: admin });
+	for (const [status, reason] of [[401, "invalidCredentials"], [500, "server"]] as const) {
+		globalThis.fetch = (async (url) => (url === "/api/csrf" ? Response.json({ csrfToken: "jeton" }) : new Response("", { status }))) as typeof fetch;
+		assert.deepEqual(await adminLogin("admin@example.fr", "Secret123"), { ok: false, reason });
+	}
+	globalThis.fetch = async () => { throw new TypeError("offline"); };
+	assert.deepEqual(await adminLogin("admin@example.fr", "Secret123"), { ok: false, reason: "network" });
 });

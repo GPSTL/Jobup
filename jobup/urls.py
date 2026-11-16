@@ -18,6 +18,8 @@ from jobup.recruiter_company import recruiter_company
 from jobup.recruiter_offers import offer_applicants, recruiter_offers
 from jobup.resume import student_resume
 from jobup.administration import (
+    admin_login,
+    admin_login_page,
     admin_page,
     user_cv,
     user_detail,
@@ -27,11 +29,13 @@ from jobup.administration import (
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("api/administration/login", admin_login),
     path("api/administration/users", user_list),
     path("api/administration/users/filters", user_filters),
     path("api/administration/users/<int:id>", user_detail),
     path("api/administration/users/<int:id>/cv", user_cv),
-    re_path(r"^administration(?:/.*)?$", admin_page),
+    re_path(r"^administration/?$", admin_login_page),
+    re_path(r"^administration/.+$", admin_page),
     path("api/csrf", api.csrf),
     path("api/signup", api.signup),
     path("api/login", api.api_login),

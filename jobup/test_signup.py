@@ -48,6 +48,15 @@ class SignupProfileTests(APITestCase):
         self.assertEqual(Recruiter.objects.count(), 2)
         self.assertEqual(Recruiter.objects.values("company").distinct().count(), 1)
 
+    def test_administrator_role_is_refused(self):
+        # ADM-13: an administrator account is never created by the public signup
+        for role in (Role.ADMIN, "Administrator"):
+            with self.subTest(role=role):
+                response = self.signup(role)
+                self.assertEqual(response.status_code, 400)
+                self.assertIn("role", response.json())
+        self.assertFalse(User.objects.exists())
+
     def test_invalid_signup_creates_nothing(self):
         self.assertEqual(self.signup("Student", password="x" * 0).status_code, 400)
         self.assertEqual((User.objects.count(), Student.objects.count()), (0, 0))

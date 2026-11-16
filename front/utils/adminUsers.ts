@@ -82,5 +82,11 @@ export function adminUsersLink(returnTo: unknown) {
 	return typeof returnTo === "string" && /^\/administration\/users(\?[^#]*)?$/.test(returnTo) ? returnTo : "/administration/users";
 }
 
+// Page reached after the admin login: the administration page asked before it (?next= of the
+// server or of RequireAdmin), never a page outside the administration
+export function adminReturnTo(next: unknown) {
+	return typeof next === "string" && /^\/administration\/[^/?#][^#]*$/.test(next) ? next : "/administration/users";
+}
+
 // « 09/10/2026 », in the time zone of the platform
 export const formatDate = (iso: string) => new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris" }).format(new Date(iso));

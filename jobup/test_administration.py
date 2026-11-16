@@ -1,7 +1,10 @@
+import os
 import tempfile
 from datetime import timedelta
+from unittest import mock
 
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.management import CommandError, call_command
 from django.http import FileResponse
 from django.test import override_settings
 from django.utils import timezone
@@ -12,6 +15,7 @@ from .models import JobApplication, Offer, Recruiter, Role, School, Student, Use
 URL = "/api/administration/users"
 FILTERS = f"{URL}/filters"
 PAGE = "/administration/users"
+LOGIN = "/api/administration/login"
 
 
 def account(email: str, first_name="Alice", last_name="Martin", **fields) -> User:
@@ -46,9 +50,10 @@ class AdminUsersTests(APITestCase):
         self.client.logout()
         for path in (URL, FILTERS):
             self.assertEqual(self.client.get(path).status_code, 403)
+        # The admin login, then back to the page
         self.assertRedirects(
             self.client.get(PAGE),
-            "/login?next=/administration/users",
+            "/administration?next=/administration/users",
             fetch_redirect_response=False,
         )
         for role in (Role.STUDENT, Role.RECRUITER, Role.MANAGER):
@@ -345,3 +350,103 @@ class AdminStudentDetailTests(APITestCase):
             self.client.patch(self.path, {"is_active": False}).status_code, 405
         )
         self.assertEqual(self.client.post(f"{self.path}/cv", {}).status_code, 405)
+
+
+class AdminLoginTests(APITestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            "admin@example.fr",
+            "Password123",
+            first_name="Jean",
+            last_name="Taire",
+            role=Role.ADMIN,
+        )
+
+    def log_in(self, email="admin@example.fr", password="Password123"):
+        return self.client.post(
+            LOGIN, {"email": email, "password": password}, format="json"
+        )
+
+    def test_administrator_opens_the_administration(self):
+        response = self.log_in()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["role"], Role.ADMIN)
+        self.assertNotIn("password", response.json())
+        self.assertEqual(self.client.get(URL).status_code, 200)
+
+    def test_other_accounts_get_the_answer_of_a_wrong_password(self):
+        User.objects.create_user(
+            "alice@example.fr",
+            "Password123",
+            first_name="Alice",
+            last_name="Martin",
+            role=Role.STUDENT,
+            is_superuser=True,
+        )
+        for email, password in (
+            ("alice@example.fr", "Password123"),
+            ("admin@example.fr", "Wrong12345"),
+            ("nobody@example.fr", "Password123"),
+        ):
+            with self.subTest(email=email, password=password):
+                response = self.log_in(email, password)
+                self.assertEqual(response.status_code, 401)
+                self.assertEqual(response.json(), {"error": "Invalid credentials"})
+                # No session was opened
+                self.assertEqual(self.client.get("/api/me").status_code, 403)
+
+    def test_suspended_administrator_cannot_log_in(self):
+        User.objects.filter(pk=self.admin.pk).update(is_active=False)
+        self.assertEqual(self.log_in().status_code, 401)
+
+    def test_invalid_payload(self):
+        self.assertEqual(self.client.post(LOGIN, {}, format="json").status_code, 400)
+        self.assertEqual(self.client.get(LOGIN).status_code, 405)
+
+    def test_login_page_is_open_to_everyone(self):
+        student = User.objects.create(
+            email="s@example.fr", first_name="S", last_name="T", role=Role.STUDENT
+        )
+        for user in (None, student, self.admin):
+            if user:
+                self.client.force_login(user)
+            for path in ("/administration", "/administration/"):
+                with self.subTest(user=user, path=path):
+                    response = self.client.get(path)
+                    self.assertEqual(response.status_code, 200)
+                    response.close()
+
+
+class CreateAdminCommandTests(APITestCase):
+    def test_creates_then_updates_the_administrator(self):
+        call_command("create_admin", email=" Admin@Example.fr ", password="Secret12345")
+        admin = User.objects.get(role=Role.ADMIN)
+        self.assertEqual(admin.email, "Admin@example.fr")
+        self.assertTrue(admin.check_password("Secret12345"))
+        self.assertFalse(admin.is_superuser)
+        call_command("create_admin", email="admin@example.fr", password="Other12345")
+        admin.refresh_from_db()
+        self.assertTrue(admin.check_password("Other12345"))
+        self.assertEqual(User.objects.filter(role=Role.ADMIN).count(), 1)
+
+    def test_reads_the_environment(self):
+        env = {
+            "JOBUP_ADMIN_EMAIL": "env@example.fr",
+            "JOBUP_ADMIN_PASSWORD": "Env12345",
+        }
+        with mock.patch.dict(os.environ, env):
+            call_command("create_admin")
+        self.assertTrue(
+            User.objects.get(email="env@example.fr").check_password("Env12345")
+        )
+
+    def test_refuses_missing_credentials_and_other_roles(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            with self.assertRaises(CommandError):
+                call_command("create_admin", email="admin@example.fr")
+        account("alice@example.fr")
+        with self.assertRaises(CommandError):
+            call_command(
+                "create_admin", email="alice@example.fr", password="Secret12345"
+            )
+        self.assertEqual(User.objects.get(email="alice@example.fr").role, Role.STUDENT)

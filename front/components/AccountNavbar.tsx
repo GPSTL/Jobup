@@ -16,6 +16,8 @@ type AccountNavbarProps = {
 	/** Bell with the unread count and the panel of the notifications (JOB-042) */
 	notifications?: boolean;
 	variant?: "glass" | "solid";
+	/** Page shown after « Déconnexion » */
+	logoutTo?: string;
 	/** Tighter spacing for roles with more navigation items. */
 	compact?: boolean;
 	hoverHighlight?: boolean;
@@ -24,7 +26,7 @@ type AccountNavbarProps = {
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary";
 
 // Shared by student, recruiter and administrator pages.
-export default function AccountNavbar({ links, showBell = false, notifications = false, variant = "solid", compact = false, hoverHighlight = false }: AccountNavbarProps) {
+export default function AccountNavbar({ links, showBell = false, notifications = false, variant = "solid", logoutTo = "/login", compact = false, hoverHighlight = false }: AccountNavbarProps) {
 	// Menu of the small screens, where the links do not fit in the bar
 	const [open, setOpen] = useState(false);
 	const [error, setError] = useState("");
@@ -54,7 +56,7 @@ export default function AccountNavbar({ links, showBell = false, notifications =
 		setError("");
 		const result = await logout();
 		setPending(false);
-		if (result.ok) navigate("/login", { replace: true });
+		if (result.ok) navigate(logoutTo, { replace: true });
 		else setError(result.reason === "network" ? MESSAGES.networkError : MESSAGES.serverError);
 	};
 

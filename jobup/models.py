@@ -613,7 +613,8 @@ class SignupSerializer(serializers.ModelSerializer):
         if not isinstance(data["role"], (str, int)):
             raise ValidationError({"role": "This field is invalid."})
         role = choice_from_frontend(Role, data["role"])
-        if role is None:
+        # ADM-13: an administrator account is never created by the public signup
+        if role is None or role == Role.ADMIN:
             raise ValidationError({"role": "This field is invalid."})
         data["role"] = role
         return super().to_internal_value(data)

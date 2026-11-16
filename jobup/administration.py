@@ -1,4 +1,4 @@
-"""Administrator account list and student details, separate from Django Admin.
+"""Administrator login, account list and student details, separate from Django Admin.
 
 Contract with the front end: docs/api/admin-users.md
 """
@@ -6,6 +6,7 @@ Contract with the front end: docs/api/admin-users.md
 import os
 from typing import Any, Literal
 
+from django.contrib.auth import authenticate, login
 from django.contrib.auth.views import redirect_to_login
 from django.contrib.staticfiles.views import serve
 from django.core.paginator import EmptyPage, Paginator
@@ -15,11 +16,16 @@ from django.db.models.functions import Lower
 from django.http import FileResponse
 from django.shortcuts import redirect
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from .api import Credentials
 from .models import JobApplication, Role, School, Student, User
+
+# Login page of the administration (ADM-13), open to everyone
+LOGIN_PAGE = "/administration"
 
 # Rows per page offered by the table; the first one is the default
 PAGE_SIZES = (10, 25, 50)
@@ -124,16 +130,42 @@ def accountRow(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def admin_page(request):
-    # The React pages of the administration (ADM-13): the login for a visitor,
-    # the home page for an account of another role
-    if not request.user.is_authenticated:
-        return redirect_to_login(request.get_full_path(), login_url="/login")
-    if not isAdmin(request.user):
-        return redirect("/")
+def react_page(request):
     # insecure: the same index.html as the other pages, also served when DEBUG is
     # off (tests). The path is fixed, never taken from the request
     return serve(request, "index.html", insecure=True)
+
+
+def admin_login_page(request):
+    # /administration: the login form of the administrators, for anyone; an
+    # administrator already logged in goes on to the list (front end)
+    return react_page(request)
+
+
+def admin_page(request):
+    # The other pages of the administration (ADM-13): the admin login for a
+    # visitor, then back to this page; the home page for an account of another role
+    if not request.user.is_authenticated:
+        return redirect_to_login(request.get_full_path(), login_url=LOGIN_PAGE)
+    if not isAdmin(request.user):
+        return redirect("/")
+    return react_page(request)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def admin_login(request: Request) -> Response:
+    # Opens a session for an administrator only (ADM-13). Another account gets
+    # the same answer as a wrong password: the form does not reveal its role
+    try:
+        creds = Credentials.model_validate(request.data)
+    except ValidationError:
+        return Response({"error": "Invalid payload"}, status=400)
+    user = authenticate(request._request, username=creds.email, password=creds.password)
+    if not isinstance(user, User) or not isAdmin(user):
+        return Response({"error": "Invalid credentials"}, status=401)
+    login(request._request, user)
+    return Response(user.to_dict())
 
 
 @api_view(["GET"])
