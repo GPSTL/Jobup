@@ -5,6 +5,7 @@ import ArrowUpRightIcon from "../components/ArrowUpRightIcon";
 import BookmarkIcon from "../components/BookmarkIcon";
 import Button from "../components/Button";
 import ChevronDownIcon from "../components/ChevronDownIcon";
+import CompanyLogo from "../components/CompanyLogo";
 import LoginBanner from "../components/LoginBanner";
 import MapPinIcon from "../components/MapPinIcon";
 import Navbar, { NavbarLink } from "../components/Navbar";
@@ -186,15 +187,15 @@ export default function CompaniesPage() {
 
 				{/* Le favori demande un compte : le marque-page mène à la connexion */}
 				<ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-					{list?.results.map(({ id, name, city, description, sector, employees }) => (
+					{list?.results.map(({ id, name, logo_url, city, description, sector, employees }) => (
 						<li key={id} className={card}>
 							<div className="flex items-center gap-3">
-								<span
-									aria-hidden="true"
-									className={`flex size-11 shrink-0 items-center justify-center rounded-[10px] font-bold ${emblemColors(id)} ${companyEmblem(name).length > 1 ? "text-[22px]" : "text-[28px]"}`}
-								>
-									{companyEmblem(name)}
-								</span>
+								<CompanyLogo
+									name={name}
+									logoUrl={logo_url}
+									className={`size-11 rounded-[10px] ${companyEmblem(name).length > 1 ? "text-[22px]" : "text-[28px]"}`}
+									emblemClassName={emblemColors(id)}
+								/>
 								<div className="flex min-w-0 flex-1 flex-col gap-[5px]">
 									<h2 className="text-[19px] font-semibold">{name}</h2>
 									{city && (

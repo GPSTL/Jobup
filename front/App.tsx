@@ -23,6 +23,7 @@ import ShortlistPage from "./pages/ShortlistPage";
 import CandidateProfilePage from "./pages/CandidateProfilePage";
 
 import RecruiterMessagesPage from "./pages/RecruiterMessagesPage";
+import RecruiterAccountPage from "./pages/RecruiterAccountPage";
 
 function App() {
 	return (
@@ -37,6 +38,7 @@ function App() {
 				<Route path="/offers" element={<OffersPage />} />
 				<Route path="/companies" element={<CompaniesPage />} />
 				<Route path="/companies/:id" element={<CompanyPage />} />
+				<Route path="/recruiter/account" element={<RequireRecruiter>{() => <RecruiterAccountPage />}</RequireRecruiter>} />
 				<Route path="/recruiter/candidates" element={<RequireRecruiter>{() => <CandidatesPage />}</RequireRecruiter>} />
 				<Route path="/recruiter/candidates/:id" element={<RequireRecruiter>{() => <CandidateProfilePage />}</RequireRecruiter>} />
 				<Route path="/recruiter/shortlist" element={<RequireRecruiter>{() => <ShortlistPage />}</RequireRecruiter>} />

@@ -3,12 +3,13 @@ import { Link, useParams } from "react-router-dom";
 
 import ArrowLeftIcon from "../components/ArrowLeftIcon";
 import Button from "../components/Button";
+import CompanyLogo from "../components/CompanyLogo";
 import GlobeIcon from "../components/GlobeIcon";
 import MapPinIcon from "../components/MapPinIcon";
 import Navbar, { NavbarLink } from "../components/Navbar";
 import UsersIcon from "../components/UsersIcon";
 import { getCompany, type Company } from "../services/companies";
-import { companyEmblem, formatDate, formatEmployees, sectorLabel, websiteLabel } from "../utils/companies";
+import { formatDate, formatEmployees, sectorLabel, websiteLabel } from "../utils/companies";
 import { focus } from "../utils/searchPageStyles";
 import { MESSAGES } from "../utils/validation";
 
@@ -97,9 +98,7 @@ function CompanyDetails({ company }: { company: Company }) {
 	return (
 		<>
 			<header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
-				<span aria-hidden="true" className="flex size-[88px] shrink-0 items-center justify-center rounded-[20px] bg-primary text-[34px] font-bold text-on-primary">
-					{companyEmblem(name)}
-				</span>
+				<CompanyLogo name={name} logoUrl={company.logo_url} className="size-[88px] rounded-[20px] text-[34px]" />
 				<div className="flex min-w-0 flex-col gap-1.5">
 					<h1 className="text-[32px] font-bold">{name}</h1>
 					{sector !== null && <p className="text-[17px] text-[#6b7280]">{sectorLabel(sector)}</p>}
