@@ -36,6 +36,7 @@ function App() {
 				<Route path="/login" element={<Connexion />} />
 				<Route path="/student" element={<RequireStudent>{(user) => <MonEspace user={user} />}</RequireStudent>} />
 				<Route path="/offers" element={<OffersPage />} />
+				<Route path="/offers/:id" element={<OffersPage />} />
 				<Route path="/companies" element={<CompaniesPage />} />
 				<Route path="/recruiter/candidates" element={<RequireRecruiter>{() => <CandidatesPage />}</RequireRecruiter>} />
 				<Route path="/recruiter/candidates/:id" element={<RequireRecruiter>{() => <CandidateProfilePage />}</RequireRecruiter>} />

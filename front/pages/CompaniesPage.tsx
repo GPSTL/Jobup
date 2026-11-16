@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 
 import ArrowUpRightIcon from "../components/ArrowUpRightIcon";
@@ -8,10 +8,13 @@ import ChevronDownIcon from "../components/ChevronDownIcon";
 import LoginBanner from "../components/LoginBanner";
 import MapPinIcon from "../components/MapPinIcon";
 import Navbar, { NavbarLink } from "../components/Navbar";
+import StudentNavbar from "../components/StudentNavbar";
+import RecruiterNavbar from "../components/RecruiterNavbar";
 import Pagination from "../components/Pagination";
 import SearchIcon from "../components/SearchIcon";
 import SortIcon from "../components/SortIcon";
 import UsersIcon from "../components/UsersIcon";
+import { getSession, type SessionResult } from "../services/auth";
 import { card, field, focus, input, searchButton, select } from "../utils/searchPageStyles";
 
 // TODO: replace these provisional sample companies with backend results.
@@ -85,6 +88,12 @@ const fit = "field-sizing-content";
 const filter = `${select} ${fit}`;
 
 export default function CompaniesPage() {
+	const [session, setSession] = useState<SessionResult | null>(null);
+	useEffect(() => {
+		let ignore = false;
+		getSession().then((result) => { if (!ignore) setSession(result); });
+		return () => { ignore = true; };
+	}, []);
 	// Local pagination works on sample data.
 	// TODO: use backend pagination and its total result count when the API is connected.
 	const [page, setPage] = useState(1);
@@ -100,8 +109,8 @@ export default function CompaniesPage() {
 
 	return (
 		<div className="min-h-dvh bg-[#f0f0f0] px-4 pt-4 pb-16 md:px-6 md:pt-6">
-			<header>
-				<Navbar>
+			{session !== null && <header>
+				{session.ok && session.user.role === 1 ? <StudentNavbar /> : session.ok && session.user.role === 3 ? <RecruiterNavbar /> : session.ok ? null : <Navbar>
 					{/* Hidden on small screens: the full bar does not fit on a phone. */}
 					<div className="hidden gap-12 lg:flex">
 						<NavbarLink to="/offers">Trouver une alternance</NavbarLink>
@@ -110,8 +119,8 @@ export default function CompaniesPage() {
 					</div>
 					<NavbarLink to="/signup" className="ml-auto">Inscription</NavbarLink>
 					<Button to="/login">Connexion</Button>
-				</Navbar>
-			</header>
+				</Navbar>}
+			</header>}
 
 			<main className="mx-auto mt-10 flex max-w-[1236px] flex-col gap-[22px] leading-[normal] text-[#111827]">
 				<div className="flex flex-col gap-2">
@@ -137,7 +146,7 @@ export default function CompaniesPage() {
 					<button type="submit" className={searchButton}>Rechercher</button>
 				</form>
 
-				<LoginBanner>Crée ton compte pour suivre des entreprises et leur écrire directement.</LoginBanner>
+				{session !== null && !session.ok && <LoginBanner>Crée ton compte pour suivre des entreprises et leur écrire directement.</LoginBanner>}
 
 				<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
 					<nav aria-label="Collections" className="flex gap-1">
