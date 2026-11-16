@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import Button from "./Button";
-import Navbar, { NavbarLink } from "./Navbar";
+import StudentNavbar from "./StudentNavbar";
 import { focus } from "../utils/searchPageStyles";
 
 type ApplicationsLayoutProps = {
@@ -16,18 +16,7 @@ export default function ApplicationsLayout({ children, className }: Applications
 	return (
 		<div className="min-h-dvh bg-[#f0f0f0] px-4 pt-4 pb-16 text-[#111827] md:px-6 md:pt-6">
 			<header>
-				{/* TODO JOB-017 : remplacer par StudentNavbar quand elle sera sur main */}
-				<Navbar>
-					<div className="ml-auto flex gap-10">
-						{/* Masqués sur petit écran : la barre complète ne tient pas sur un téléphone */}
-						<div className="hidden gap-10 md:flex">
-							<NavbarLink to="/student">Mon espace</NavbarLink>
-							<NavbarLink to="/companies">Entreprises</NavbarLink>
-							<NavbarLink to="/offers">Offres</NavbarLink>
-						</div>
-						<NavbarLink to="/applications">Candidatures</NavbarLink>
-					</div>
-				</Navbar>
+				<StudentNavbar />
 			</header>
 			<main className={`mx-auto mt-10 flex flex-col rounded-[25px] bg-white leading-[normal] shadow-[0_4px_12px_rgba(0,0,0,0.1)] ${className}`}>
 				{children}

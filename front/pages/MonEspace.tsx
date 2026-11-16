@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import Button from "../components/Button";
 import CvSection from "../components/CvSection";
+import NotificationSettings from "../components/NotificationSettings";
 import PhotoSection from "../components/PhotoSection";
 import StudentNavbar from "../components/StudentNavbar";
 import TextSection from "../components/TextSection";
@@ -113,6 +114,8 @@ export default function MonEspace({ user }: MonEspaceProps) {
 
 					{/* JOB-019: loads its own data, so it does not wait for the profile */}
 					<CvSection userId={user.id} />
+					{/* JOB-042: notifications and e-mail preference, loaded on their own too */}
+					<NotificationSettings />
 				</div>
 			</main>
 		</div>

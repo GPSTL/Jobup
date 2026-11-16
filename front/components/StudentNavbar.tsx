@@ -10,7 +10,7 @@ const links = [
 	{ label: "Candidatures", to: "/applications" },
 ];
 
-// Shared by every page of the logged-in student
+// Shared by every page of the logged-in student, with the bell of the notifications (JOB-042)
 export default function StudentNavbar() {
-	return <AccountNavbar links={links} />;
+	return <AccountNavbar links={links} notifications />;
 }
