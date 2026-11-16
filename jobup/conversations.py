@@ -145,7 +145,7 @@ def candidateSummary(conversation: Conversation, viewer: User) -> dict[str, Any]
             "first_name": candidate.first_name,
             "last_name": candidate.last_name,
         },
-        "last_message": (conversation, viewer),
+        "last_message": lastMessage(conversation, viewer),
         "seen_seconds_ago": secondsSinceSeen(candidate),
     }
 
