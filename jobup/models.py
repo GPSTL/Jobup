@@ -147,6 +147,8 @@ class User(AbstractBaseUser, PermissionsMixin):  # pyright: ignore[reportIncompa
     first_name = StrictCharField(max_length=32)
     role = models.SmallIntegerField(choices=Role.choices)
     is_active = models.BooleanField(default=True)
+    # ADM-01: historical suspension dates are unknown until recorded explicitly.
+    suspended_at = models.DateTimeField(null=True, blank=True)
     email_confirmed = models.BooleanField(default=True)
     date_joined = models.DateTimeField(auto_now_add=True)
     # Last request of the logged-in user, for the presence (JOB-039, jobup/presence.py);

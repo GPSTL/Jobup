@@ -22,11 +22,16 @@ import ShortlistPage from "./pages/ShortlistPage";
 import CandidateProfilePage from "./pages/CandidateProfilePage";
 
 import RecruiterMessagesPage from "./pages/RecruiterMessagesPage";
+import RequireAdmin from "./components/RequireAdmin";
+import AdminUsersPage from "./pages/AdminUsersPage";
+import AdminUserDetailPage from "./pages/AdminUserDetailPage";
 
 function App() {
 	return (
 		<BrowserRouter>
 			<Routes>
+				<Route path="/administration/users" element={<RequireAdmin><AdminUsersPage /></RequireAdmin>} />
+				<Route path="/administration/users/:id" element={<RequireAdmin><AdminUserDetailPage /></RequireAdmin>} />
 				<Route path="/" element={<HomePage />} />
 				<Route path="/students" element={<StudentPage />} />
 				<Route path="/schools" element={<SchoolPage />} />

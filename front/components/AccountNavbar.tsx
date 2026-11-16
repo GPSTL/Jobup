@@ -1,18 +1,22 @@
-import { useId, useRef, useState, type KeyboardEvent } from "react";
+import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 
 import MenuIcon from "./MenuIcon";
-import Navbar, { NavbarLink } from "./Navbar";
+import Navbar, { NavbarLink, navbarItemClass } from "./Navbar";
 
 type AccountNavbarProps = {
 	/** Pages of the role, in the order of the mockup */
-	links: { label: string; to: string }[];
+	links: { label: string; to?: string }[];
 	showBell?: boolean;
+	actions?: ReactNode;
+	/** Tighter spacing for roles with more navigation items. */
+	compact?: boolean;
+	hoverHighlight?: boolean;
 };
 
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary";
 
-// Bar of the logged-in pages, filled by StudentNavbar and RecruiterNavbar. NavbarLink highlights the link of the current page.
-export default function AccountNavbar({ links, showBell = false }: AccountNavbarProps) {
+// Shared by student, recruiter and administrator pages.
+export default function AccountNavbar({ links, showBell = false, actions, compact = false, hoverHighlight = false }: AccountNavbarProps) {
 	// Menu of the small screens, where the links do not fit in the bar
 	const [open, setOpen] = useState(false);
 	const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -28,13 +32,12 @@ export default function AccountNavbar({ links, showBell = false }: AccountNavbar
 
 	return (
 		<Navbar>
-			<div className="relative ml-auto flex items-center gap-12" onKeyDown={onKeyDown}>
+			<div className={`relative ml-auto flex min-w-0 items-center ${hoverHighlight ? "account-nav-hover" : ""} ${compact ? "gap-4 lg:gap-6" : "gap-12"}`} onKeyDown={onKeyDown}>
 				{/* Large screens: the links are in the bar */}
-				<div className="hidden gap-12 lg:flex">
+				<div className={`hidden lg:flex ${compact ? "min-w-0 flex-wrap justify-end gap-x-6 gap-y-4" : "gap-12"}`}>
 					{links.map(({ label, to }) => (
-						<NavbarLink key={to} to={to}>
-							{label}
-						</NavbarLink>
+						to ? <NavbarLink key={label} to={to}>{label}</NavbarLink>
+							: <span key={label} aria-disabled="true" title="Bientôt disponible" className={navbarItemClass}>{label}</span>
 					))}
 				</div>
 
@@ -55,14 +58,15 @@ export default function AccountNavbar({ links, showBell = false }: AccountNavbar
 					id={menuId}
 					hidden={!open}
 					onClick={() => setOpen(false)}
-					className="absolute top-full right-0 z-10 mt-6 flex w-56 flex-col gap-5 rounded-3xl bg-surface p-6 shadow-[0_4px_12px_rgba(0,0,0,0.1)] lg:hidden"
+					className={`absolute top-full right-0 z-10 mt-6 flex w-56 flex-col gap-5 rounded-3xl bg-surface p-6 shadow-[0_4px_12px_rgba(0,0,0,0.1)] lg:hidden`}
 				>
 					{links.map(({ label, to }) => (
-						<li key={to}>
-							<NavbarLink to={to}>{label}</NavbarLink>
+						<li key={label}>
+							{to ? <NavbarLink to={to}>{label}</NavbarLink> : <span aria-disabled="true" title="Bientôt disponible" className={navbarItemClass}>{label}</span>}
 						</li>
 					))}
 				</ul>
+				{actions}
 
 				{/* Notifications are not integrated: static icon, no fictitious unread count. */}
 				{showBell && <span role="img" aria-label="Notifications"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" strokeLinecap="round" strokeLinejoin="round" /></svg></span>}

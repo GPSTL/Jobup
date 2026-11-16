@@ -13,9 +13,14 @@ from jobup.conversations import (
 )
 from jobup.profile import student, student_photo
 from jobup.resume import student_resume
+from jobup.administration import admin_page, user_cv, user_detail, user_list
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("api/administration/users", user_list),
+    path("api/administration/users/<int:id>", user_detail),
+    path("api/administration/users/<int:id>/cv", user_cv),
+    re_path(r"^administration(?:/.*)?$", admin_page),
     path("api/csrf", api.csrf),
     path("api/signup", api.signup),
     path("api/login", api.api_login),
