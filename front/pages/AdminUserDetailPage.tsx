@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import AdminNavbar from "../components/AdminNavbar";
 import { getAdminUser, type AdminUserDetail, type AdminUserDetailResult } from "../services/adminUsers";
+import { adminUsersLink } from "../utils/adminUsers";
 
 export function AdminStudentProfile({ user }: { user: AdminUserDetail }) {
 	const [downloadError, setDownloadError] = useState("");
@@ -47,8 +48,8 @@ export function AdminStudentProfile({ user }: { user: AdminUserDetail }) {
 export default function AdminUserDetailPage() {
 	const { id = "" } = useParams();
 	const location = useLocation();
-	const returnTo = location.state?.adminUsersReturnTo;
-	const back = typeof returnTo === "string" && /^\/administration\/users(?:\?page=\d+)?$/.test(returnTo) ? returnTo : "/administration/users";
+	// The table as it was left: search, filters, sort and page
+	const back = adminUsersLink(location.state?.adminUsersReturnTo);
 	const [attempt, setAttempt] = useState(0);
 	const [loaded, setLoaded] = useState<{ id: string; attempt: number; result: AdminUserDetailResult } | null>(null);
 	useEffect(() => {

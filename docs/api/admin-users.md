@@ -2,17 +2,37 @@
 
 Page React : `/administration/users`. Le préfixe `/admin/` reste réservé à
 Django Admin. Un compte de rôle `127` arrive sur cette liste après connexion
-via `/login`. Le serveur protège aussi l'accès direct à la page ; l'API vérifie
-indépendamment le rôle. Un superutilisateur d'un autre rôle n'a pas accès.
+via `/login`. Le serveur protège aussi l'accès direct à la page : un visiteur
+part vers `/login`, un compte d'un autre rôle vers l'accueil (ADM-13) ; l'API
+vérifie indépendamment le rôle. Un superutilisateur d'un autre rôle n'a pas accès.
+
+La liste est un tableau de données (data table) : recherche pendant la saisie,
+filtres par statut et par école, tri par colonne, pagination et nombre de
+lignes par page. Ces critères sont gardés dans l'URL de la page, avec les noms
+des paramètres de l'API : un rechargement, les flèches du navigateur et
+« Retour à la liste » depuis une fiche retrouvent le même tableau.
 
 ## API
 
-`GET /api/administration/users?page=1` utilise la session Django. Réponse :
+`GET /api/administration/users` utilise la session Django. Paramètres, tous
+facultatifs ; une valeur vide équivaut à un paramètre absent :
+
+| Paramètre | Valeurs | Défaut |
+| --- | --- | --- |
+| `q` | 100 caractères au plus. Chaque mot doit se trouver dans le prénom, le nom, l'e-mail ou l'école, sans distinction de casse | — |
+| `status` | `active` ou `suspended` (compte inactif) | tous |
+| `school` | id d'une école (voir `/filters`) | toutes |
+| `sort` | `first_name`, `last_name`, `email`, `school` ou `date_joined`, précédé de `-` pour l'ordre décroissant | `-date_joined` |
+| `page` | entier à partir de 1 | `1` |
+| `page_size` | `10`, `25` ou `50` | `10` |
+
+Réponse :
 
 ```json
 {
   "count": 1,
   "page": 1,
+  "page_size": 10,
   "total_pages": 1,
   "results": [{
     "id": 7,
@@ -20,6 +40,7 @@ indépendamment le rôle. Un superutilisateur d'un autre rôle n'a pas accès.
     "last_name": "Martin",
     "email": "alice@example.fr",
     "role": 1,
+    "school": "Université Paris",
     "date_joined": "2026-10-09T12:00:00Z",
     "is_active": true,
     "suspended_at": null,
@@ -28,10 +49,24 @@ indépendamment le rôle. Un superutilisateur d'un autre rôle n'a pas accès.
 }
 ```
 
-Huit comptes étudiants par page, triés par `-date_joined`, puis `-pk`. Seul le
-rôle étudiant est visible, y compris les comptes inactifs, conformément au
-périmètre confirmé. Liste vide : page 1, zéro résultat et une page. Page invalide : 400 ;
-page hors limites : 404 ; absence de session ou rôle non admin : 403.
+Seul le rôle étudiant est visible, y compris les comptes inactifs, conformément
+au périmètre confirmé ; `school` vaut `null` sans profil ni école. Le tri est
+stable : l'id départage les comptes aux valeurs égales, dans le sens du tri.
+Les noms, e-mails et écoles sont triés sans distinction de casse ; les comptes
+sans école viennent en dernier dans les deux sens. SQLite ne compare les
+majuscules et minuscules que pour les lettres sans accent : « emilie » ne
+trouve pas « Émilie », et un nom commençant par « É » est classé après « Z ».
+
+Liste vide : page 1, zéro résultat et une page. Paramètre invalide : 400
+(`{"error": "Invalid filters"}`) ; page au-delà de la dernière : 404 ; absence
+de session ou rôle non admin : 403.
+
+`GET /api/administration/users/filters` donne les valeurs du filtre « École » :
+les écoles d'au moins un compte étudiant, par ordre alphabétique.
+
+```json
+{ "schools": [{ "id": 3, "name": "Université Paris" }] }
+```
 
 Le champ nullable `User.suspended_at` permet l'affichage d'une date réelle.
 Il ne déclenche aucune suspension et aucune date n'est déduite pour les comptes
@@ -45,7 +80,8 @@ Les migrations restent générées localement et ignorées par Git. Ne pas exéc
 `make init` : cette cible supprime la base.
 
 La flèche ouvre `/administration/users/:id`, une fiche étudiant dédiée aux
-administrateurs, et conserve la page de retour de la liste. La fiche affiche
+administrateurs ; « Retour à la liste » retrouve le tableau tel qu'il était
+(recherche, filtres, tri et page). La fiche affiche
 le nom, l'école, l'e-mail, la date d'inscription et le nombre de candidatures
 ayant un `submitted_at` (les brouillons sont exclus). Aucun téléphone n'est
 actuellement stocké : `phone: null`, affiché « Téléphone non renseigné ».
@@ -60,8 +96,9 @@ d'un autre rôle. Un CV absent ou un fichier supprimé répond aussi 404.
 La fiche utilise la navigation partagée. Le bouton de suspension reste
 indisponible en attendant confirmation du périmètre des opérations de suspension.
 
-ADM-13 : l'authentification existante est réutilisée. Seule la destination de
-connexion du rôle admin est ajoutée. Cette fonctionnalité ne configure ni
+ADM-13 : l'authentification existante est réutilisée. Sont ajoutés la
+destination de connexion du rôle admin et le renvoi vers l'accueil d'un compte
+d'un autre rôle qui ouvre une page admin. Cette fonctionnalité ne configure ni
 Django Admin ni `is_staff`, et ne crée aucun compte automatiquement.
 
 Les autres rubriques de la maquette sont affichées comme indisponibles, sans

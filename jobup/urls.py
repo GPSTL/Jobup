@@ -17,11 +17,18 @@ from jobup.profile import student, student_photo
 from jobup.recruiter_company import recruiter_company
 from jobup.recruiter_offers import offer_applicants, recruiter_offers
 from jobup.resume import student_resume
-from jobup.administration import admin_page, user_cv, user_detail, user_list
+from jobup.administration import (
+    admin_page,
+    user_cv,
+    user_detail,
+    user_filters,
+    user_list,
+)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/administration/users", user_list),
+    path("api/administration/users/filters", user_filters),
     path("api/administration/users/<int:id>", user_detail),
     path("api/administration/users/<int:id>/cv", user_cv),
     re_path(r"^administration(?:/.*)?$", admin_page),

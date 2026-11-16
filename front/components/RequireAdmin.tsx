@@ -18,6 +18,7 @@ export default function RequireAdmin({ children }: { children: ReactNode }) {
 		if (session.reason === "noSession") return <Navigate to="/login" replace />;
 		return <main className="p-12 text-center"><p role="alert">Impossible de vérifier votre session.</p><button className="mt-4 cursor-pointer text-primary underline" onClick={() => setAttempt(attempt + 1)}>Réessayer</button></main>;
 	}
-	if (session.user.role !== ADMIN_ROLE) return <main className="p-12 text-center"><h1>Accès interdit</h1><p>Cet espace est réservé aux administrateurs.</p></main>;
+	// ADM-13: an account of another role goes back to the home page, as with the server
+	if (session.user.role !== ADMIN_ROLE) return <Navigate to="/" replace />;
 	return children;
 }
