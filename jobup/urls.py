@@ -4,7 +4,7 @@ from django.contrib import admin
 from django.contrib.staticfiles.views import serve
 from django.urls import path, re_path
 
-from jobup import api, candidates, exclusions, shortlist
+from jobup import api, candidates, exclusions, notifications, shortlist
 from jobup.companies import cities, companies, company
 from jobup.conversations import (
     conversation_messages,
@@ -15,11 +15,31 @@ from jobup.conversations import (
 from jobup.offers import offer, offers, savedOffers
 from jobup.profile import student, student_photo
 from jobup.recruiter_company import recruiter_company
-from jobup.recruiter_offers import offer_applicants, recruiter_offers
+from jobup.recruiter_offers import (
+    offer_applicants,
+    recruiter_application,
+    recruiter_offers,
+)
 from jobup.resume import student_resume
+from jobup.administration import (
+    admin_login,
+    admin_login_page,
+    admin_page,
+    user_cv,
+    user_detail,
+    user_filters,
+    user_list,
+)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("api/administration/login", admin_login),
+    path("api/administration/users", user_list),
+    path("api/administration/users/filters", user_filters),
+    path("api/administration/users/<int:id>", user_detail),
+    path("api/administration/users/<int:id>/cv", user_cv),
+    re_path(r"^administration/?$", admin_login_page),
+    re_path(r"^administration/.+$", admin_page),
     path("api/csrf", api.csrf),
     path("api/signup", api.signup),
     path("api/login", api.api_login),
@@ -49,6 +69,7 @@ urlpatterns = [
     path("api/recruiter/candidates/<int:id>/cv", candidates.candidate_cv),
     path("api/recruiter/offers", recruiter_offers),
     path("api/recruiter/offers/<int:id>/applicants", offer_applicants),
+    path("api/recruiter/applications/<int:id>", recruiter_application),
     path("api/recruiter/candidates/<int:id>/shortlist", shortlist.shortlist_candidate),
     path("api/recruiter/candidates/<int:id>/exclusion", exclusions.exclude_candidate),
     path("api/recruiter/shortlist", shortlist.shortlist),
@@ -57,6 +78,11 @@ urlpatterns = [
     path("api/companies", companies),
     path("api/companies/cities", cities),
     path("api/companies/<int:id>", company),
+    path("api/notifications", notifications.notification_list),
+    path("api/notifications/unread-count", notifications.notification_unread_count),
+    path("api/notifications/read-all", notifications.notification_read_all),
+    path("api/notifications/preferences", notifications.notification_preferences),
+    path("api/notifications/<int:id>/read", notifications.notification_read),
     re_path(r"^(?!api)[^.]*$", serve, kwargs={"path": "index.html"}),
     path("favicon.ico", serve, kwargs={"path": "favicon.ico"}),
 ]

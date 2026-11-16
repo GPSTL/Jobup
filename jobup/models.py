@@ -13,7 +13,7 @@ from django.core.files.storage import FileSystemStorage
 from django.core.files.uploadedfile import UploadedFile
 from django.core.validators import RegexValidator
 from django.db import models, transaction
-from django.db.models.signals import post_delete
+from django.db.models.signals import post_delete, post_init, post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from rest_framework import serializers
@@ -170,6 +170,8 @@ class User(AbstractBaseUser, PermissionsMixin):  # pyright: ignore[reportIncompa
     first_name = StrictCharField(max_length=32)
     role = models.SmallIntegerField(choices=Role.choices)
     is_active = models.BooleanField(default=True)
+    # ADM-01: historical suspension dates are unknown until recorded explicitly.
+    suspended_at = models.DateTimeField(null=True, blank=True)
     email_confirmed = models.BooleanField(default=True)
     date_joined = models.DateTimeField(auto_now_add=True)
     # Last request of the logged-in user, for the presence (JOB-039, jobup/presence.py);
@@ -294,6 +296,7 @@ class JobApplication(models.Model):
         choices=ApplicationStatus.choices, default=ApplicationStatus.DRAFT
     )
     message = models.CharField(max_length=1024, blank=True)
+    decision_message = models.CharField(max_length=1024, blank=True)
     cover_letter = models.FileField(upload_to="covers", blank=True)
     sent_resume = models.FileField(upload_to="sent_resumes", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -337,6 +340,7 @@ class JobApplication(models.Model):
         return {
             **self.to_dict(),
             "message": self.message,
+            "decision_message": self.decision_message,
             "documents": {
                 "resume": f"{base}/resume" if self.sent_resume else None,
                 "cover_letter": f"{base}/cover_letter" if self.cover_letter else None,
@@ -516,6 +520,96 @@ def delete_attachment_file(instance: MessageAttachment, **_: Any) -> None:
     transaction.on_commit(instance.discard_file)
 
 
+# ----- NOTIFICATIONS ----- #
+
+
+# Socle commun des notifications (JOB-042, ETU-28), réutilisé par REC-32 et ECO-21 : chaque
+# notification appartient à un seul utilisateur. Contrat : docs/api/notifications.md
+class NotificationKind(models.TextChoices):
+    MESSAGE = "message", "New message"
+    APPLICATION_UPDATE = "application_update", "Application updated"
+    APPLICATION_ACCEPTED = "application_accepted", "Application accepted"
+    APPLICATION_REFUSED = "application_refused", "Application refused"
+    # Recruteur (JOB-046, REC-32) : candidature reçue sur une de ses offres
+    NEW_APPLICATION = "new_application", "New application"
+
+
+class Notification(models.Model):
+    recipient = models.ForeignKey(User, models.CASCADE, related_name="notifications")
+    kind = models.CharField(max_length=32, choices=NotificationKind.choices)
+    title = models.CharField(max_length=150)
+    body = models.CharField(max_length=300, blank=True)
+    # Page de l'application à ouvrir, ex. /messages/3
+    link = models.CharField(max_length=200, blank=True)
+    # Événement d'origine, ex. message:12 : une seule notification par événement et destinataire
+    event = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    # None tant que la notification n'est pas lue
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints: ClassVar = [
+            models.UniqueConstraint(
+                fields=["recipient", "event"], name="unique_notification_event"
+            )
+        ]
+
+
+# Préférences d'un utilisateur, créées à la première lecture (preferencesOf, notifications.py).
+# Valeurs initiales des maquettes « Mon espace » : tous les types de notifications actifs ;
+# l'e-mail désactivé pour l'étudiant, activé pour le recruteur.
+class NotificationPreference(models.Model):
+    user = models.OneToOneField(
+        User, models.CASCADE, related_name="notification_preference"
+    )
+    # Recevoir une notification pour chaque type d'événement, dans l'application.
+    # Chaque rôle n'affiche que les siens : messages et statuts pour l'étudiant,
+    # nouvelles candidatures et messages pour le recruteur.
+    messages = models.BooleanField(default=True)
+    application_status = models.BooleanField(default=True)
+    new_applications = models.BooleanField(default=True)
+    # Recevoir aussi un e-mail pour ces notifications ; sans effet sur l'application
+    email = models.BooleanField(default=False)
+
+
+# Événements des notifications (JOB-042, JOB-046), branchés sur les modèles pour qu'aucun écran ne les
+# oublie. Ils s'exécutent une fois l'enregistrement validé en base : un fichier joint au message
+# est alors connu, et un échec de la notification n'annule jamais le message ou la candidature.
+# Un changement de statut fait avec QuerySet.update() ne passe pas par save() et n'est pas notifié.
+@receiver(post_save, sender=Message)
+def notify_new_message(instance: Message, created: bool, **_: Any) -> None:
+    if created:
+        from .notifications import notifyNewMessage
+
+        message_id = instance.pk
+        transaction.on_commit(lambda: notifyNewMessage(message_id), robust=True)
+
+
+@receiver(post_init, sender=JobApplication)
+def remember_application_status(instance: JobApplication, **_: Any) -> None:
+    # Statut tel qu'enregistré ; __dict__ pour ne pas recharger un champ différé
+    instance.__dict__["_saved_status"] = instance.__dict__.get("status")
+
+
+@receiver(post_save, sender=JobApplication)
+def notify_status_change(instance: JobApplication, created: bool, **_: Any) -> None:
+    previous = instance.__dict__.get("_saved_status")
+    instance.__dict__["_saved_status"] = instance.status
+    # Une candidature créée ne compte qu'une fois envoyée (en général créée en brouillon,
+    # puis envoyée par submit()) ; une candidature existante, quand son statut change
+    if created:
+        if instance.status != ApplicationStatus.SUBMITTED:
+            return
+    elif previous == instance.status:
+        return
+    from .notifications import notifyStatusChange
+
+    application_id, status = instance.pk, instance.status
+    transaction.on_commit(
+        lambda: notifyStatusChange(application_id, status), robust=True
+    )
+
+
 # Utilities #
 
 
@@ -545,7 +639,8 @@ class SignupSerializer(serializers.ModelSerializer):
         if not isinstance(data["role"], (str, int)):
             raise ValidationError({"role": "This field is invalid."})
         role = choice_from_frontend(Role, data["role"])
-        if role is None:
+        # ADM-13: an administrator account is never created by the public signup
+        if role is None or role == Role.ADMIN:
             raise ValidationError({"role": "This field is invalid."})
         data["role"] = role
         return super().to_internal_value(data)

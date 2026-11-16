@@ -47,6 +47,7 @@ export function OfferApplicantsContent({ data }: { data: OfferApplicants }) {
 							</div>
 							<p className="text-sm text-[#6b7280]">Reçue le <time dateTime={submitted_at}>{formatDate(submitted_at)}</time></p>
 							<span className={`rounded-full px-2.5 py-[5px] text-[13px] font-semibold ${statusChip(status).className}`}>{statusChip(status).label}</span>
+							<Link to={`/recruiter/applications/${id}`} className={`font-semibold text-primary ${focus}`}>Ouvrir la candidature</Link>
 							<Link to={`/recruiter/candidates/${candidate.id}?offer=${data.offer.id}`} className={`ml-auto flex items-center gap-2 rounded-[10px] px-1 py-[9px] text-sm font-semibold text-primary ${focus}`}>
 								<img src="/static/img/recruiter-offers/arrow.svg" width={16} height={16} alt="" />Voir<span className="sr-only"> le profil de {fullName(candidate)}</span>
 							</Link>
