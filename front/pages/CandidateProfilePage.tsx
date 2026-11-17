@@ -15,12 +15,12 @@ import { availability, degreeLabel, exchangeDate, exchangeText, fullName } from 
 import { focus } from "../utils/searchPageStyles";
 import { REQUEST_ERRORS } from "../utils/validation";
 
-const panel = "mx-auto flex max-w-6xl flex-col gap-6 rounded-[25px] bg-surface p-5 shadow-[0_4px_12px_rgba(0,0,0,0.1)] md:p-10";
-const sectionTitle = "text-[20px] font-semibold";
+const panel = "mx-auto flex max-w-[1000px] flex-col gap-6 rounded-2xl border border-[#e5e7eb] bg-surface p-5 shadow-xs md:p-8";
+const sectionTitle = "text-lg font-semibold";
 const box = "rounded-2xl border border-[#e5e7eb] bg-[#f9fafb]";
 const metaItem = "flex items-center gap-1.5";
-const action = `flex items-center justify-center gap-2 rounded-[14px] px-[22px] py-3 text-[16px] font-semibold ${focus}`;
-const outlineAction = `${action} border border-[#d1d5db] bg-surface text-[#111827] hover:bg-slate-50`;
+const action = `flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold ${focus}`;
+const outlineAction = `${action} border border-[#d1d5db] bg-surface text-ink hover:bg-[#f9fafb]`;
 
 // Back to the cards, on the card of this candidate when there is one, with the criteria of the
 // search when the profile was opened from a card (JOB-036)
@@ -33,7 +33,7 @@ function BackToCandidates({ id }: { id?: number }) {
 	return (
 		<Link
 			to={fromOffer ? `/recruiter/offers/${offer}/applicants` : candidatesLink(search, id)}
-			className={`flex w-fit items-center gap-2 rounded-[14px] py-1 text-[16px] font-semibold text-primary ${focus}`}
+			className={`flex w-fit items-center gap-2 rounded-xl py-1 text-sm font-semibold text-primary hover:underline ${focus}`}
 		>
 			<img src="/static/img/applications/back.svg" width={18} height={18} alt="" />
 			{fromOffer ? "Retour aux candidats de l’offre" : "Retour aux candidats"}
@@ -49,14 +49,14 @@ export function CandidateProfile({ candidate }: { candidate: Candidate }) {
 			<BackToCandidates id={candidate.id} />
 
 			<header className="flex flex-wrap items-center gap-x-5 gap-y-4">
-				<CandidateAvatar candidate={candidate} className="size-24 text-[32px]" />
+				<CandidateAvatar candidate={candidate} className="size-20 text-2xl" />
 				{/* basis: on a phone, the buttons go to the next line instead of squeezing the name */}
-				<div className="flex min-w-0 flex-1 basis-48 flex-col gap-1.5">
-					<h1 className="text-3xl leading-tight font-semibold">{fullName(candidate)}</h1>
-					<p className="text-[17px] text-[#6b7280]">
+				<div className="flex min-w-0 flex-1 basis-48 flex-col gap-1">
+					<h1 className="text-2xl leading-tight font-bold sm:text-3xl">{fullName(candidate)}</h1>
+					<p className="text-sm sm:text-base text-[#6b7280]">
 						<EducationLine candidate={candidate} />
 					</p>
-					<ul className="flex flex-wrap gap-x-5 gap-y-1 text-[14px] text-[#6b7280]">
+					<ul className="flex flex-wrap gap-x-5 gap-y-1 text-xs sm:text-sm text-[#6b7280]">
 						{candidate.region && (
 							<li className={metaItem}>
 								<MapPinIcon width={16} height={16} />
@@ -77,7 +77,7 @@ export function CandidateProfile({ candidate }: { candidate: Candidate }) {
 						)}
 					</ul>
 				</div>
-				<div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+				<div className="flex w-full flex-col gap-2.5 sm:w-auto sm:flex-row">
 					{/* Opens the conversation with this candidate (JOB-039); starting one when there is none: JOB-041 */}
 					<Link to={`/recruiter/messages?candidate=${candidate.id}`} className={outlineAction}>
 						<MessageIcon width={18} height={18} />
@@ -89,48 +89,48 @@ export function CandidateProfile({ candidate }: { candidate: Candidate }) {
 							Télécharger le CV
 						</a>
 					) : (
-						<p className="flex items-center text-[16px] text-[#6b7280]">CV non fourni</p>
+						<p className="flex items-center text-sm text-[#6b7280]">CV non fourni</p>
 					)}
 				</div>
 			</header>
 
-			<div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_400px]">
+			<div className="grid gap-8 border-t border-[#e5e7eb] pt-6 lg:grid-cols-[minmax(0,1fr)_360px]">
 				<div className="flex flex-col gap-6">
 					<section className="flex flex-col gap-2">
 						<h2 className={sectionTitle}>Présentation</h2>
-						<p className={`whitespace-pre-line ${candidate.description ? "text-[#4b5563]" : "text-[#6b7280]"}`}>
+						<p className={`text-sm sm:text-base leading-relaxed whitespace-pre-line ${candidate.description ? "text-[#4b5563]" : "text-[#6b7280]"}`}>
 							{candidate.description || "Présentation non renseignée."}
 						</p>
 					</section>
 
-					<section className="flex flex-col gap-3">
+					<section className="flex flex-col gap-2.5">
 						<h2 className={sectionTitle}>Compétences</h2>
 						{candidate.skills.length > 0 ? (
 							<ul className="flex flex-wrap gap-2">
 								{candidate.skills.map((skill) => (
-									<li key={skill} className="rounded-full bg-[#f3f4f6] px-3 py-1 text-[13px] font-medium text-[#4b5563]">
+									<li key={skill} className="rounded-full bg-[#f3f4f6] px-3 py-1 text-xs font-medium text-[#4b5563]">
 										{skill}
 									</li>
 								))}
 							</ul>
 						) : (
-							<p className="text-[#6b7280]">Aucune compétence renseignée.</p>
+							<p className="text-sm text-[#6b7280]">Aucune compétence renseignée.</p>
 						)}
 					</section>
 
-					<section className="flex flex-col gap-3">
+					<section className="flex flex-col gap-2.5">
 						<h2 className={sectionTitle}>Expérience</h2>
 						{candidate.experiences.length > 0 ? (
 							<ul className="flex flex-col gap-3">
 								{candidate.experiences.map((experience) => (
-									<li key={experience.title} className={`flex flex-col gap-1 px-5 py-4 ${box}`}>
-										<p className="font-semibold">{experience.title}</p>
-										<p className="text-[14px] text-[#6b7280]">{experience.details}</p>
+									<li key={experience.title} className={`flex flex-col gap-1 px-4 py-3.5 ${box}`}>
+										<p className="text-sm sm:text-base font-semibold">{experience.title}</p>
+										<p className="text-xs sm:text-sm text-[#6b7280]">{experience.details}</p>
 									</li>
 								))}
 							</ul>
 						) : (
-							<p className="text-[#6b7280]">Aucune expérience renseignée.</p>
+							<p className="text-sm text-[#6b7280]">Aucune expérience renseignée.</p>
 						)}
 					</section>
 				</div>
@@ -139,13 +139,13 @@ export function CandidateProfile({ candidate }: { candidate: Candidate }) {
 					<h2 className={sectionTitle}>Historique des échanges</h2>
 					{candidate.exchanges.length > 0 ? (
 						<>
-							<ol className={`flex flex-col gap-3 px-5 py-4 ${box}`}>
+							<ol className={`flex flex-col gap-3 px-4 py-3.5 ${box}`}>
 								{candidate.exchanges.map((exchange) => (
 									<li key={`${exchange.kind}-${exchange.id}`} className="flex flex-col">
-										<time dateTime={exchange.date} className="text-[13px] font-semibold text-primary">
+										<time dateTime={exchange.date} className="text-xs font-semibold text-primary">
 											{exchangeDate(exchange.date)}
 										</time>
-										<p className="line-clamp-2 text-[15px]">{exchangeText(exchange, candidate)}</p>
+										<p className="line-clamp-2 text-sm">{exchangeText(exchange, candidate)}</p>
 									</li>
 								))}
 							</ol>
@@ -156,7 +156,7 @@ export function CandidateProfile({ candidate }: { candidate: Candidate }) {
 							</Link>
 						</>
 					) : (
-						<p className={`px-5 py-4 text-[#6b7280] ${box}`}>Aucun échange avec ce candidat pour le moment.</p>
+						<p className={`px-4 py-3.5 text-sm text-[#6b7280] ${box}`}>Aucun échange avec ce candidat pour le moment.</p>
 					)}
 				</section>
 			</div>
@@ -188,31 +188,31 @@ export default function CandidateProfilePage() {
 	if (result?.ok === false && result.reason === "unauthenticated") return <Navigate to="/login" replace />;
 
 	return (
-		<div className="min-h-dvh bg-[#f0f0f0]">
-			<header className="p-4">
+		<div className="min-h-dvh bg-[#f8fafc] px-4 pt-4 pb-16 text-ink md:px-6 md:pt-6">
+			<header>
 				<RecruiterNavbar />
 			</header>
 
-			<main className="px-4 pt-6 pb-16 md:px-6 md:pt-9">
+			<main className="mt-8">
 				{result?.ok ? (
 					<CandidateProfile candidate={result.candidate} />
 				) : (
 					<div className={panel}>
 						<BackToCandidates />
 						{result === null && (
-							<p role="status" className="text-[#6b7280]">
+							<p role="status" className="text-sm text-[#6b7280]">
 								Chargement du profil…
 							</p>
 						)}
 						{result?.reason === "notFound" && (
 							<>
-								<h1 className="text-3xl font-semibold">Profil introuvable</h1>
-								<p className="text-[#6b7280]">Ce profil n’existe pas ou ne fait pas partie des candidats que vous pouvez consulter.</p>
+								<h1 className="text-2xl font-bold">Profil introuvable</h1>
+								<p className="text-sm text-[#6b7280]">Ce profil n’existe pas ou ne fait pas partie des candidats que vous pouvez consulter.</p>
 							</>
 						)}
 						{(result?.reason === "server" || result?.reason === "network") && (
 							<div role="alert" className="flex flex-col items-start gap-4">
-								<p>{REQUEST_ERRORS[result.reason]}</p>
+								<p className="text-sm">{REQUEST_ERRORS[result.reason]}</p>
 								<Button onClick={() => setAttempt(attempt + 1)}>Réessayer</Button>
 							</div>
 						)}

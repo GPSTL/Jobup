@@ -32,7 +32,7 @@ const COLUMNS: { column: SortColumn; label: string }[] = [
 	{ column: "date_joined", label: "Inscription" },
 ];
 
-const cell = "px-4 py-3";
+const cell = "px-4 py-3.5";
 const chevron = "pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-gray-500";
 const arrow = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><path d="m9 5 7 7-7 7" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 
@@ -57,9 +57,9 @@ function AccountRow({ user, returnTo }: { user: AdminUser; returnTo: string }) {
 			<td className={`${cell} whitespace-nowrap`}><time dateTime={user.date_joined}>{formatDate(user.date_joined)}</time></td>
 			<td className={`${cell} whitespace-nowrap`}>
 				{user.is_active ? (
-					<span className="rounded-full bg-[#dcfce7] px-2.5 py-1 text-[13px] font-medium text-[#166534]">Actif</span>
+					<span className="rounded-full bg-[#dcfce7] px-2.5 py-1 text-xs font-semibold text-[#166534]">Actif</span>
 				) : (
-					<span className="font-medium text-[#e00000]">
+					<span className="text-xs font-semibold text-[#e00000]">
 						{user.suspended_at ? <>Suspendu le <time dateTime={user.suspended_at}>{formatDate(user.suspended_at)}</time></> : "Suspendu, date non renseignée"}
 					</span>
 				)}
@@ -91,9 +91,9 @@ export function AdminUsersTable({ users, sort, onSort }: AdminUsersTableProps) {
 	const location = useLocation();
 	const returnTo = location.pathname + location.search;
 	return (
-		<div role="region" aria-label="Comptes étudiants" tabIndex={0} className={`relative overflow-x-auto rounded-[20px] border border-[#e1e3e8] ${focus}`}>
-			<table className="w-full min-w-[860px] border-collapse text-left text-[15px] text-[#111827]">
-				<thead className="bg-[#f9fafb] text-[13px] text-[#6b7280]">
+		<div role="region" aria-label="Comptes étudiants" tabIndex={0} className={`relative overflow-x-auto rounded-2xl border border-[#e1e3e8] ${focus}`}>
+			<table className="w-full min-w-[860px] border-collapse text-left text-sm text-ink">
+				<thead className="bg-[#f9fafb] text-xs text-[#6b7280]">
 					<tr>
 						{COLUMNS.map(({ column, label }) => {
 							const direction = sortDirection(sort, column);
@@ -102,7 +102,7 @@ export function AdminUsersTable({ users, sort, onSort }: AdminUsersTableProps) {
 									<button
 										type="button"
 										onClick={() => onSort(nextSort(sort, column))}
-										className={`inline-flex cursor-pointer items-center gap-1.5 rounded-sm whitespace-nowrap hover:text-[#111827] ${direction ? "text-[#111827]" : ""} ${focus}`}
+										className={`inline-flex cursor-pointer items-center gap-1.5 rounded-sm whitespace-nowrap hover:text-ink ${direction ? "text-ink" : ""} ${focus}`}
 									>
 										{label}
 										<SortArrows direction={direction} />
@@ -183,7 +183,7 @@ export function AdminUsersToolbar({ query, schools, onSearch, onChange, onReset 
 				<ChevronDownIcon width={20} height={20} className={chevron} />
 			</label>
 			{hasCriteria(query) && (
-				<button type="button" onClick={onReset} className={`cursor-pointer self-start rounded-[14px] px-3 py-3.5 font-semibold text-primary hover:underline lg:self-auto ${focus}`}>
+				<button type="button" onClick={onReset} className={`cursor-pointer self-start rounded-xl px-3 py-2.5 text-sm font-semibold text-primary hover:underline lg:self-auto ${focus}`}>
 					Réinitialiser
 				</button>
 			)}
@@ -209,15 +209,15 @@ type AdminUsersResultsProps = {
 };
 
 export function AdminUsersResults({ result, loading, query, onChange, onRetry, onReset }: AdminUsersResultsProps) {
-	if (!result) return <p role="status" className="py-20 text-center">Chargement des utilisateurs…</p>;
+	if (!result) return <p role="status" className="py-16 text-center text-sm text-[#6b7280]">Chargement des utilisateurs…</p>;
 	if (!result.ok) {
 		return (
-			<div className="py-20 text-center">
-				<p role="alert">{ERRORS[result.reason]}</p>
+			<div className="py-16 text-center">
+				<p role="alert" className="text-sm">{ERRORS[result.reason]}</p>
 				{result.reason === "forbidden" ? (
-					<Link to={adminLoginLink("/administration/users")} className="mt-4 inline-block text-primary underline">Se connecter</Link>
+					<Link to={adminLoginLink("/administration/users")} className="mt-4 inline-block text-sm font-semibold text-primary underline">Se connecter</Link>
 				) : (
-					<button type="button" onClick={result.reason === "notFound" ? () => onChange({ page: 1 }) : onRetry} className="mt-4 cursor-pointer text-primary underline">
+					<button type="button" onClick={result.reason === "notFound" ? () => onChange({ page: 1 }) : onRetry} className="mt-4 cursor-pointer text-sm font-semibold text-primary underline">
 						{result.reason === "notFound" ? "Revenir à la première page" : "Réessayer"}
 					</button>
 				)}
@@ -226,23 +226,23 @@ export function AdminUsersResults({ result, loading, query, onChange, onRetry, o
 	}
 	if (result.count === 0) {
 		// ADM-09: a message when no student matches
-		if (!hasCriteria(query)) return <p role="status" className="py-20 text-center">Aucun étudiant inscrit pour le moment.</p>;
+		if (!hasCriteria(query)) return <p role="status" className="py-16 text-center text-sm text-[#6b7280]">Aucun étudiant inscrit pour le moment.</p>;
 		return (
-			<div className="py-20 text-center">
-				<p role="status">Aucun étudiant ne correspond à votre recherche.</p>
-				<button type="button" onClick={onReset} className="mt-4 cursor-pointer text-primary underline">Réinitialiser les filtres</button>
+			<div className="py-16 text-center">
+				<p role="status" className="text-sm text-[#6b7280]">Aucun étudiant ne correspond à votre recherche.</p>
+				<button type="button" onClick={onReset} className="mt-4 cursor-pointer text-sm font-semibold text-primary underline">Réinitialiser les filtres</button>
 			</div>
 		);
 	}
 	return (
 		<div className={loading ? "opacity-60" : ""}>
 			<AdminUsersTable users={result.results} sort={query.sort} onSort={(sort) => onChange({ sort })} />
-			<div className="mt-6 flex flex-col items-center gap-4 text-[14px] text-[#6b7280] lg:flex-row lg:justify-between">
+			<div className="mt-6 flex flex-col items-center gap-4 text-xs sm:text-sm text-[#6b7280] lg:flex-row lg:justify-between">
 				<p role="status">{rangeLabel(result.count, result.page, result.page_size, result.results.length)}</p>
 				<Pagination currentPage={result.page} totalPages={result.total_pages} onPageChange={(page) => onChange({ page })} />
 				<label className="flex items-center gap-2">
 					Lignes par page
-					<select value={query.page_size} onChange={(e) => onChange({ page_size: Number(e.target.value) })} className={`cursor-pointer rounded-[10px] border border-[#d1d5db] bg-white px-2 py-1.5 text-[#111827] ${focus}`}>
+					<select value={query.page_size} onChange={(e) => onChange({ page_size: Number(e.target.value) })} className={`cursor-pointer rounded-lg border border-[#d1d5db] bg-surface px-2.5 py-1.5 text-ink ${focus}`}>
 						{PAGE_SIZES.map((size) => <option key={size} value={size}>{size}</option>)}
 					</select>
 				</label>
@@ -290,10 +290,13 @@ export default function AdminUsersPage() {
 	const shown = current ?? (loaded?.result.ok ? loaded.result : null);
 
 	return (
-		<div className="min-h-dvh bg-[#f0f0f0] px-4 py-6 text-ink md:px-10 md:py-16">
-			<header className="mx-auto max-w-[1472px]"><AdminNavbar /></header>
-			<main className="mx-auto mt-10 max-w-[1236px] rounded-[28px] bg-surface px-4 pt-6 pb-7 shadow-[0_4px_12px_rgba(0,0,0,0.1)] md:mt-16 md:px-10" aria-busy={current === null}>
-				<h1 className="mb-10 text-center text-3xl font-semibold text-[#111827] md:text-4xl">Liste d’utilisateurs</h1>
+		<div className="min-h-dvh bg-[#f8fafc] px-4 pt-4 pb-16 text-ink md:px-6 md:pt-6">
+			<header><AdminNavbar /></header>
+			<main className="mx-auto mt-8 max-w-[1236px] rounded-2xl border border-[#e5e7eb] bg-surface px-5 py-7 shadow-xs md:px-10 md:py-8" aria-busy={current === null}>
+				<div className="mb-6 flex flex-col gap-1">
+					<h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">Liste d’utilisateurs</h1>
+					<p className="text-sm text-[#6b7280]">Consultez et gérez les comptes étudiants inscrits sur la plateforme.</p>
+				</div>
 				<AdminUsersToolbar query={query} schools={schools} onSearch={onSearch} onChange={update} onReset={onReset} />
 				<AdminUsersResults result={shown} loading={current === null} query={query} onChange={update} onRetry={() => setAttempt(attempt + 1)} onReset={onReset} />
 			</main>

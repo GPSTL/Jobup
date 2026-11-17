@@ -23,7 +23,8 @@ type ButtonProps = {
 };
 
 const base = [
-	"inline-flex items-center justify-center rounded-full cursor-pointer font-medium",
+	"inline-flex items-center justify-center rounded-xl cursor-pointer font-semibold",
+	"motion-safe:transition-all motion-safe:duration-200 motion-safe:active:scale-[0.98]",
 	"disabled:cursor-not-allowed disabled:opacity-60",
 	// Keyboard focus: blue outline separated from the button by a white band,
 	// so it stays visible on a white background as well as on the home page photo.
@@ -32,7 +33,7 @@ const base = [
 ].join(" ");
 
 const variants = {
-	primary: "bg-primary text-on-primary",
+	primary: "bg-primary text-on-primary hover:bg-primary/90 hover:shadow-sm",
 	// Same light blue as the "Pour les étudiants" badge of the student page
 	secondary: "bg-[#dae8ff] text-[#1950ff] hover:bg-[#c9dcff]",
 	// Inset ring rather than a border, so the button keeps the height of the others
@@ -40,8 +41,8 @@ const variants = {
 };
 
 const sizes = {
-	md: "px-4 py-1 text-base",
-	lg: "px-8 py-4 text-xl",
+	md: "px-5 py-2.5 text-sm",
+	lg: "px-8 py-4 text-base",
 };
 
 export default function Button({

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 import Button from "../components/Button";
 import CvSection from "../components/CvSection";
@@ -55,67 +56,97 @@ export default function MonEspace({ user }: MonEspaceProps) {
 		return REQUEST_ERRORS[result.reason];
 	};
 
+	const initials = `${user.first_name?.[0] ?? ""}${user.last_name?.[0] ?? ""}`.toUpperCase() || "ET";
+
 	return (
-		<div className="min-h-dvh bg-[#f0f0f0]">
-			<header className="px-4 pt-4 md:px-6 md:pt-6">
+		<div className="min-h-dvh bg-[#f8fafc] px-4 pt-4 pb-16 text-ink md:px-6 md:pt-6">
+			<header>
 				<StudentNavbar />
 			</header>
 
-			<main className="px-4 pt-6 pb-16 md:px-6 md:pt-9">
-				<div className="mx-auto flex max-w-4xl flex-col gap-6 rounded-3xl bg-surface p-5 shadow-[0_4px_12px_rgba(0,0,0,0.06)] md:p-8">
-					<div className="text-center">
-						<h1 className="text-3xl font-bold">Mon espace</h1>
-						<p className="mt-1 text-[#6c7386]">Gérez votre profil, votre CV et vos informations personnelles.</p>
+			<main className="mx-auto mt-8 flex max-w-[1236px] flex-col gap-6">
+				{/* Student Dashboard Header Banner */}
+				<div className="flex flex-col justify-between gap-4 rounded-3xl border border-[#e5e7eb] bg-surface p-6 shadow-xs sm:flex-row sm:items-center sm:p-8">
+					<div className="flex items-center gap-4">
+						<div aria-hidden="true" className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary text-lg font-bold text-on-primary">
+							{initials}
+						</div>
+						<div>
+							<div className="flex flex-wrap items-center gap-2">
+								<h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Mon espace</h1>
+								<span className="rounded-full bg-[#dbeafe] px-2.5 py-0.5 text-xs font-semibold text-[#1d4ed8]">
+									Étudiant
+								</span>
+							</div>
+							<p className="mt-1 text-sm text-[#6b7280]">
+								Gérez votre profil, votre CV et vos préférences pour postuler en un clic.
+							</p>
+						</div>
+					</div>
+					<div className="flex flex-wrap gap-2.5">
+						<Link to="/offers" className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90">
+							Découvrir les offres
+						</Link>
+						<Link to="/applications" className="rounded-xl border border-[#d1d5db] bg-surface px-4 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-[#f9fafb]">
+							Mes candidatures
+						</Link>
+					</div>
+				</div>
+
+				{loadError && (
+					<div role="alert" className="flex flex-col items-center gap-3 rounded-2xl border border-[#e5e7eb] bg-surface p-6 text-center shadow-xs">
+						<p className="text-sm">{REQUEST_ERRORS[loadError]}</p>
+						{loadError === "unauthenticated" ? <Button to="/login">Se connecter</Button> : <Button onClick={retry}>Réessayer</Button>}
+					</div>
+				)}
+
+				<div className="grid items-start gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+					<div className="flex flex-col gap-6">
+						{!profile && !loadError && (
+							<div className="flex flex-col gap-6">
+								<p role="status" className="sr-only">
+									Chargement de votre profil…
+								</p>
+								{[1, 2, 3].map((n) => (
+									<div key={n} className="h-32 rounded-2xl bg-surface motion-safe:animate-pulse" />
+								))}
+							</div>
+						)}
+
+						{profile && (
+							<>
+								<PhotoSection photoUrl={profile.photoUrl} onUpload={async (file) => applyResult(await updatePhoto(user.id, file))} />
+								<TextSection
+									title="Poste recherché"
+									value={profile.desiredPosition}
+									emptyText="Vous n’avez pas encore indiqué de poste."
+									hint="Votre objectif principal : il sert aux suggestions d’offres et aide les entreprises à comprendre votre recherche."
+									placeholder="Ex. : Développeur web"
+									maxLength={POSITION_MAX_LENGTH}
+									onSave={async (desiredPosition) => applyResult(await updateProfile(user.id, { desiredPosition }))}
+								/>
+								<TextSection
+									title="Présentation personnelle"
+									value={profile.description}
+									emptyText="Vous n’avez pas encore rédigé de présentation."
+									hint="Un court résumé de votre parcours et de vos atouts, visible sur votre profil et utile aux recruteurs."
+									placeholder="Ex. : Étudiant en M2 informatique, je recherche une alternance de 12 mois en développement web."
+									maxLength={DESCRIPTION_MAX_LENGTH}
+									multiline
+									onSave={async (description) => applyResult(await updateProfile(user.id, { description }))}
+								/>
+							</>
+						)}
 					</div>
 
-					{loadError && (
-						<div role="alert" className="flex flex-col items-center gap-3 rounded-2xl border border-[#E5E7EB] bg-[#F9FAFB] p-6 text-center">
-							<p>{REQUEST_ERRORS[loadError]}</p>
-							{loadError === "unauthenticated" ? <Button to="/login">Se connecter</Button> : <Button onClick={retry}>Réessayer</Button>}
+					<div className="flex flex-col gap-6">
+						{/* JOB-019: loads its own data, so it does not wait for the profile */}
+						<CvSection userId={user.id} />
+						{/* JOB-042: notifications and e-mail preference, loaded on their own too */}
+						<div className="rounded-2xl border border-[#e5e7eb] bg-surface p-5 shadow-xs sm:p-6">
+							<NotificationSettings />
 						</div>
-					)}
-
-					{!profile && !loadError && (
-						// Gray blocks with the shape of the sections, while the profile loads
-						<div className="flex flex-col gap-6">
-							<p role="status" className="sr-only">
-								Chargement de votre profil…
-							</p>
-							{[1, 2, 3].map((n) => (
-								<div key={n} className="h-28 rounded-2xl bg-[#F0F0F0] motion-safe:animate-pulse" />
-							))}
-						</div>
-					)}
-
-					{profile && (
-						<>
-							<PhotoSection photoUrl={profile.photoUrl} onUpload={async (file) => applyResult(await updatePhoto(user.id, file))} />
-							<TextSection
-								title="Présentation personnelle"
-								value={profile.description}
-								emptyText="Vous n’avez pas encore rédigé de présentation."
-								hint="Un court résumé de votre parcours et de vos atouts, visible sur votre profil et utile aux recruteurs."
-								placeholder="Ex. : Étudiant en M2 informatique, je recherche une alternance de 12 mois en développement web."
-								maxLength={DESCRIPTION_MAX_LENGTH}
-								multiline
-								onSave={async (description) => applyResult(await updateProfile(user.id, { description }))}
-							/>
-							<TextSection
-								title="Poste recherché"
-								value={profile.desiredPosition}
-								emptyText="Vous n’avez pas encore indiqué de poste."
-								hint="Votre objectif principal : il sert aux suggestions d’offres et aide les entreprises à comprendre votre recherche."
-								placeholder="Ex. : Développeur web"
-								maxLength={POSITION_MAX_LENGTH}
-								onSave={async (desiredPosition) => applyResult(await updateProfile(user.id, { desiredPosition }))}
-							/>
-						</>
-					)}
-
-					{/* JOB-019: loads its own data, so it does not wait for the profile */}
-					<CvSection userId={user.id} />
-					{/* JOB-042: notifications and e-mail preference, loaded on their own too */}
-					<NotificationSettings />
+					</div>
 				</div>
 			</main>
 		</div>

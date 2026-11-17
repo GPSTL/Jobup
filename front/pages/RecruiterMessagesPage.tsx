@@ -89,12 +89,12 @@ export default function RecruiterMessagesPage() {
 	const filtered = conversations?.filter((conversation) => candidateName(conversation).toLocaleLowerCase("fr").includes(search));
 
 	return (
-		<div className="flex h-dvh flex-col gap-6 bg-[#f0f0f0] px-4 pt-4 pb-6 md:gap-10 md:px-6 md:pt-4 md:pb-12">
-			<header className="mx-auto w-full max-w-[1236px]">
+		<div className="flex h-dvh flex-col gap-6 bg-[#f8fafc] px-4 pt-4 pb-6 text-ink md:px-6 md:pt-6">
+			<header>
 				<RecruiterNavbar />
 			</header>
-			<main className="mx-auto flex min-h-0 w-full max-w-[1236px] flex-1 overflow-hidden rounded-[24px] bg-white shadow-[0_4px_12px_rgba(0,0,0,0.1)] md:max-h-[680px]">
-				<div className={`min-h-0 w-full flex-col border-gray-200 md:flex md:w-[330px] md:shrink-0 md:border-r ${showThread ? "hidden" : "flex"}`}>
+			<main className="mx-auto flex min-h-0 w-full max-w-[1236px] flex-1 overflow-hidden rounded-2xl border border-[#e5e7eb] bg-surface shadow-xs">
+				<div className={`min-h-0 w-full flex-col border-[#e5e7eb] md:flex md:w-[330px] md:shrink-0 md:border-r ${showThread ? "hidden" : "flex"}`}>
 					<ConversationList
 						title="Candidats"
 						searchLabel="Rechercher un candidat"
@@ -109,7 +109,7 @@ export default function RecruiterMessagesPage() {
 						selectedId={selectedId}
 						action={
 							<Button ariaLabel="Nouvelle conversation" onClick={() => setShowRecipientDialog(true)} className="size-9">
-								<span className="text-[22px] translate-y-[2px]">
+								<span className="translate-y-[1px] text-xl">
 									+
 								</span>
 							</Button>
@@ -118,7 +118,7 @@ export default function RecruiterMessagesPage() {
 				</div>
 				<section aria-label="Conversation" className={`min-h-0 min-w-0 flex-1 flex-col md:flex ${showThread ? "flex" : "hidden"}`}>
 					{selectedId === undefined ? (
-						<p className="m-auto p-6 text-center text-gray-500">
+						<p className="m-auto p-6 text-center text-sm text-[#6b7280]">
 							{noConversation ? (
 								<>
 									Vous n’avez pas encore de conversation avec ce candidat.{" "}
@@ -131,7 +131,7 @@ export default function RecruiterMessagesPage() {
 							)}
 						</p>
 					) : !Number.isSafeInteger(selectedId) || selectedId <= 0 ? (
-						<p role="alert" className="m-auto p-6">
+						<p role="alert" className="m-auto p-6 text-sm">
 							Conversation introuvable.{" "}
 							<Link to="/recruiter/messages" className="text-primary underline">
 								Retour
@@ -148,7 +148,7 @@ export default function RecruiterMessagesPage() {
 							backTo="/recruiter/messages"
 							onActivity={load}
 							closed={selected?.suspended ? "Le compte de ce candidat est suspendu : vous ne pouvez plus lui écrire." : undefined}
-							presence={selected?.suspended ? <p className="text-[13px] font-medium text-[#e00000]">{SUSPENDED}</p> : <CandidatePresence lastSeen={selected?.last_seen_at ?? null} />}
+							presence={selected?.suspended ? <p className="text-xs font-medium text-[#e00000]">{SUSPENDED}</p> : <CandidatePresence lastSeen={selected?.last_seen_at ?? null} />}
 						/>
 					)}
 				</section>

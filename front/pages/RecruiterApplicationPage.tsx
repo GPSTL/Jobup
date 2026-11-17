@@ -20,34 +20,34 @@ export function RecruiterApplicationContent({ application, onDecision, saving, e
 	const pending = status === STATUS.READ || status === STATUS.IN_REVIEW;
 	return (
 		<>
-			<Link className={`w-fit font-semibold text-primary ${focus}`} to={`/recruiter/offers/${offer.id}/applicants`}>Retour aux candidatures de l’offre</Link>
-			<h1 className="text-[28px] font-semibold">Candidature — {offer.title}</h1>
-			<div className="flex flex-wrap items-center gap-4">
-				<CandidateAvatar candidate={candidate} className="size-16 text-xl" />
+			<Link className={`w-fit text-sm font-semibold text-primary hover:underline ${focus}`} to={`/recruiter/offers/${offer.id}/applicants`}>← Retour aux candidatures de l’offre</Link>
+			<h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Candidature — {offer.title}</h1>
+			<div className="flex flex-wrap items-center gap-4 rounded-2xl border border-[#e5e7eb] bg-[#f9fafb] p-4">
+				<CandidateAvatar candidate={candidate} className="size-14 text-lg" />
 				<div className="min-w-0 flex-1">
-					<h2 className="text-xl font-semibold">{fullName(candidate)}</h2>
-					<p className="text-sm text-[#6b7280]"><EducationLine candidate={candidate} /></p>
-					<p className="text-sm text-[#6b7280]">Postulée le {formatDate(application.submitted_at)}</p>
+					<h2 className="text-lg font-semibold">{fullName(candidate)}</h2>
+					<p className="text-xs sm:text-sm text-[#6b7280]"><EducationLine candidate={candidate} /></p>
+					<p className="text-xs sm:text-sm text-[#6b7280]">Postulée le {formatDate(application.submitted_at)}</p>
 				</div>
 				<ApplicationStatusChip status={status} />
 			</div>
-			<Link className={`w-fit font-semibold text-primary ${focus}`} to={`/recruiter/candidates/${candidate.id}?offer=${offer.id}`}>Voir le profil du candidat</Link>
-			{application.message && <section className="flex flex-col gap-2"><h2 className="font-semibold">Présentation du candidat</h2><p className="whitespace-pre-line">{application.message}</p></section>}
+			<Link className={`w-fit text-sm font-semibold text-primary hover:underline ${focus}`} to={`/recruiter/candidates/${candidate.id}?offer=${offer.id}`}>Voir le profil du candidat</Link>
+			{application.message && <section className="flex flex-col gap-2"><h2 className="text-lg font-semibold">Présentation du candidat</h2><p className="text-sm sm:text-base whitespace-pre-line text-[#6b7280]">{application.message}</p></section>}
 			{pending ? (
-				<section className="flex flex-col gap-4" aria-label="Décision de recrutement">
-					<label className="flex flex-col gap-2 font-semibold" htmlFor="decision-message">Message au candidat (facultatif)</label>
-					<textarea id="decision-message" value={message} onChange={(event) => setMessage(event.target.value)} maxLength={1024} disabled={saving} rows={4} className={`w-full rounded-xl border border-[#d1d5db] p-3 font-normal ${focus}`} />
-					{error && <p role="alert" className="text-red-700">{error}</p>}
+				<section className="flex flex-col gap-4 border-t border-[#e5e7eb] pt-5" aria-label="Décision de recrutement">
+					<label className="flex flex-col gap-2 text-sm font-semibold" htmlFor="decision-message">Message au candidat (facultatif)</label>
+					<textarea id="decision-message" value={message} onChange={(event) => setMessage(event.target.value)} maxLength={1024} disabled={saving} rows={4} className={`w-full rounded-xl border border-[#d1d5db] bg-surface p-3.5 text-sm sm:text-base font-normal ${focus}`} />
+					{error && <p role="alert" className="text-sm text-red-700">{error}</p>}
 					<div className="flex flex-wrap gap-3">
-						<button type="button" onClick={() => onDecision(STATUS.ACCEPTED, message)} disabled={saving} className={`rounded-xl bg-[#16803d] px-5 py-3 font-semibold text-white disabled:opacity-50 ${focus}`}>Accepter</button>
-						<button type="button" onClick={() => onDecision(STATUS.REFUSED, message)} disabled={saving} className={`rounded-xl border border-[#b91c1c] px-5 py-3 font-semibold text-[#b91c1c] disabled:opacity-50 ${focus}`}>Refuser</button>
+						<button type="button" onClick={() => onDecision(STATUS.ACCEPTED, message)} disabled={saving} className={`rounded-xl bg-[#16803d] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50 ${focus}`}>Accepter</button>
+						<button type="button" onClick={() => onDecision(STATUS.REFUSED, message)} disabled={saving} className={`rounded-xl border border-[#b91c1c] px-5 py-2.5 text-sm font-semibold text-[#b91c1c] disabled:opacity-50 ${focus}`}>Refuser</button>
 					</div>
 				</section>
 			) : (
-				<section className="flex flex-col gap-3" aria-label="Décision enregistrée">
-					<p role="status" className="font-semibold">Décision enregistrée : {status === STATUS.ACCEPTED ? "Acceptée" : "Refusée"}</p>
-					{application.decision_message && <div><h2 className="font-semibold">Message envoyé au candidat</h2><p className="whitespace-pre-line">{application.decision_message}</p></div>}
-					{status === STATUS.ACCEPTED && application.conversation_id && <Link to={`/recruiter/messages/${application.conversation_id}`} className={`w-fit font-semibold text-primary ${focus}`}>Ouvrir la conversation avec le candidat</Link>}
+				<section className="flex flex-col gap-3 border-t border-[#e5e7eb] pt-5" aria-label="Décision enregistrée">
+					<p role="status" className="text-sm sm:text-base font-semibold">Décision enregistrée : {status === STATUS.ACCEPTED ? "Acceptée" : "Refusée"}</p>
+					{application.decision_message && <div><h2 className="text-base font-semibold">Message envoyé au candidat</h2><p className="mt-1 text-sm sm:text-base whitespace-pre-line text-[#6b7280]">{application.decision_message}</p></div>}
+					{status === STATUS.ACCEPTED && application.conversation_id && <Link to={`/recruiter/messages/${application.conversation_id}`} className={`w-fit text-sm font-semibold text-primary hover:underline ${focus}`}>Ouvrir la conversation avec le candidat</Link>}
 				</section>
 			)}
 		</>

@@ -65,12 +65,12 @@ export default function MessagesPage() {
 	const selected = conversations?.find((conversation) => conversation.id === selectedId);
 
 	return (
-		<div className="flex h-dvh flex-col gap-6 bg-[#f0f0f0] px-4 pt-4 pb-6 md:px-6 md:pt-6">
+		<div className="flex h-dvh flex-col gap-6 bg-[#f8fafc] px-4 pt-4 pb-6 text-ink md:px-6 md:pt-6">
 			<header>
 				<StudentNavbar />
 			</header>
 
-			<main className="mx-auto flex min-h-0 w-full max-w-[1236px] flex-1 overflow-hidden rounded-[24px] bg-white text-[#111827] shadow-[0_4px_12px_rgba(0,0,0,0.1)]">
+			<main className="mx-auto flex min-h-0 w-full max-w-[1236px] flex-1 overflow-hidden rounded-2xl border border-[#e5e7eb] bg-surface shadow-xs">
 				{/* Sur mobile, la liste ou la conversation ouverte occupe tout l'écran */}
 				<div className={`w-full flex-col border-[#e5e7eb] md:flex md:w-[330px] md:shrink-0 md:border-r ${selectedId === undefined ? "flex" : "hidden"}`}>
 					<ConversationList
@@ -87,7 +87,7 @@ export default function MessagesPage() {
 
 				<section aria-label="Conversation" className={`min-w-0 flex-1 flex-col bg-[#f9fafb] md:flex ${selectedId === undefined ? "hidden" : "flex"}`}>
 					{selectedId === undefined ? (
-						<p className="m-auto px-6 text-center text-[15px] text-[#6b7280]">Sélectionnez une conversation pour l’afficher.</p>
+						<p className="m-auto px-6 text-center text-sm text-[#6b7280]">Sélectionnez une conversation pour l’afficher.</p>
 					) : (
 						<MessageThread
 							key={selectedId}

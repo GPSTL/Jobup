@@ -14,11 +14,11 @@ type ApplicationsLayoutProps = {
 // Fond, barre de navigation et panneau blanc communs aux écrans de candidatures
 export default function ApplicationsLayout({ children, className }: ApplicationsLayoutProps) {
 	return (
-		<div className="min-h-dvh bg-[#f0f0f0] px-4 pt-4 pb-16 text-[#111827] md:px-6 md:pt-6">
+		<div className="min-h-dvh bg-[#f8fafc] px-4 pt-4 pb-16 text-ink md:px-6 md:pt-6">
 			<header>
 				<StudentNavbar />
 			</header>
-			<main className={`mx-auto mt-10 flex flex-col rounded-[25px] bg-white leading-[normal] shadow-[0_4px_12px_rgba(0,0,0,0.1)] ${className}`}>
+			<main className={`mx-auto mt-8 flex flex-col rounded-2xl border border-[#e5e7eb] bg-surface shadow-xs ${className}`}>
 				{children}
 			</main>
 		</div>
@@ -27,7 +27,7 @@ export default function ApplicationsLayout({ children, className }: Applications
 
 export function BackToApplications() {
 	return (
-		<Link to="/applications" className={`flex w-fit items-center gap-2 rounded-[14px] px-1 py-3.5 text-[16px] font-semibold text-primary ${focus}`}>
+		<Link to="/applications" className={`flex w-fit items-center gap-2 rounded-xl px-1 py-2 text-sm font-semibold text-primary hover:underline ${focus}`}>
 			<img src="/static/img/applications/back.svg" width={18} height={18} alt="" />
 			Retour aux candidatures
 		</Link>
@@ -35,13 +35,13 @@ export function BackToApplications() {
 }
 
 export function LoadingMessage() {
-	return <p role="status" className="text-[16px] text-[#6b7280]">Chargement…</p>;
+	return <p role="status" className="text-sm text-[#6b7280]">Chargement…</p>;
 }
 
 export function LoadError({ message, onRetry }: { message: string; onRetry: () => void }) {
 	return (
 		<div className="flex flex-col items-start gap-4">
-			<p role="alert" className="text-[16px]">{message}</p>
+			<p role="alert" className="text-sm">{message}</p>
 			<Button onClick={onRetry}>Réessayer</Button>
 		</div>
 	);

@@ -16,16 +16,16 @@ type ColumnProps = {
 function Column({ title, applications, emptyMessage }: ColumnProps) {
 	const titleId = useId();
 	return (
-		<section aria-labelledby={titleId} className="flex min-w-0 flex-col gap-3">
-			<div className="flex items-center gap-2.5">
-				<h2 id={titleId} className="text-[20px] font-semibold">{title}</h2>
-				<span className="rounded-full bg-[#f3f4f6] px-2.5 py-[5px] text-[13px] font-semibold text-[#6b7280]">
+		<section aria-labelledby={titleId} className="flex min-w-0 flex-col gap-4 rounded-2xl border border-[#e5e7eb] bg-[#f9fafb] p-4 sm:p-5">
+			<div className="flex items-center justify-between gap-2.5">
+				<h2 id={titleId} className="text-base sm:text-lg font-bold text-ink">{title}</h2>
+				<span className="rounded-full bg-[#dbeafe] px-2.5 py-0.5 text-xs font-bold text-[#1d4ed8]">
 					<span className="sr-only">Nombre de candidatures : </span>
 					{applications.length}
 				</span>
 			</div>
 			{applications.length === 0 ? (
-				<p className="text-[15px] text-[#6b7280]">{emptyMessage}</p>
+				<p className="rounded-xl border border-dashed border-[#d1d5db] bg-surface p-6 text-center text-sm text-[#6b7280]">{emptyMessage}</p>
 			) : (
 				<ul className="flex flex-col gap-3">
 					{byLastUpdate(applications).map((application) => (
@@ -64,10 +64,19 @@ export default function ApplicationsPage() {
 	if (noSession) return <Navigate to="/login" replace />;
 
 	return (
-		<ApplicationsLayout className="max-w-[1236px] gap-5 px-4 pt-8 pb-9 md:px-10">
-			<div className="flex flex-col gap-1.5">
-				<h1 className="text-[32px] font-semibold">Candidatures</h1>
-				<p className="text-[16px] text-[#6b7280]">Suivez vos candidatures et faites le bilan de votre recherche.</p>
+		<ApplicationsLayout className="max-w-[1236px] gap-6 px-5 py-7 md:px-10 md:py-8">
+			<div className="flex flex-wrap items-end justify-between gap-4">
+				<div className="flex flex-col gap-1">
+					<h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Candidatures</h1>
+					<p className="text-sm sm:text-base text-[#6b7280]">Suivez vos candidatures en temps réel et faites le bilan de votre recherche.</p>
+				</div>
+				{columns && (
+					<div className="flex items-center gap-2 text-xs sm:text-sm">
+						<span className="rounded-xl border border-[#e5e7eb] bg-[#f9fafb] px-3 py-1.5 font-medium text-[#6b7280]">
+							Total : <strong className="text-ink">{columns.inProgress.length + columns.completed.length}</strong>
+						</span>
+					</div>
+				)}
 			</div>
 
 			{error && <LoadError message={error} onRetry={() => setAttempt(attempt + 1)} />}

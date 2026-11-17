@@ -3,10 +3,11 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 
 import Button from "../components/Button";
 import ChevronDownIcon from "../components/ChevronDownIcon";
+import Footer from "../components/Footer";
 import HeartIcon from "../components/HeartIcon";
 import LoginBanner from "../components/LoginBanner";
 import MapPinIcon from "../components/MapPinIcon";
-import Navbar, { NavbarLink } from "../components/Navbar";
+import PublicNavbar from "../components/PublicNavbar";
 import SearchIcon from "../components/SearchIcon";
 import StudentNavbar from "../components/StudentNavbar";
 import RecruiterNavbar from "../components/RecruiterNavbar";
@@ -17,41 +18,71 @@ import { isOfferSaved, removeSavedOffer, saveOffer } from "../services/savedOffe
 import { filterPublicOffers, getOffer, getOffers, type PublicOffer, type PublicOfferFilters, type PublicOfferResult } from "../services/offers";
 export { filterPublicOffers } from "../services/offers";
 import { card, field, focus, input, searchButton, select } from "../utils/searchPageStyles";
-import { SECTOR_OPTIONS, sectorLabel } from "../utils/companies";
+import { companyEmblem, emblemColors, SECTOR_OPTIONS, sectorLabel } from "../utils/companies";
 import { MESSAGES, REQUEST_ERRORS } from "../utils/validation";
 import StudentOfferSwipe from "./StudentOfferSwipe";
 
 const PAGE_SIZE = 6;
 
 export function PublicOfferRequestState({ result, retry, detail = false }: { result: PublicOfferResult<unknown> | null; retry: () => void; detail?: boolean }) {
-	if (result === null) return <p role="status">Chargement des offres…</p>;
+	if (result === null) return <p role="status" className="py-10 text-center text-sm text-[#6b7280]">Chargement des offres…</p>;
 	if (result.ok) return null;
-	if (detail && result.reason === "notFound") return <h2 role="alert" className="text-2xl font-semibold">Offre introuvable ou retirée</h2>;
-	return <div role="alert"><p>{REQUEST_ERRORS[result.reason === "notFound" ? "server" : result.reason]}</p><Button className="mt-3" onClick={retry}>Réessayer</Button></div>;
+	if (detail && result.reason === "notFound") return <h2 role="alert" className="text-xl font-semibold">Offre introuvable ou retirée</h2>;
+	return <div role="alert" className="py-8 text-center"><p className="text-sm">{REQUEST_ERRORS[result.reason === "notFound" ? "server" : result.reason]}</p><Button className="mt-3" onClick={retry}>Réessayer</Button></div>;
 }
 
 export function PublicOfferList({ offers, page, onPageChange, emptyMessage = "Aucune offre publiée pour le moment. Revenez bientôt découvrir de nouvelles opportunités." }: { offers: PublicOffer[]; page: number; onPageChange: (page: number) => void; emptyMessage?: string }) {
-	if (offers.length === 0) return <p role="status" className={card}>{emptyMessage}</p>;
+	if (offers.length === 0) return <p role="status" className={`${card} py-10 text-center text-sm text-[#6b7280]`}>{emptyMessage}</p>;
 	const totalPages = Math.ceil(offers.length / PAGE_SIZE);
 	const current = Math.max(1, Math.min(page, totalPages));
 	return <>
 		<ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-			{offers.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE).map(({ id, title, company }) => (
-				<li key={id} className={card}>
-					<img src="/static/img/home_bg_image.webp" alt="" loading="lazy" className="h-[150px] w-full rounded-[14px] object-cover" />
-					<div className="flex items-center gap-2">
-						<h2 className="flex-1 text-[19px] font-semibold">{title}</h2>
-						<Link to="/login" state={{ studentReturnTo: `/offers/${id}` }} aria-label={`Sauvegarder l’offre ${title}`} className={`group shrink-0 rounded-sm ${focus}`}>
-							<HeartIcon width={20} height={20} className="text-gray-400 group-hover:text-primary group-focus-visible:text-primary" />
-						</Link>
-					</div>
-					<p className="text-[15px] text-[#6b7280]">{company?.name || "Entreprise non renseignée"}{company?.city && ` • ${company.city}`}</p>
-					<div className="flex items-start gap-2">
-						<span className="rounded-full bg-[#dbeafe] px-[10px] py-[5px] text-[13px] font-semibold text-[#1d4ed8]">Alternance</span>
-					</div>
-					<Link to={`/offers/${id}`} className={`rounded-[10px] border-[1.5px] border-[#d1d5db] bg-white px-3.5 py-[9px] text-center text-[14px] font-semibold hover:bg-[#f9fafb] ${focus}`}>Voir l’offre<span className="sr-only"> {title}</span></Link>
-				</li>
-			))}
+			{offers.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE).map(({ id, title, description, category, created_at, company }) => {
+				const companyName = company?.name || "Entreprise non renseignée";
+				const initials = company ? companyEmblem(company.name) : "JU";
+				const badgeColor = company ? emblemColors(company.id) : "bg-[#dbeafe] text-[#1d4ed8]";
+				return (
+					<li key={id} className={card}>
+						<div className="flex items-start justify-between gap-3">
+							<div className="flex min-w-0 items-center gap-3">
+								<span aria-hidden="true" className={`flex size-11 shrink-0 items-center justify-center rounded-xl text-sm font-bold ${badgeColor}`}>
+									{initials}
+								</span>
+								<div className="min-w-0">
+									<p className="truncate text-sm font-semibold text-ink">{companyName}</p>
+									{company?.city && (
+										<p className="flex items-center gap-1 text-xs text-[#6b7280]">
+											<MapPinIcon width={12} height={12} className="shrink-0" />
+											{company.city}
+										</p>
+									)}
+								</div>
+							</div>
+							<Link to="/login" state={{ studentReturnTo: `/offers/${id}` }} aria-label={`Sauvegarder l’offre ${title}`} className={`group shrink-0 rounded-lg p-1.5 hover:bg-[#f3f4f6] ${focus}`}>
+								<HeartIcon width={18} height={18} className="text-gray-400 transition-colors group-hover:text-primary group-focus-visible:text-primary" />
+							</Link>
+						</div>
+
+						<div className="flex flex-col gap-2 pt-1">
+							<h2 className="text-lg leading-snug font-bold text-ink">{title}</h2>
+							<div className="flex flex-wrap items-center gap-1.5">
+								<span className="rounded-md bg-[#dbeafe] px-2.5 py-0.5 text-xs font-semibold text-[#1d4ed8]">Alternance</span>
+								<span className="rounded-md bg-[#f3f4f6] px-2.5 py-0.5 text-xs font-medium text-[#6b7280]">{sectorLabel(category)}</span>
+							</div>
+							{description && <p className="line-clamp-2 text-sm leading-relaxed text-[#6b7280]">{description}</p>}
+						</div>
+
+						<div className="mt-auto flex items-center justify-between border-t border-[#e5e7eb] pt-3.5">
+							<span className="text-xs text-[#6b7280]">
+								{new Date(created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+							</span>
+							<Link to={`/offers/${id}`} className={`inline-flex items-center gap-1.5 rounded-xl bg-[#f9fafb] px-3.5 py-2 text-xs sm:text-sm font-semibold text-primary transition-colors hover:bg-[#dbeafe] ${focus}`}>
+								Voir l’offre<span className="sr-only"> {title}</span> <span aria-hidden="true">→</span>
+							</Link>
+						</div>
+					</li>
+				);
+			})}
 		</ul>
 		<Pagination currentPage={current} totalPages={totalPages} onPageChange={onPageChange} />
 	</>;
@@ -59,30 +90,34 @@ export function PublicOfferList({ offers, page, onPageChange, emptyMessage = "Au
 
 export function PublicOfferDetail({ offer }: { offer: PublicOffer }) {
 	return <>
-		<Link to="/offers" className="flex w-fit items-center gap-2 rounded-sm px-1 py-2 font-semibold text-primary hover:underline">
+		<Link to="/offers" className="flex w-fit items-center gap-2 rounded-sm px-1 py-1 text-sm font-semibold text-primary hover:underline">
 			<span aria-hidden="true">←</span>Retour aux offres
 		</Link>
-		<div className="grid gap-8 md:grid-cols-[380px_minmax(0,1fr)]">
-			<img src="/static/img/recruiter-offers/offer.webp" alt="Une équipe échange autour d’une table dans ses bureaux" className="h-[250px] w-full rounded-2xl object-cover" />
-			<div className="flex min-w-0 flex-col gap-3.5">
-				<h1 id="offer-detail-title" className="text-[30px] leading-tight font-semibold">{offer.title}</h1>
-				{offer.company && <Link to={`/companies/${offer.company.id}`} className="font-medium text-primary hover:underline">{offer.company.name} — voir la page entreprise</Link>}
+		<div className="grid gap-6 rounded-2xl border border-[#e5e7eb] bg-[#f9fafb] p-5 md:grid-cols-[320px_minmax(0,1fr)] md:gap-8 sm:p-6">
+			<img src="/static/img/recruiter-offers/offer.webp" alt="Une équipe échange autour d’une table dans ses bureaux" className="h-56 w-full rounded-xl object-cover" />
+			<div className="flex min-w-0 flex-col justify-center gap-3">
 				<div className="flex flex-wrap gap-2">
-					<span className="rounded-full bg-[#dbeafe] px-2.5 py-1 text-[13px] font-semibold text-[#1d4ed8]">Alternance</span>
-					<span className="rounded-full bg-[#f3f4f6] px-2.5 py-1 text-[13px] font-semibold text-[#6b7280]">{sectorLabel(offer.category)}</span>
+					<span className="rounded-full bg-[#dbeafe] px-3 py-1 text-xs font-semibold text-[#1d4ed8]">Alternance</span>
+					<span className="rounded-full bg-surface px-3 py-1 text-xs font-semibold text-[#6b7280]">{sectorLabel(offer.category)}</span>
 				</div>
-				{offer.company?.city && <p className="flex items-center gap-2 text-[16px]"><MapPinIcon className="shrink-0 text-[#6b7280]" />{offer.company.city}</p>}
-				<p className="text-[14px] text-[#6b7280]">Publiée le {new Date(offer.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</p>
+				<h1 id="offer-detail-title" className="text-2xl leading-tight font-bold sm:text-3xl">{offer.title}</h1>
+				{offer.company && <Link to={`/companies/${offer.company.id}`} className="w-fit text-sm sm:text-base font-semibold text-primary hover:underline">{offer.company.name} — voir la page entreprise</Link>}
+				<div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs sm:text-sm text-[#6b7280]">
+					{offer.company?.city && <p className="flex items-center gap-1.5"><MapPinIcon className="shrink-0 text-[#6b7280]" />{offer.company.city}</p>}
+					<p>Publiée le {new Date(offer.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</p>
+				</div>
 			</div>
 		</div>
-		<section aria-labelledby="offer-description-title" className="flex flex-col gap-3">
-			<h2 id="offer-description-title" className="text-[20px] font-semibold">Description du poste</h2>
-			<p className="whitespace-pre-wrap text-[16px] leading-normal text-[#6b7280]">{offer.description}</p>
-		</section>
-		{offer.requirements && <section aria-labelledby="offer-requirements-title" className="flex flex-col gap-3">
-			<h2 id="offer-requirements-title" className="text-[20px] font-semibold">Profil recherché</h2>
-			<p className="whitespace-pre-wrap text-[16px] leading-normal text-[#6b7280]">{offer.requirements}</p>
-		</section>}
+		<div className="grid gap-6 md:grid-cols-2">
+			<section aria-labelledby="offer-description-title" className={`flex flex-col gap-2.5 rounded-2xl border border-[#e5e7eb] bg-surface p-5 ${offer.requirements ? "" : "md:col-span-2"}`}>
+				<h2 id="offer-description-title" className="text-lg font-semibold">Description du poste</h2>
+				<p className="whitespace-pre-wrap text-sm sm:text-base leading-relaxed text-[#6b7280]">{offer.description}</p>
+			</section>
+			{offer.requirements && <section aria-labelledby="offer-requirements-title" className="flex flex-col gap-2.5 rounded-2xl border border-[#e5e7eb] bg-surface p-5">
+				<h2 id="offer-requirements-title" className="text-lg font-semibold">Profil recherché</h2>
+				<p className="whitespace-pre-wrap text-sm sm:text-base leading-relaxed text-[#6b7280]">{offer.requirements}</p>
+			</section>}
+		</div>
 	</>;
 }
 
@@ -139,19 +174,16 @@ function OfferDetailRequest({ id }: { id: string }) {
 		setActionError("");
 		setSaved(!saved);
 	};
-	return <div className="min-h-dvh bg-[#f0f0f0] px-4 pt-4 pb-16 text-[#111827] md:px-6 md:pt-[50px]">
-		{session !== null && <header>
-			{student ? <StudentNavbar /> : recruiter ? <RecruiterNavbar /> : session.ok ? null : <Navbar>
-				<div className="hidden gap-12 lg:flex"><NavbarLink to="/offers">Trouver une alternance</NavbarLink><NavbarLink to="/companies">Explorer les entreprises</NavbarLink><NavbarLink to="/pricing">Tarifs</NavbarLink></div>
-				<NavbarLink to="/signup" className="ml-auto">Inscription</NavbarLink><Button to="/login">Connexion</Button>
-			</Navbar>}
+	return <div className="flex min-h-dvh flex-col bg-[#f8fafc] text-ink">
+		{session !== null && <header className="px-4 pt-4 md:px-6 md:pt-6">
+			{student ? <StudentNavbar /> : recruiter ? <RecruiterNavbar /> : session.ok ? null : <PublicNavbar />}
 		</header>}
-		<main className="mx-auto mt-10 flex max-w-[1000px] flex-col gap-5 rounded-[25px] bg-white px-5 py-8 shadow-[0_4px_12px_rgba(0,0,0,0.1)] md:px-10 md:pt-8 md:pb-9">
+		<main className="mx-auto mt-8 mb-16 flex w-full max-w-[1000px] flex-col gap-6 rounded-2xl border border-[#e5e7eb] bg-surface px-5 py-7 shadow-xs md:px-10 md:py-8">
 			{result?.ok ? <>
 				<PublicOfferDetail offer={result.data} />
-				{actionError && <p role="alert" className="text-[15px] font-medium text-red-700">{actionError}</p>}
-				<div className="flex flex-wrap items-center gap-3">
-					{student ? <Button onClick={startApplication} disabled={applying}>{applying ? "Préparation…" : "Postuler"}</Button> : <Link to="/login" state={{ studentReturnTo: `/offers/${result.data.id}` }} className="inline-flex items-center justify-center rounded-full bg-primary px-4 py-1 text-base font-medium text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">Se connecter pour postuler</Link>}
+				{actionError && <p role="alert" className="text-sm font-medium text-red-700">{actionError}</p>}
+				<div className="flex flex-wrap items-center gap-3 border-t border-[#e5e7eb] pt-4">
+					{student ? <Button onClick={startApplication} disabled={applying}>{applying ? "Préparation…" : "Postuler"}</Button> : <Link to="/login" state={{ studentReturnTo: `/offers/${result.data.id}` }} className="inline-flex items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">Se connecter pour postuler</Link>}
 					{student ? <Button variant="outline" onClick={toggleSaved} disabled={saving}>{saving ? "Mise à jour…" : saved ? "Retirer des sauvegardées" : "Sauvegarder"}</Button> : <Button variant="outline" disabled title="Connectez-vous avec un compte étudiant pour sauvegarder cette offre">Sauvegarder</Button>}
 					<Button variant="outline" disabled title="Le signalement des offres sera disponible prochainement">Signaler l’offre</Button>
 				</div>
@@ -160,6 +192,7 @@ function OfferDetailRequest({ id }: { id: string }) {
 				{result !== null && <Button variant="outline" to="/offers">Retour aux offres</Button>}
 			</>}
 		</main>
+		<Footer />
 	</div>;
 }
 
@@ -188,47 +221,50 @@ function OffersIndexPage() {
 		setPage(1);
 	};
 	const visibleOffers = result?.ok ? filterPublicOffers(result.data, filters) : [];
+	const isStudent = session?.ok && session.user.role === 1;
 
 	return (
-		<div className="min-h-dvh bg-[#f0f0f0] px-4 pt-4 pb-16 text-[#111827] md:px-6 md:pt-[50px]">
-			{session !== null && <header>
-				{session.ok && session.user.role === 1 ? <StudentNavbar /> : session.ok && session.user.role === 3 ? <RecruiterNavbar /> : session.ok ? null : <Navbar>
-					<div className="hidden gap-12 lg:flex">
-						<NavbarLink to="/offers">Trouver une alternance</NavbarLink>
-						<NavbarLink to="/companies">Explorer les entreprises</NavbarLink>
-						<NavbarLink to="/pricing">Tarifs</NavbarLink>
-					</div>
-					<NavbarLink to="/signup" className="ml-auto">Inscription</NavbarLink>
-					<Button to="/login">Connexion</Button>
-				</Navbar>}
-			</header>}
+		<div className="flex min-h-dvh flex-col bg-[#f8fafc] text-ink">
+			<div className={isStudent ? "" : "hero-mesh border-b border-[#e5e7eb]"}>
+				{session !== null && <header className="px-4 pt-4 md:px-6 md:pt-6">
+					{isStudent ? <StudentNavbar /> : session.ok && session.user.role === 3 ? <RecruiterNavbar /> : session.ok ? null : <PublicNavbar variant="glass" />}
+				</header>}
 
-			{session?.ok && session.user.role === 1 ? result?.ok ? <StudentOfferSwipe offers={result.data} /> : <main className="mx-auto mt-10 max-w-[1236px]"><PublicOfferRequestState result={result} retry={() => { setResult(null); setAttempt((value) => value + 1); }} /></main> : <main className="mx-auto mt-10 flex max-w-[1236px] flex-col gap-[22px] leading-[normal]">
-				<div className="flex flex-col gap-1.5">
-					<h1 className="text-[40px] font-bold">Trouver une alternance</h1>
-					{result?.ok && <p className="text-[17px] text-[#6b7280]">{visibleOffers.length} offres d’alternance publiées par des entreprises partenaires.</p>}
-				</div>
-				<form role="search" onSubmit={onSearch} className="flex flex-col gap-3 md:flex-row md:items-start">
-					<label className={`${field} md:flex-1`}>
-						<SearchIcon width={20} height={20} className="shrink-0 text-gray-500" />
-						<span className="sr-only">Poste, compétence ou entreprise</span>
-						<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Poste, compétence ou entreprise" className={input} />
-					</label>
-					<label className={`${field} md:w-[260px]`}>
-						<span className="sr-only">Ville ou code postal</span>
-						<input value={city} onChange={(event) => setCity(event.target.value)} placeholder="Ville ou code postal" className={input} />
-						<MapPinIcon className="shrink-0 text-gray-500" />
-					</label>
-					<label className="relative md:w-[220px]">
-						<span className="sr-only">Secteur</span>
-						<select value={sector} onChange={(event) => setSector(event.target.value)} className={select}>
-							<option value="">Secteur</option>
-							{SECTOR_OPTIONS.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
-						</select>
-						<ChevronDownIcon width={20} height={20} className="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-gray-500" />
-					</label>
-					<button type="submit" className={searchButton}>Rechercher</button>
-				</form>
+				{!isStudent && (
+					<div className="mx-auto flex max-w-[1236px] flex-col gap-6 px-4 pt-8 pb-10 md:px-6 md:pt-10 md:pb-12">
+						<div className="flex flex-col gap-2">
+							<span className="w-fit rounded-full bg-[#dbeafe] px-3 py-1 text-xs font-semibold text-[#1d4ed8]">
+								 Opportunités d’alternance
+							</span>
+							<h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">Trouver une alternance</h1>
+							{result?.ok && <p className="text-sm sm:text-base text-[#6b7280]">{visibleOffers.length} offres d’alternance publiées par des entreprises partenaires.</p>}
+						</div>
+						<form role="search" onSubmit={onSearch} className="flex flex-col gap-2.5 rounded-2xl border border-[#e5e7eb] bg-surface p-2.5 shadow-md md:flex-row md:items-center">
+							<label className={`${field} border-transparent bg-[#f9fafb] md:flex-1`}>
+								<SearchIcon width={20} height={20} className="shrink-0 text-gray-500" />
+								<span className="sr-only">Poste, compétence ou entreprise</span>
+								<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Poste, compétence ou entreprise" className={input} />
+							</label>
+							<label className={`${field} border-transparent bg-[#f9fafb] md:w-[240px]`}>
+								<span className="sr-only">Ville ou code postal</span>
+								<input value={city} onChange={(event) => setCity(event.target.value)} placeholder="Ville ou code postal" className={input} />
+								<MapPinIcon className="shrink-0 text-gray-500" />
+							</label>
+							<label className="relative md:w-[220px]">
+								<span className="sr-only">Secteur</span>
+								<select value={sector} onChange={(event) => setSector(event.target.value)} className={`${select} border-transparent bg-[#f9fafb]`}>
+									<option value="">Secteur</option>
+									{SECTOR_OPTIONS.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+								</select>
+								<ChevronDownIcon width={20} height={20} className="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-gray-500" />
+							</label>
+							<button type="submit" className={searchButton}>Rechercher</button>
+						</form>
+					</div>
+				)}
+			</div>
+
+			{isStudent ? result?.ok ? <div className="px-4 md:px-6"><StudentOfferSwipe offers={result.data} /></div> : <main className="mx-auto mt-8 w-full max-w-[1236px] flex-1 px-4 pb-16 md:px-6"><PublicOfferRequestState result={result} retry={() => { setResult(null); setAttempt((value) => value + 1); }} /></main> : <main className="mx-auto mt-8 flex w-full max-w-[1236px] flex-1 flex-col gap-6 px-4 pb-16 md:px-6">
 				{session !== null && !session.ok && <LoginBanner actions>Connecte-toi pour swiper les offres, les sauvegarder et postuler en un clic.</LoginBanner>}
 				{result?.ok ? <>
 					<p className="sr-only" aria-live="polite">{visibleOffers.length} offres correspondent à votre recherche.</p>
@@ -240,6 +276,7 @@ function OffersIndexPage() {
 					/>
 				</> : <PublicOfferRequestState result={result} retry={() => { setResult(null); setPage(1); setAttempt((value) => value + 1); }} />}
 			</main>}
+			<Footer />
 		</div>
 	);
 }

@@ -34,14 +34,14 @@ test("navigation partagée : menu mobile, page active, rubriques indisponibles e
 	assert.match(html, /aria-expanded="false"/);
 	assert.match(html, /aria-current="page"/);
 	assert.match(html, /aria-disabled="true" title="Bientôt disponible"/);
-	assert.match(html, /Déconnexion/);
+	assert.match(html, /Se déconnecter/);
 	assert.doesNotMatch(html, /href="\/administration\/(account|companies|schools)"/);
 	const student = render(<StudentNavbar />);
 	assert.match(student, /href="\/student"/);
 	assert.match(student, /href="\/applications"/);
 	assert.match(student, /aria-expanded="false"/);
 	// Every role logs out from the account menu of AccountNavbar
-	assert.match(student, /Déconnexion/);
+	assert.match(student, /Se déconnecter/);
 });
 
 test("tableau : colonnes, identité, école, date française et flèche vers la fiche", () => {

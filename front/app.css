@@ -17,13 +17,405 @@
 }
 
 @theme {
-  /* Mockup colors */
-  --color-primary: #007fff; /* JobUp blue (azure): buttons, "Up" in the logo */
-  --color-on-primary: #ffffff; /* text on a blue background */
-  --color-surface: #ffffff; /* page background */
-  --color-ink: #000000; /* main text */
+  --color-primary: #2563eb;
+  --color-on-primary: #ffffff;
+  --color-surface: #ffffff;
+  --color-ink: #0f172a;
 
-  /* Mockup fonts */
-  --font-sans: "League Spartan", ui-sans-serif, system-ui, sans-serif; /* body text, navigation, buttons */
-  --font-display: "Cormorant Garamond", ui-serif, Georgia, serif; /* large headings */
+  /* Modern UI fonts */
+  --font-sans: "Inter", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Shared design tokens for public, student, recruiter, and administration pages (Light mode). */
+:root,
+:root[data-theme="light"] {
+  --color-primary: #2563eb;
+  --color-on-primary: #ffffff;
+  --color-surface: #ffffff;
+  --color-ink: #0f172a;
+  --hero-gradient: radial-gradient(circle at 15% 20%, rgb(37 99 235 / 10%), transparent 45%),
+    radial-gradient(circle at 85% 15%, rgb(99 102 241 / 10%), transparent 40%),
+    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  margin: 0;
+  background: #f8fafc;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.5;
+  transition: background-color 220ms ease, color 220ms ease;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  letter-spacing: -0.025em;
+}
+
+input, select, textarea {
+  max-width: 100%;
+  font-family: inherit;
+}
+
+button, a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Modern decorative mesh backgrounds */
+.hero-mesh {
+  background-image: var(--hero-gradient);
+}
+
+.auth-mesh {
+  background: radial-gradient(circle at 20% 20%, rgb(96 165 250 / 28%), transparent 45%),
+    radial-gradient(circle at 80% 80%, rgb(129 140 248 / 25%), transparent 50%),
+    linear-gradient(135deg, #0f172a 0%, #1e3a8a 55%, #1d4ed8 100%);
+}
+
+/* Keyframe animations */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes float-slow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.65;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  main {
+    animation: fade-up 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  main > section:nth-of-type(1) {
+    animation: fade-up 420ms cubic-bezier(0.22, 1, 0.36, 1) 40ms both;
+  }
+
+  main > section:nth-of-type(2) {
+    animation: fade-up 460ms cubic-bezier(0.22, 1, 0.36, 1) 90ms both;
+  }
+
+  main > section:nth-of-type(3) {
+    animation: fade-up 500ms cubic-bezier(0.22, 1, 0.36, 1) 140ms both;
+  }
+
+  main > section:nth-of-type(4) {
+    animation: fade-up 540ms cubic-bezier(0.22, 1, 0.36, 1) 190ms both;
+  }
+
+  .animate-fade-up {
+    animation: fade-up 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .animate-scale-in {
+    animation: scale-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .animate-float {
+    animation: float-slow 5s ease-in-out infinite;
+  }
+
+  dialog[open] {
+    animation: scale-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+/* Floating Light / Dark theme toggle */
+.theme-toggle {
+  position: fixed;
+  z-index: 50;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.75rem;
+  padding: 0 0.95rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 92%);
+  backdrop-filter: blur(12px);
+  color: #0f172a;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  box-shadow: 0 10px 28px rgb(15 23 42 / 14%);
+  cursor: pointer;
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1), background-color 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+}
+
+.theme-toggle:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px rgb(15 23 42 / 20%);
+}
+
+.theme-toggle:active {
+  transform: translateY(0) scale(0.97);
+}
+
+.theme-toggle svg {
+  transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.theme-toggle:hover svg {
+  transform: rotate(15deg) scale(1.08);
+}
+
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+/* Dark mode tokens and surface mappings */
+:root[data-theme="dark"] {
+  --color-primary: #3b82f6;
+  --color-on-primary: #ffffff;
+  --color-surface: #111827;
+  --color-ink: #f8fafc;
+  --hero-gradient: radial-gradient(circle at 15% 20%, rgb(59 130 246 / 16%), transparent 45%),
+    radial-gradient(circle at 85% 15%, rgb(99 102 241 / 14%), transparent 40%),
+    linear-gradient(180deg, #0b1120 0%, #0f172a 100%);
+  color-scheme: dark;
+}
+
+[data-theme="dark"] body {
+  background: #0b1120;
+}
+
+[data-theme="dark"] .theme-toggle {
+  background: rgb(30 41 59 / 92%);
+  color: #f8fafc;
+  border-color: #334155;
+  box-shadow: 0 10px 28px rgb(0 0 0 / 50%);
+}
+
+/* Map neutral surfaces, muted backgrounds, text, and borders in dark mode */
+[data-theme="dark"] :is(.bg-white, .bg-surface) {
+  background-color: #111827;
+}
+
+[data-theme="dark"] :is([class~="bg-surface/85"], [class~="bg-surface/90"], [class~="bg-white/85"], [class~="bg-white/90"]) {
+  background-color: rgb(17 24 39 / 88%);
+}
+
+[data-theme="dark"] :is([class~="bg-[#f0f0f0]"], [class~="bg-[#F0F0F0]"], [class~="bg-[#f8fafc]"]) {
+  background-color: #0b1120;
+}
+
+[data-theme="dark"] :is([class~="bg-[#f9fafb]"], [class~="bg-[#F9FAFB]"], [class~="bg-[#f3f4f6]"], [class~="bg-[#f1f3f6]"], [class~="bg-[#f8f9fb]"], [class~="bg-[#e5e7eb]"], [class~="bg-[#E5E7EB]"], .bg-slate-50, .bg-slate-100, .bg-gray-50, .bg-gray-100) {
+  background-color: #1e293b;
+}
+
+[data-theme="dark"] :is([class~="bg-[#f6faff]"], [class~="bg-[#eff6ff]"]) {
+  background-color: #172554;
+}
+
+[data-theme="dark"] :is([class~="text-[#111827]"], [class~="text-[#151a29]"], [class~="text-[#0f172a]"], .text-black, .text-slate-900, .text-gray-900) {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] :is([class~="text-[#6b7280]"], [class~="text-[#6B7280]"], [class~="text-[#6c7386]"], [class~="text-[#4b5563]"], [class~="text-[#475569]"], .text-gray-500, .text-gray-400, .text-slate-600, .text-slate-500) {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] :is([class~="border-[#d1d5db]"], [class~="border-[#D1D5DB]"], [class~="border-[#e5e7eb]"], [class~="border-[#E5E7EB]"], [class~="border-[#e1e3e8]"], [class~="border-[#e2e8f0]"], [class~="border-[#cfd4de]"], .border-gray-200, .border-gray-300, .border-slate-200) {
+  border-color: #334155;
+}
+
+[data-theme="dark"] [class~="inset-ring-[#cfd4de]"] {
+  --tw-inset-ring-color: #334155;
+}
+
+[data-theme="dark"] :is([class~="bg-[#dae8ff]"], [class~="bg-[#dbeafe]"], [class~="bg-[#dcedfc]"], .bg-blue-50, .bg-blue-100) {
+  background-color: #1e3a8a;
+}
+
+[data-theme="dark"] :is([class~="text-[#1950ff]"], [class~="text-[#1d4ed8]"], .text-blue-800) {
+  color: #93c5fd;
+}
+
+[data-theme="dark"] :is([class~="bg-[#fef2f2]"], .bg-red-50) {
+  background-color: #451a1a;
+}
+
+[data-theme="dark"] :is([class~="bg-[#dcfce7]"], [class~="bg-[#ecfdf3]"], .bg-emerald-50) {
+  background-color: #064e3b;
+}
+
+[data-theme="dark"] [class~="bg-[#fef3c7]"] {
+  background-color: #451a03;
+}
+
+[data-theme="dark"] :is([class~="text-[#DC2626]"], [class~="text-[#dc2626]"], [class~="text-[#b91c1c]"], [class~="text-[#e00000]"], .text-red-700, .text-red-600) {
+  color: #fca5a5;
+}
+
+[data-theme="dark"] :is([class~="text-[#15803d]"], [class~="text-[#16803d]"], [class~="text-[#166534]"]) {
+  color: #6ee7b7;
+}
+
+[data-theme="dark"] :is([class~="text-[#b45309]"], [class~="text-[#92400e]"]) {
+  color: #fcd34d;
+}
+
+[data-theme="dark"] img[src$="JobUp_logo.svg"] {
+  filter: brightness(0) invert(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Consistent type scale and comfortable reading across the application. */
+main h1:not(.hero-title) {
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+main h2:not(.section-display) {
+  font-size: clamp(1.125rem, 1.8vw, 1.25rem);
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+main h3 {
+  line-height: 1.4;
+}
+
+main p {
+  line-height: 1.6;
+}
+
+main {
+  min-width: 0;
+}
+
+.public-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+@media (max-width: 639px) {
+  main h1 {
+    overflow-wrap: anywhere;
+  }
+  .theme-toggle {
+    right: 0.875rem;
+    bottom: 0.875rem;
+    padding: 0 0.75rem;
+  }
+}
+
+/* The bell asset has a dark stroke and needs contrast on the dark navigation. */
+[data-theme="dark"] .notification-bell-icon { filter: brightness(0) invert(1); }
+
+/* Match the reference card while keeping the site's saved theme preference. */
+[data-theme="dark"] .home-job-preview {
+  background: #121a28 !important;
+  border-color: #334155 !important;
+  color: #f1f5f9;
+}
+[data-theme="dark"] .home-job-preview :is(.bg-\[\#f3f4f6\], .bg-\[\#f9fafb\]) {
+  background-color: #202b3d;
+}
+[data-theme="dark"] .home-job-preview [class~="bg-[#eff6ff]"] { background-color: #1c2b5a; }
+[data-theme="dark"] .home-job-preview [class~="bg-[#dbeafe]"] { background-color: #263f78; }
+[data-theme="dark"] .home-job-preview [class~="bg-[#dcfce7]"] { background-color: #194b3b; }
+[data-theme="dark"] .home-job-preview [class~="text-[#15803d]"] { color: #8ce0b5; }
+
+.theme-toggle { right: 1.25rem; bottom: 1.25rem; }
+[data-theme="dark"] .theme-toggle { border-color: #3b4960; background: #1d293b; color: #eef4ff; }
+
+@media (max-width: 1023px) {
+  .account-nav-hover { gap: .5rem; }
+}
+[data-theme="dark"] .home-job-preview { background:#121a28 !important; border-color:#334155 !important; color:#f1f5f9; }
+[data-theme="dark"] .home-job-preview [class~="bg-[#eff6ff]"] { background:#1c2b5a; }
+[data-theme="dark"] .home-job-preview [class~="bg-[#dbeafe]"] { background:#263f78; }
+[data-theme="dark"] .home-job-preview [class~="bg-[#dcfce7]"] { background:#194b3b; }
+[data-theme="dark"] .home-job-preview [class~="text-[#15803d]"] { color:#8ce0b5; }
+
+/* Task navigation sits beside the brand; account tools form a distinct group. */
+.jobup-navigation { min-height: 76px; border-radius: 14px; gap: 2rem; }
+.account-navigation > .relative:has(> button[aria-label="Compte utilisateur"]) { margin-left: .5rem; padding-left: 1rem; border-left: 1px solid #cbd5e1; }
+.account-navigation .theme-toggle { width: 40px !important; min-width: 40px; padding: 0 !important; }
+.account-navigation .theme-toggle span { display: none; }
+#app > .theme-toggle:has(~ *) { display: none !important; }
+#app:not(:has(.account-navigation)) > .theme-toggle { display: inline-flex !important; position: fixed !important; bottom: 1rem; right: 1rem; z-index: 50 !important; }
+@media (max-width: 1023px) {
+ .account-navigation { flex: initial; }
+ .jobup-navigation { gap: 1rem; min-height: 64px; }
+}
+
+/* Keep navigation menus above animated cards and page panels. */
+header:has(.jobup-navigation) { position: relative; z-index: 40; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .landing-page main,
+  .landing-page main > section { animation: none; }
+  .landing-page [aria-labelledby="home-hero-title"] > div:first-child > * {
+    animation: fade-up 700ms cubic-bezier(.22,1,.36,1) both;
+  }
+  .landing-page [aria-labelledby="home-hero-title"] > div:first-child > :nth-child(2) { animation-delay: 80ms; }
+  .landing-page [aria-labelledby="home-hero-title"] > div:first-child > :nth-child(3) { animation-delay: 160ms; }
+  .landing-page [aria-labelledby="home-hero-title"] > div:first-child > :nth-child(n+4) { animation-delay: 240ms; }
+  .landing-page .home-job-preview { animation: fade-up 900ms cubic-bezier(.22,1,.36,1) 160ms both, float-slow 7s ease-in-out 1.1s infinite; }
+  .landing-page .reveal-on-scroll { opacity: 0; transform: translateY(24px); transition: opacity 700ms ease, transform 700ms cubic-bezier(.22,1,.36,1); }
+  .landing-page .reveal-on-scroll.is-revealed { opacity: 1; transform: none; }
+  .landing-page a { transition: background-color 180ms ease, box-shadow 180ms ease, border-color 180ms ease, transform 180ms ease; }
+  .landing-page a:hover { transform: translateY(-2px); }
+  .landing-page a:active { transform: translateY(0); }
+  .landing-page article { transition: transform 250ms ease, box-shadow 250ms ease; }
+  .landing-page article:hover { transform: translateY(-5px); box-shadow: 0 14px 30px rgb(15 23 42 / 12%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-page *, .landing-page *::before, .landing-page *::after { animation: none !important; transition: none !important; }
+  .landing-page .reveal-on-scroll { opacity: 1; transform: none; }
+}
+
+.public-theme-control .theme-toggle { width: 40px !important; min-width: 40px; padding: 0 !important; }
+.public-theme-control .theme-toggle span { display: none; }
+@media (max-width: 639px) {
+ .jobup-navigation:has(.public-menu) { gap: .5rem; }
 }

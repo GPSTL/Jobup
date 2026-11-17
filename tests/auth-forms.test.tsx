@@ -3,6 +3,13 @@ import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import Inscription from "../front/pages/Inscription";
+import Connexion from "../front/pages/Connexion";
+import HomePage from "../front/pages/HomePage";
+import StudentPage from "../front/pages/StudentPage";
+import SchoolPage from "../front/pages/SchoolPage";
+import ComingSoonPage from "../front/pages/ComingSoonPage";
+import NotFoundPage from "../front/pages/NotFoundPage";
+import ThemeToggle from "../front/components/ThemeToggle";
 
 function renderSignup(role: string) {
 	return renderToStaticMarkup(<MemoryRouter initialEntries={[`/signup?role=${role}`]}><Inscription /></MemoryRouter>);
@@ -34,4 +41,41 @@ test("school and company selections preserve role and use the same enabled form"
 
 test("an unknown role falls back to student", () => {
 	assert.match(renderSignup("admin"), /<input(?=[^>]*value="student")(?=[^>]*checked)[^>]*>/);
+});
+
+test("landing and role pages render modern sections, navigation, footer and theme toggle", () => {
+	const home = renderToStaticMarkup(<MemoryRouter><HomePage /></MemoryRouter>);
+	assert.match(home, /Ton succès commence/);
+	assert.match(home, /Un parcours pensé pour chaque acteur/);
+	assert.match(home, /Comment fonctionne JobUp \?/);
+	assert.match(home, /href="\/students"/);
+	assert.match(home, /href="\/schools"/);
+	assert.match(home, /href="\/offers"/);
+	assert.match(home, /aria-label="Pied de page"/);
+
+	const student = renderToStaticMarkup(<MemoryRouter><StudentPage /></MemoryRouter>);
+	assert.match(student, /Pour les étudiants/);
+	assert.match(student, /href="\/signup\?role=student"/);
+	assert.match(student, /aria-label="Pied de page"/);
+
+	const school = renderToStaticMarkup(<MemoryRouter><SchoolPage /></MemoryRouter>);
+	assert.match(school, /Pour les écoles et CFA/);
+	assert.match(school, /href="\/signup\?role=school"/);
+	assert.match(school, /aria-label="Pied de page"/);
+
+	const toggle = renderToStaticMarkup(<ThemeToggle />);
+	assert.match(toggle, /aria-label="Activer le mode sombre"/);
+	assert.match(toggle, /Sombre/);
+
+	const login = renderToStaticMarkup(<MemoryRouter><Connexion /></MemoryRouter>);
+	assert.match(login, /Connexion/);
+	assert.match(login, /Espace membre/);
+
+	const comingSoon = renderToStaticMarkup(<MemoryRouter><ComingSoonPage /></MemoryRouter>);
+	assert.match(comingSoon, /Bientôt disponible/);
+	assert.match(comingSoon, /aria-label="Pied de page"/);
+
+	const notFound = renderToStaticMarkup(<MemoryRouter><NotFoundPage /></MemoryRouter>);
+	assert.match(notFound, /404/);
+	assert.match(notFound, /aria-label="Pied de page"/);
 });

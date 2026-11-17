@@ -6,28 +6,28 @@ type FieldProps = {
 	error?: string;
 	/** Champ en rouge sans message sous lui (ex. : message commun affiché sous un autre champ) */
 	invalid?: boolean;
-	/** The <input> or <select> */
+	/** The <input>, <select> or <textarea> */
 	children: ReactElement<{ className?: string }>;
 	/** Extra classes on the wrapper, e.g. spacing */
 	className?: string;
 };
 
 const control = [
-	"h-[34px] w-full rounded-[10px] border-[1.5px] bg-[#F0F0F0] px-3 text-sm text-ink outline-none",
-	"transition-colors duration-150",
+	"min-h-11 w-full rounded-xl border bg-surface px-3.5 py-2.5 text-sm sm:text-base text-ink outline-none",
+	"transition-colors duration-150 placeholder:text-[#9ca3af]",
 ].join(" ");
 
 const states = {
-	normal: "border-transparent focus:border-primary focus:bg-surface",
-	error: "border-[#DC2626]",
+	normal: "border-[#d1d5db] focus:border-primary focus:ring-2 focus:ring-primary/20",
+	error: "border-[#DC2626] focus:border-[#DC2626] focus:ring-2 focus:ring-[#DC2626]/20",
 };
 
 // Label + input/select + error message under it
 export default function Field({ id, label, error, invalid = false, children, className = "" }: FieldProps) {
 	const isInvalid = invalid || !!error;
 	return (
-		<div className={`flex flex-col gap-[5px] ${className}`}>
-			<label htmlFor={id} className="text-xs leading-[15px]">
+		<div className={`flex flex-col gap-1.5 ${className}`}>
+			<label htmlFor={id} className="text-sm font-medium text-ink">
 				{label}
 			</label>
 			{cloneElement(children, {
@@ -37,7 +37,7 @@ export default function Field({ id, label, error, invalid = false, children, cla
 				className: `${control} ${isInvalid ? states.error : states.normal} ${children.props.className ?? ""}`,
 			} as object)}
 			{error && (
-				<p id={`${id}-error`} className="text-xs leading-3 font-medium text-[#DC2626]">
+				<p id={`${id}-error`} className="text-xs font-medium text-[#DC2626]">
 					{error}
 				</p>
 			)}
