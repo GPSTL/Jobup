@@ -6,13 +6,13 @@ import Logo from "./Logo";
 type NavbarProps = {
 	/** Links and buttons shown after the logo. Give an item `ml-auto` to push it and the next ones to the right. */
 	children: ReactNode;
-	/** "glass": translucent, over a photo (home page). "solid": white (app pages). */
+	/** "glass": translucent backdrop blur. "solid": surface with subtle border. */
 	variant?: "glass" | "solid";
 };
 
 const variants = {
-	glass: "bg-surface/40 backdrop-blur-md border border-surface/50",
-	solid: "bg-surface border border-transparent shadow-[0_4px_12px_rgba(0,0,0,0.1)]",
+	glass: "bg-surface/85 backdrop-blur-md border border-[#e5e7eb] shadow-xs",
+	solid: "bg-surface/90 backdrop-blur-md border border-[#e5e7eb] shadow-xs",
 };
 
 // Shared by every navigation bar: logo on the left, content given by the page.
@@ -20,7 +20,7 @@ export default function Navbar({ children, variant = "solid" }: NavbarProps) {
 	return (
 		<nav
 			aria-label="Navigation principale"
-			className={`mx-auto flex w-full max-w-[1236px] items-center gap-4 rounded-full px-4 py-3 text-ink md:gap-8 md:px-8 md:py-4 ${variants[variant]}`}
+			className={`jobup-navigation relative z-30 mx-auto flex w-full max-w-[1236px] items-center gap-4 rounded-2xl border border-[#d8e0ec] px-4 py-3 text-sm font-medium text-ink shadow-[0_8px_24px_rgba(15,23,42,0.08)] md:gap-6 md:px-6 md:py-3.5 ${variants[variant]}`}
 		>
 			<Logo />
 			{children}
@@ -36,15 +36,15 @@ type NavbarLinkProps = {
 };
 
 export const navbarItemClass = [
-	"inline-flex items-center whitespace-nowrap rounded-full px-3 py-2 -mx-3 -my-2",
-	"motion-safe:transition-colors motion-safe:duration-200",
-	"focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary",
+	"inline-flex items-center whitespace-nowrap rounded-xl px-3.5 py-2 text-sm font-medium",
+	"motion-safe:transition-all motion-safe:duration-150",
+	"focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
 ].join(" ");
 
 const linkStates = {
-	idle: "hover:bg-surface/60 focus-visible:bg-surface/60",
+	idle: "text-[#4b5563] hover:bg-[#f3f4f6] hover:text-ink focus-visible:bg-[#f3f4f6]",
 	// Current page: blue pill
-	active: "bg-primary text-on-primary",
+	active: "bg-primary/10 font-semibold text-primary",
 };
 
 /** Text link of a navigation bar. Highlighted when it leads to the current page. */

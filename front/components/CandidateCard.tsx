@@ -7,7 +7,7 @@ import type { CandidateSummary } from "../services/candidates";
 import { fullName } from "../utils/candidates";
 import { focus } from "../utils/searchPageStyles";
 
-const cardLink = `w-fit underline underline-offset-4 ${focus}`;
+const cardLink = `w-fit text-sm font-semibold text-primary hover:underline underline-offset-4 ${focus}`;
 
 // Card of a candidate, as in the mockups "Tri des candidats (cartes)" and "Swipe – carte 2".
 // A click anywhere on the card opens the profile: the "Consulter le profil" link stretches over the
@@ -30,23 +30,23 @@ export default function CandidateCard({ candidate, onKeep, keeping = false, onEx
 	// Recherche en cours (critères des filtres, JOB-036), reprise par « Retour aux candidats » sur le profil
 	const { search } = useLocation();
 	return (
-		<article className="relative flex min-h-[540px] flex-col items-center rounded-[20px] bg-surface px-6 pt-9 pb-10 shadow-[0_4px_12px_rgba(0,0,0,0.1)] sm:px-18">
-			<h2 className="text-center text-[32px] leading-tight font-semibold">{fullName(candidate)}</h2>
-			<p className="mt-3 text-center text-xl leading-tight font-medium">
+		<article className="animate-scale-in relative flex min-h-[520px] flex-col items-center rounded-2xl border border-[#e5e7eb] bg-surface px-6 pt-8 pb-8 shadow-xs motion-safe:transition-shadow hover:shadow-md sm:px-10">
+			<h2 className="text-center text-2xl leading-tight font-bold text-ink">{fullName(candidate)}</h2>
+			<p className="mt-1.5 text-center text-sm sm:text-base font-medium text-[#6b7280]">
 				<EducationLine candidate={candidate} />
 			</p>
-			<CandidateAvatar candidate={candidate} className="mt-5 size-[164px] text-5xl ring-4 ring-[#dae8ff]" />
+			<CandidateAvatar candidate={candidate} className="mt-5 size-36 text-4xl ring-4 ring-[#dbeafe]" />
 
 			{/* The whole presentation is on the profile */}
-			<p className={`mt-6 line-clamp-6 self-stretch text-xl leading-tight ${candidate.description ? "" : "text-[#6b7280]"}`}>
+			<p className={`mt-5 line-clamp-5 self-stretch text-sm sm:text-base leading-relaxed ${candidate.description ? "text-ink" : "text-[#6b7280]"}`}>
 				{candidate.description || "Présentation non renseignée."}
 			</p>
 
-			<div className="mt-5 flex flex-col gap-4 self-stretch text-xl font-medium">
+			<div className="mt-4 flex flex-col gap-2.5 self-stretch">
 				<Link
 					to={`/recruiter/candidates/${candidate.id}`}
 					state={{ candidatesSearch: search }}
-					className={`${cardLink} after:absolute after:inset-0 after:rounded-[20px]`}
+					className={`${cardLink} after:absolute after:inset-0 after:rounded-2xl`}
 				>
 					Consulter le profil
 				</Link>
@@ -55,22 +55,22 @@ export default function CandidateCard({ candidate, onKeep, keeping = false, onEx
 						Télécharger le CV
 					</a>
 				) : (
-					<p className="text-[#6b7280]">CV non fourni</p>
+					<p className="text-sm text-[#6b7280]">CV non fourni</p>
 				)}
 			</div>
 
 			{(onKeep || onExclude) && (
 				// Deux colonnes comme la maquette : 🚫 à gauche (JOB-038), ♥ à droite (JOB-037) ; au-dessus du lien étiré sur la carte
-				<div className="relative z-10 mt-auto grid w-full grid-cols-2 place-items-center pt-8">
+				<div className="relative z-10 mt-auto grid w-full grid-cols-2 place-items-center border-t border-[#e5e7eb] pt-5">
 					{onExclude && (
 						<button
 							type="button"
 							aria-label={`Écarter ${fullName(candidate)}`}
 							aria-disabled={busy}
 							onClick={() => !busy && onExclude()}
-							className={`col-start-1 flex size-14 cursor-pointer items-center justify-center rounded-full text-[#b91c1c] hover:bg-[#b91c1c]/10 aria-disabled:cursor-wait aria-disabled:opacity-60 ${focus}`}
+							className={`col-start-1 flex size-12 cursor-pointer items-center justify-center rounded-full border border-[#e5e7eb] text-[#b91c1c] transition-colors hover:bg-[#b91c1c]/10 aria-disabled:cursor-wait aria-disabled:opacity-60 ${focus}`}
 						>
-							<BanIcon width={40} height={40} />
+							<BanIcon width={28} height={28} />
 						</button>
 					)}
 					{onKeep && (
@@ -79,9 +79,9 @@ export default function CandidateCard({ candidate, onKeep, keeping = false, onEx
 							aria-label={`Retenir ${fullName(candidate)}`}
 							aria-disabled={busy}
 							onClick={() => !busy && onKeep()}
-							className={`col-start-2 flex size-14 cursor-pointer items-center justify-center rounded-full text-primary hover:bg-primary/10 aria-disabled:cursor-wait aria-disabled:opacity-60 ${focus}`}
+							className={`col-start-2 flex size-12 cursor-pointer items-center justify-center rounded-full border border-[#e5e7eb] text-primary transition-colors hover:bg-primary/10 aria-disabled:cursor-wait aria-disabled:opacity-60 ${focus}`}
 						>
-							<HeartIcon width={40} height={40} fill="currentColor" />
+							<HeartIcon width={28} height={28} fill="currentColor" />
 						</button>
 					)}
 				</div>

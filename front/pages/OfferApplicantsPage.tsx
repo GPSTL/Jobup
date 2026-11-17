@@ -23,32 +23,32 @@ export function OfferApplicantsContent({ data }: { data: OfferApplicants }) {
 	const visible = data.applications.filter((application) => matches(application.status));
 	return (
 		<>
-			<header className="flex flex-col gap-1.5">
-				<h1 className="text-[30px] leading-tight font-semibold">{data.offer.title}</h1>
-				<p className="text-[#6b7280]">{data.applications.length} candidature{data.applications.length === 1 ? "" : "s"} • Publiée le {formatDate(data.offer.created_at)}{!data.offer.is_active && " • Offre clôturée"}</p>
+			<header className="flex flex-col gap-1">
+				<h1 className="text-2xl leading-tight font-bold sm:text-3xl">{data.offer.title}</h1>
+				<p className="text-sm text-[#6b7280]">{data.applications.length} candidature{data.applications.length === 1 ? "" : "s"} • Publiée le {formatDate(data.offer.created_at)}{!data.offer.is_active && " • Offre clôturée"}</p>
 			</header>
 			<div role="group" aria-label="Filtrer les candidatures par statut" className="flex flex-wrap gap-2">
 				{applicantFilters.map((filter) => (
-					<button key={filter.key} type="button" aria-pressed={filter === selected} onClick={() => { const next = new URLSearchParams(params); next.set("status", filter.key); setParams(next, { replace: true }); }} className={`cursor-pointer rounded-full border px-4 py-2.5 text-[15px] ${filter === selected ? "border-primary bg-[#dbeafe] font-semibold text-primary" : "border-[#d1d5db] bg-surface hover:bg-slate-50"} ${focus}`}>
+					<button key={filter.key} type="button" aria-pressed={filter === selected} onClick={() => { const next = new URLSearchParams(params); next.set("status", filter.key); setParams(next, { replace: true }); }} className={`cursor-pointer rounded-full border px-4 py-2 text-xs sm:text-sm ${filter === selected ? "border-primary bg-[#dbeafe] font-semibold text-primary" : "border-[#d1d5db] bg-surface hover:bg-[#f9fafb]"} ${focus}`}>
 						{filter.label} ({data.applications.filter(({ status }) => filter.statuses.length === 0 || filter.statuses.includes(status)).length})
 					</button>
 				))}
 			</div>
 			{visible.length === 0 ? (
-				<p role="status" className="rounded-2xl border border-[#e5e7eb] bg-[#f9fafb] p-5">{data.applications.length === 0 ? "Aucune candidature pour cette offre pour le moment." : "Aucune candidature avec ce statut."}</p>
+				<p role="status" className="rounded-2xl border border-[#e5e7eb] bg-[#f9fafb] p-5 text-sm text-[#6b7280]">{data.applications.length === 0 ? "Aucune candidature pour cette offre pour le moment." : "Aucune candidature avec ce statut."}</p>
 			) : (
 				<ul aria-label="Candidats ayant postulé" className="flex flex-col gap-2.5">
 					{visible.map(({ id, candidate, status, submitted_at }) => (
 						<li key={id} className="flex flex-wrap items-center gap-4 rounded-2xl border border-[#e5e7eb] bg-[#f9fafb] px-5 py-3.5">
 							<CandidateAvatar candidate={candidate} className="size-11 text-base" />
 							<div className="min-w-0 flex-1 basis-40 lg:max-w-[314px]">
-								<h2 className="text-[17px] font-semibold break-words">{fullName(candidate)}</h2>
-								<p className="text-sm text-[#6b7280]"><EducationLine candidate={candidate} /></p>
+								<h2 className="text-base font-semibold break-words">{fullName(candidate)}</h2>
+								<p className="text-xs sm:text-sm text-[#6b7280]"><EducationLine candidate={candidate} /></p>
 							</div>
-							<p className="text-sm text-[#6b7280]">Reçue le <time dateTime={submitted_at}>{formatDate(submitted_at)}</time></p>
-							<span className={`rounded-full px-2.5 py-[5px] text-[13px] font-semibold ${statusChip(status).className}`}>{statusChip(status).label}</span>
-							<Link to={`/recruiter/applications/${id}`} className={`font-semibold text-primary ${focus}`}>Ouvrir la candidature</Link>
-							<Link to={`/recruiter/candidates/${candidate.id}?offer=${data.offer.id}`} className={`ml-auto flex items-center gap-2 rounded-[10px] px-1 py-[9px] text-sm font-semibold text-primary ${focus}`}>
+							<p className="text-xs sm:text-sm text-[#6b7280]">Reçue le <time dateTime={submitted_at}>{formatDate(submitted_at)}</time></p>
+							<span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusChip(status).className}`}>{statusChip(status).label}</span>
+							<Link to={`/recruiter/applications/${id}`} className={`text-sm font-semibold text-primary hover:underline ${focus}`}>Ouvrir la candidature</Link>
+							<Link to={`/recruiter/candidates/${candidate.id}?offer=${data.offer.id}`} className={`ml-auto flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-semibold text-primary hover:underline ${focus}`}>
 								<img src="/static/img/recruiter-offers/arrow.svg" width={16} height={16} alt="" />Voir<span className="sr-only"> le profil de {fullName(candidate)}</span>
 							</Link>
 						</li>
@@ -73,7 +73,7 @@ export default function OfferApplicantsPage() {
 	return (
 		<RecruiterOffersLayout>
 			<section className={offerPanel}>
-				<Link to="/recruiter/offers" className={`flex w-fit items-center gap-2 rounded-[14px] px-1 py-3.5 font-semibold text-primary ${focus}`}><img src="/static/img/recruiter-offers/back.svg" width={18} height={18} alt="" />Retour à vos offres</Link>
+				<Link to="/recruiter/offers" className={`flex w-fit items-center gap-2 rounded-xl px-1 py-2 text-sm font-semibold text-primary hover:underline ${focus}`}><img src="/static/img/recruiter-offers/back.svg" width={18} height={18} alt="" />Retour à vos offres</Link>
 				{response?.ok ? <OfferApplicantsContent data={response.data} /> : <OfferRequestState result={response} retry={() => { setResult(null); setAttempt(attempt + 1); }} />}
 			</section>
 		</RecruiterOffersLayout>

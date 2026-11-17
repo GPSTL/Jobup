@@ -151,7 +151,7 @@ export default function NotificationBell({ role = "student" }: NotificationBellP
 				onClick={() => setOpen(!open)}
 				className={`relative flex size-11 cursor-pointer items-center justify-center rounded-full ${open ? "bg-[#dbeafe]" : "hover:bg-[#f3f4f6]"} ${focus}`}
 			>
-				<img src="/static/img/notifications/bell.svg" width={22} height={22} alt="" />
+				<img src="/static/img/notifications/bell.svg" width={22} height={22} alt="" className="notification-bell-icon" />
 				{count > 0 && (
 					<span aria-hidden="true" className="absolute top-1 left-6 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#dc2626] px-[5px] text-[11px] leading-none font-bold text-white">
 						{badgeLabel(count)}

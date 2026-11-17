@@ -13,14 +13,14 @@ import { focus } from "../utils/searchPageStyles";
 import { REQUEST_ERRORS } from "../utils/validation";
 import { RecruiterOffersLayout } from "./RecruiterOffersPage";
 
-const panel = "mx-auto flex max-w-2xl flex-col gap-6 rounded-[25px] bg-surface px-5 py-8 shadow-[0_4px_12px_rgba(0,0,0,0.1)] md:px-10";
+const panel = "mx-auto flex max-w-2xl flex-col gap-6 rounded-2xl border border-[#e5e7eb] bg-surface px-5 py-7 shadow-xs md:px-10 md:py-8";
 
 // Recruteur sans entreprise : une offre est toujours publiée au nom d'une entreprise
 export function NoCompanyForOffer() {
 	return (
 		<div className="flex flex-col items-center gap-3 py-6 text-center">
-			<h2 className="text-2xl font-semibold">Aucune entreprise rattachée</h2>
-			<p className="text-[#6b7280]">Votre compte n’est rattaché à aucune entreprise : vous ne pouvez pas encore publier d’offre. Contactez l’équipe JobUp pour rattacher votre entreprise.</p>
+			<h2 className="text-xl font-semibold">Aucune entreprise rattachée</h2>
+			<p className="text-sm text-[#6b7280]">Votre compte n’est rattaché à aucune entreprise : vous ne pouvez pas encore publier d’offre. Contactez l’équipe JobUp pour rattacher votre entreprise.</p>
 			<Button to="/recruiter/offers">Retour à vos offres</Button>
 		</div>
 	);
@@ -116,7 +116,7 @@ export function CreateOfferForm({ companyName }: OfferFormProps) {
 					</select>
 				</Field>
 				<Field id="offer-requirements" label="Compétences recherchées" error={errors.requirements?.message}>
-					<textarea {...register("requirements")} maxLength={256} rows={2} placeholder="Ex. : Java, SQL, Git" className="h-auto! py-2" />
+					<textarea {...register("requirements")} maxLength={256} rows={2} placeholder="Ex. : Java, SQL, Git" className="h-auto! py-2.5" />
 				</Field>
 				<div className="grid gap-4 sm:grid-cols-2">
 					<Field id="offer-duration" label="Durée" error={errors.duration?.message}>
@@ -127,12 +127,12 @@ export function CreateOfferForm({ companyName }: OfferFormProps) {
 					</Field>
 				</div>
 				<Field id="offer-description" label="Description du poste *" error={errors.description?.message}>
-					<textarea {...register("description")} required maxLength={2048} rows={6} placeholder="Décrivez les missions et le profil recherché…" className="h-auto! py-2" />
+					<textarea {...register("description")} required maxLength={2048} rows={6} placeholder="Décrivez les missions et le profil recherché…" className="h-auto! py-2.5" />
 				</Field>
 				{/* Rattachement fait par le serveur : affiché pour information, jamais envoyé */}
 				{/* Sans Field : il remplacerait aria-describedby, qui relie le champ à son explication */}
-				<div className="flex flex-col gap-[5px]">
-					<label htmlFor="offer-company" className="text-xs leading-[15px]">
+				<div className="flex flex-col gap-1.5">
+					<label htmlFor="offer-company" className="text-sm font-medium text-ink">
 						Nom de l’entreprise
 					</label>
 					<input
@@ -140,7 +140,7 @@ export function CreateOfferForm({ companyName }: OfferFormProps) {
 						value={companyName}
 						readOnly
 						aria-describedby="offer-company-hint"
-						className="h-[34px] w-full cursor-default rounded-[10px] border-[1.5px] border-transparent bg-[#F0F0F0] px-3 text-sm text-[#6b7280] outline-none"
+						className="min-h-11 w-full cursor-default rounded-xl border border-[#e5e7eb] bg-[#f9fafb] px-3.5 py-2.5 text-sm text-[#6b7280] outline-none"
 					/>
 					<p id="offer-company-hint" className="text-xs text-[#6b7280]">
 						L’offre est publiée au nom de votre entreprise. Modifiez-la depuis{" "}
@@ -156,21 +156,21 @@ export function CreateOfferForm({ companyName }: OfferFormProps) {
 			</fieldset>
 
 			{error && (
-				<p role="alert" className="mt-5 text-[#b91c1c]">
+				<p role="alert" className="mt-4 text-sm font-medium text-[#b91c1c]">
 					{error}
 				</p>
 			)}
 			{accessError && (
-				<Link to="/login" target="_blank" rel="noopener" state={{ recruiterReturnTo: "/recruiter/offers/new" }} className={`mt-2 block rounded-sm text-primary underline ${focus}`}>
+				<Link to="/login" target="_blank" rel="noopener" state={{ recruiterReturnTo: "/recruiter/offers/new" }} className={`mt-2 block rounded-sm text-sm text-primary underline ${focus}`}>
 					Se reconnecter dans un nouvel onglet
 				</Link>
 			)}
 
-			<div className="mt-8 flex flex-col gap-3">
-				<Button type="submit" disabled={busy} className="py-2.5">
+			<div className="mt-6 flex flex-col gap-3">
+				<Button type="submit" disabled={busy} className="py-3">
 					{busy ? "Publication…" : "Publier l’offre"}
 				</Button>
-				<Button variant="outline" disabled={busy} onClick={() => navigate("/recruiter/offers")} className="py-2.5">
+				<Button variant="outline" disabled={busy} onClick={() => navigate("/recruiter/offers")} className="py-3">
 					Annuler
 				</Button>
 				<p className="text-center text-xs text-[#6b7280]">Vérifiez les informations avant de publier votre offre : elle sera visible tout de suite.</p>
@@ -200,21 +200,21 @@ export default function CreateOfferPage() {
 	return (
 		<RecruiterOffersLayout>
 			<section aria-labelledby="create-offer-title" className={panel}>
-				<Link to="/recruiter/offers" className={`self-start rounded-sm text-[15px] font-semibold text-primary hover:underline ${focus}`}>
+				<Link to="/recruiter/offers" className={`self-start rounded-sm text-sm font-semibold text-primary hover:underline ${focus}`}>
 					← Retour à vos offres
 				</Link>
 				<div className="text-center">
-					<h1 id="create-offer-title" className="text-3xl font-semibold">
+					<h1 id="create-offer-title" className="text-2xl font-bold tracking-tight sm:text-3xl">
 						Publier une offre
 					</h1>
-					<p className="mt-1 text-[#6b7280]">Présentez votre poste et trouvez votre futur alternant. Les champs marqués d’un * sont obligatoires.</p>
+					<p className="mt-1 text-sm text-[#6b7280]">Présentez votre poste et trouvez votre futur alternant. Les champs marqués d’un * sont obligatoires.</p>
 				</div>
 
-				{company === null && <p role="status">Chargement…</p>}
+				{company === null && <p role="status" className="text-sm text-[#6b7280]">Chargement…</p>}
 				{company?.ok === false && company.reason === "noCompany" && <NoCompanyForOffer />}
 				{company?.ok === false && company.reason !== "noCompany" && company.reason !== "unauthenticated" && company.reason !== "invalid" && (
 					<div role="alert" className="flex flex-col items-center gap-4 text-center">
-						<p>{REQUEST_ERRORS[company.reason]}</p>
+						<p className="text-sm">{REQUEST_ERRORS[company.reason]}</p>
 						<Button
 							onClick={() => {
 								setCompany(null);

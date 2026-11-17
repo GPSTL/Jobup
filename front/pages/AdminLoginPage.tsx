@@ -48,24 +48,29 @@ export function AdminLoginView({ onLoggedIn }: { onLoggedIn: () => void }) {
 	const credentialsError = formError === MESSAGES.invalidCredentials;
 
 	return (
-		<main className="flex min-h-screen flex-col items-center bg-[#F0F0F0] px-4 pt-10 pb-16 sm:pt-19">
-			<Logo className="h-12 sm:h-16" />
-			<div className="mt-8.5 flex w-full max-w-[545px] flex-col items-center rounded-[25px] bg-surface px-4 pt-8 pb-10 shadow-[0_4px_12px_rgba(0,0,0,0.1)]">
-				<h1 className="text-center text-4xl leading-[40px] font-semibold">Espace administrateur</h1>
-				<p className="mt-[27px] text-center text-base leading-5 text-[#6b7280]">Connexion réservée aux administrateurs de JobUp.</p>
-				<form className="flex w-full max-w-73 flex-col [&_label]:text-sm [&_label]:leading-4.5" onSubmit={onSubmit} noValidate aria-busy={isSubmitting}>
-					<Field id="admin-email" label="Adresse mail" error={errors.email?.message} invalid={credentialsError} className="mt-7">
+		<main className="flex min-h-dvh flex-col items-center justify-center bg-[#f8fafc] px-4 py-12">
+			<Logo className="h-10 sm:h-12" />
+			<div className="mt-8 flex w-full max-w-md flex-col rounded-3xl border border-[#e5e7eb] bg-surface p-6 shadow-sm sm:p-9">
+				<div className="flex flex-col items-center text-center">
+					<span className="mb-2 rounded-full bg-[#dbeafe] px-3 py-1 text-xs font-semibold text-[#1d4ed8]">
+						Portail d’administration
+					</span>
+					<h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Espace administrateur</h1>
+					<p className="mt-2 text-sm text-[#6b7280]">Connexion réservée aux administrateurs de JobUp.</p>
+				</div>
+				<form className="mt-6 flex w-full flex-col gap-4" onSubmit={onSubmit} noValidate aria-busy={isSubmitting}>
+					<Field id="admin-email" label="Adresse mail" error={errors.email?.message} invalid={credentialsError}>
 						<input type="email" autoComplete="username" {...register("email", { onChange: () => setFormError("") })} />
 					</Field>
-					<Field id="admin-password" label="Mot de passe" error={errors.password?.message || (credentialsError ? formError : "")} className="mt-[29px]">
+					<Field id="admin-password" label="Mot de passe" error={errors.password?.message || (credentialsError ? formError : "")}>
 						<input type="password" autoComplete="current-password" {...register("password", { onChange: () => setFormError("") })} />
 					</Field>
 					{formError && !credentialsError && (
-						<p role="alert" className="mt-[5px] text-xs leading-3 font-medium text-[#DC2626]">
+						<p role="alert" className="text-xs font-medium text-[#DC2626]">
 							{formError}
 						</p>
 					)}
-					<Button type="submit" disabled={isSubmitting} className={`mt-8 w-[205px] self-center py-2.5! leading-3.75 ${isSubmitting ? "cursor-wait opacity-70" : ""}`}>
+					<Button type="submit" disabled={isSubmitting} className={`mt-2 w-full py-3 ${isSubmitting ? "cursor-wait opacity-70" : ""}`}>
 						{isSubmitting ? "Connexion…" : "Se connecter"}
 					</Button>
 				</form>
@@ -94,8 +99,8 @@ export default function AdminLoginPage() {
 
 	if (session === null) {
 		return (
-			<main className="flex min-h-screen items-center justify-center px-4" aria-busy="true">
-				<p className="text-lg">Chargement…</p>
+			<main className="flex min-h-dvh items-center justify-center px-4" aria-busy="true">
+				<p className="text-base text-[#6b7280]">Chargement…</p>
 			</main>
 		);
 	}

@@ -4,6 +4,7 @@ import ReactDOM from "react-dom/client";
 import HomePage from "./pages/HomePage";
 import Inscription from "./pages/Inscription";
 import ComingSoonPage from "./pages/ComingSoonPage";
+import PricingPage from "./pages/PricingPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import Connexion from "./pages/Connexion";
 import StudentPage from "./pages/StudentPage";
@@ -68,7 +69,7 @@ function App() {
 				<Route path="/applications" element={<RequireStudent>{() => <ApplicationsPage />}</RequireStudent>} />
 				<Route path="/applications/:id" element={<RequireStudent>{() => <ApplicationDetailPage />}</RequireStudent>} />
 				<Route path="/applications/:id/edit" element={<RequireStudent>{() => <ApplicationDraftPage />}</RequireStudent>} />
-				<Route path="/pricing" element={<ComingSoonPage />} />
+				<Route path="/pricing" element={<PricingPage />} />
 				<Route path="/messages/:id?" element={<RequireStudent>{() => <MessagesPage />}</RequireStudent>} />
 				<Route path="/notifications" element={<RequireStudent>{() => <NotificationsPage />}</RequireStudent>} />
 				<Route path="/filters" element={<ComingSoonPage />} />

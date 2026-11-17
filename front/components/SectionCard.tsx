@@ -8,15 +8,15 @@ type SectionCardProps = {
 	action?: ReactNode;
 };
 
-// Block of the "Mon espace" page: a title, then a gray card with the content and its action
+// Modular card block of the "Mon espace" dashboard
 export default function SectionCard({ title, children, action }: SectionCardProps) {
 	return (
-		<section className="flex flex-col gap-2">
-			<h2 className="text-lg font-semibold">{title}</h2>
-			<div className="flex flex-col gap-3 rounded-2xl border border-[#E5E7EB] bg-[#F9FAFB] p-4 sm:flex-row sm:items-center">
-				<div className="min-w-0 flex-1">{children}</div>
+		<section className="flex flex-col gap-3 rounded-2xl border border-[#e5e7eb] bg-surface p-5 shadow-xs sm:p-6">
+			<div className="flex flex-wrap items-center justify-between gap-3">
+				<h2 className="text-lg font-bold text-ink">{title}</h2>
 				{action && <div className="shrink-0">{action}</div>}
 			</div>
+			<div className="min-w-0 text-sm sm:text-base">{children}</div>
 		</section>
 	);
 }

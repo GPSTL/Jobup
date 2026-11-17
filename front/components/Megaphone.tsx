@@ -12,7 +12,7 @@ export default function Megaphone(props: SVGProps<SVGSVGElement>) {
 			aria-hidden="true"
 			{...props}
 		>
-			<path d="M3 11L21 6V18L3 14V11Z" stroke-width="2" 
+			<path d="M3 11L21 6V18L3 14V11Z" strokeWidth="2"
 			strokeLinecap="round" 
 			strokeLinejoin="round" 
 			stroke="#007FFF" />

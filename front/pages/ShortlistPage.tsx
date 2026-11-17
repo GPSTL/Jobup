@@ -10,8 +10,8 @@ import { fullName } from "../utils/candidates";
 import { focus } from "../utils/searchPageStyles";
 import { REQUEST_ERRORS } from "../utils/validation";
 
-const panel = "mx-auto flex max-w-6xl flex-col gap-6 rounded-[25px] bg-surface p-5 shadow-[0_4px_12px_rgba(0,0,0,0.1)] md:p-10";
-const action = `flex items-center justify-center gap-1.5 rounded-[12px] px-4 py-2.5 text-[15px] font-semibold ${focus}`;
+const panel = "mx-auto flex max-w-[1236px] flex-col gap-6 rounded-2xl border border-[#e5e7eb] bg-surface p-5 shadow-xs md:p-8";
+const action = `flex items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold ${focus}`;
 
 type ShortlistCardProps = {
 	candidate: ShortlistedCandidate;
@@ -26,24 +26,24 @@ export function ShortlistCard({ candidate, onRemove, removing }: ShortlistCardPr
 	return (
 		<li className="flex flex-col gap-3 rounded-2xl border border-[#e5e7eb] bg-[#f9fafb] p-5">
 			<div className="flex items-start justify-between">
-				<CandidateAvatar candidate={candidate} className="size-14 text-xl" />
+				<CandidateAvatar candidate={candidate} className="size-13 text-lg" />
 				{/* Rappel du ♥ donné sur la carte : décoratif */}
-				<HeartIcon width={24} height={24} fill="currentColor" className="text-[#dc2626]" />
+				<HeartIcon width={22} height={22} fill="currentColor" className="text-[#dc2626]" />
 			</div>
 			<div>
-				<h2 className="text-[18px] font-semibold">{name}</h2>
-				<p className="text-[14px] text-[#6b7280]">
+				<h2 className="text-base sm:text-lg font-semibold">{name}</h2>
+				<p className="text-xs sm:text-sm text-[#6b7280]">
 					<EducationLine candidate={candidate} />
 				</p>
 			</div>
 			{/* Offre pour laquelle il est retenu : pas encore renseignée (JOB-036) */}
 			{candidate.offer && (
-				<span className="w-fit rounded-full bg-[#dae8ff] px-3 py-1 text-[13px] font-semibold text-primary">
+				<span className="w-fit rounded-full bg-[#dbeafe] px-3 py-1 text-xs font-semibold text-primary">
 					Pour : {candidate.offer.title}
 				</span>
 			)}
-			<div className="mt-auto flex items-center gap-3 pt-1">
-				<Link to={`/recruiter/candidates/${candidate.id}`} className={`${action} flex-1 border border-[#d1d5db] bg-surface text-[#111827] hover:bg-slate-50`}>
+			<div className="mt-auto flex items-center gap-2.5 pt-1">
+				<Link to={`/recruiter/candidates/${candidate.id}`} className={`${action} flex-1 border border-[#d1d5db] bg-surface text-ink hover:bg-[#f9fafb]`}>
 					Voir le profil<span className="sr-only"> de {name}</span>
 				</Link>
 				<button
@@ -70,9 +70,9 @@ type ShortlistViewProps = {
 export function ShortlistView({ candidates, onRemove, removingId }: ShortlistViewProps) {
 	if (candidates.length === 0) {
 		return (
-			<div className="flex flex-col items-center gap-4 py-10 text-center">
-				<h2 className="text-2xl font-semibold">Aucun candidat retenu pour le moment</h2>
-				<p className="text-[#6b7280]">Retenez un profil avec ♥ depuis les cartes des candidats pour le retrouver ici.</p>
+			<div className="flex flex-col items-center gap-3 py-10 text-center">
+				<h2 className="text-xl font-semibold">Aucun candidat retenu pour le moment</h2>
+				<p className="text-sm text-[#6b7280]">Retenez un profil avec ♥ depuis les cartes des candidats pour le retrouver ici.</p>
 				<Button to="/recruiter/candidates">Parcourir les candidats</Button>
 			</div>
 		);
@@ -138,26 +138,26 @@ export default function ShortlistPage() {
 	const count = result?.ok ? result.candidates.length : 0;
 
 	return (
-		<div className="min-h-dvh bg-[#f0f0f0]">
-			<header className="p-4">
+		<div className="min-h-dvh bg-[#f8fafc] px-4 pt-4 pb-16 text-ink md:px-6 md:pt-6">
+			<header>
 				<RecruiterNavbar />
 			</header>
 
-			<main className="px-4 pt-6 pb-16 md:px-6 md:pt-9">
+			<main className="mt-8">
 				<section aria-labelledby="shortlist-title" className={panel}>
 					<div className="flex flex-wrap items-start justify-between gap-3">
 						<div className="flex flex-col gap-1">
-							<h1 id="shortlist-title" className="text-[28px] font-semibold">
+							<h1 id="shortlist-title" className="text-2xl font-bold tracking-tight sm:text-3xl">
 								Candidats retenus
 							</h1>
-							<p className="text-[#6b7280]">
+							<p className="text-sm sm:text-base text-[#6b7280]">
 								Votre présélection : les profils que vous avez retenus avec{" "}
 								<HeartIcon width={16} height={16} fill="currentColor" className="inline align-[-2px] text-[#dc2626]" />
 								<span className="sr-only">♥</span>.
 							</p>
 						</div>
 						{result?.ok && (
-							<span className="rounded-full bg-[#f1f3f6] px-3 py-1 text-[13px] font-semibold text-[#6b7280]">
+							<span className="rounded-full bg-[#f1f3f6] px-3 py-1 text-xs font-semibold text-[#6b7280]">
 								{count} {count > 1 ? "candidats" : "candidat"}
 							</span>
 						)}
@@ -167,7 +167,7 @@ export default function ShortlistPage() {
 						{result === null ? "Chargement des candidats retenus…" : removed}
 					</p>
 					{removeError && (
-						<p role="alert" className="rounded-[12px] bg-[#fef2f2] px-4 py-3 text-[#b91c1c]">
+						<p role="alert" className="rounded-xl bg-[#fef2f2] px-4 py-3 text-sm text-[#b91c1c]">
 							{removeError}
 						</p>
 					)}
@@ -176,7 +176,7 @@ export default function ShortlistPage() {
 
 					{result?.ok === false && (
 						<div role="alert" className="flex flex-col items-center gap-4 py-10 text-center">
-							<p>{REQUEST_ERRORS[result.reason]}</p>
+							<p className="text-sm">{REQUEST_ERRORS[result.reason]}</p>
 							<Button onClick={retry}>Réessayer</Button>
 						</div>
 					)}

@@ -18,9 +18,9 @@ const FORM_ERRORS = {
 	network: MESSAGES.networkError,
 };
 
-const label = "text-[16px] font-semibold";
-const fieldError = "text-[14px] font-medium text-[#DC2626]";
-const button = `h-14 w-full cursor-pointer rounded-[14px] text-[18px] font-semibold disabled:cursor-wait disabled:opacity-70 ${focus}`;
+const label = "text-sm font-semibold text-ink";
+const fieldError = "text-xs font-medium text-[#DC2626]";
+const button = `min-h-11 w-full cursor-pointer rounded-xl px-5 py-3 text-sm sm:text-base font-semibold transition-colors disabled:cursor-wait disabled:opacity-70 ${focus}`;
 
 export function DraftEditor({ application }: { application: ApplicationDetail }) {
 	const navigate = useNavigate();
@@ -65,41 +65,41 @@ export function DraftEditor({ application }: { application: ApplicationDetail })
 	if (noSession) return <Navigate to="/login" replace />;
 
 	return (
-		<ApplicationsLayout className="max-w-[464px] gap-6 px-4 py-[39px] sm:px-[73px]">
+		<ApplicationsLayout className="max-w-2xl gap-6 px-5 py-7 sm:px-10 sm:py-8">
 			<BackToApplications />
 
-			<div className="flex flex-col gap-2 text-center">
-				<h1 className="text-[36px] font-semibold">Reprendre ma candidature</h1>
-				<p className="text-[18px] text-[#6b7280]">{application.offer.title} chez {application.company}</p>
+			<div className="flex flex-col gap-1.5 text-center">
+				<h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Reprendre ma candidature</h1>
+				<p className="text-sm sm:text-base text-[#6b7280]">{application.offer.title} chez {application.company}</p>
 			</div>
 
-			<form onSubmit={save(true)} noValidate aria-busy={isSubmitting} className="flex flex-col gap-4">
-				<div className="flex flex-col gap-2">
+			<form onSubmit={save(true)} noValidate aria-busy={isSubmitting} className="flex flex-col gap-5">
+				<div className="flex flex-col gap-1.5">
 					<label htmlFor="message" className={label}>Présentation</label>
 					<textarea
 						id="message"
 						placeholder="À propos de moi"
 						aria-invalid={!!errors.message}
 						aria-describedby={errors.message ? "message-error" : undefined}
-						className="h-[94px] w-full resize-y rounded-[14px] border border-[#d1d5db] bg-white px-[18px] py-4 text-[18px] outline-none placeholder:text-[#9ca3af] focus:border-primary"
+						className="min-h-28 w-full resize-y rounded-xl border border-[#d1d5db] bg-surface px-4 py-3 text-sm sm:text-base outline-none placeholder:text-[#9ca3af] focus:border-primary focus:ring-2 focus:ring-primary/20"
 						{...register("message")}
 					/>
 					{errors.message && <p id="message-error" className={fieldError}>{errors.message.message}</p>}
 				</div>
 
 				{/* L'API ne prend pas de CV dans le brouillon : l'envoi joint celui du profil */}
-				<div className="flex flex-col gap-2">
+				<div className="flex flex-col gap-1">
 					<p className={label}>CV</p>
-					<p className="text-[16px] text-[#6b7280]">Le CV de votre profil sera joint à l’envoi.</p>
+					<p className="text-sm text-[#6b7280]">Le CV de votre profil sera joint à l’envoi.</p>
 				</div>
 
-				<div className="flex flex-col gap-2">
+				<div className="flex flex-col gap-1.5">
 					<label htmlFor="cover-letter" className={label}>Lettre de motivation (PDF ou DOCX)</label>
 					{/* Le champ fichier invisible couvre la zone : clic, glisser-déposer et clavier passent par lui */}
-					<div className="relative flex h-[132px] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-primary bg-[#f9fafb] p-5 text-center focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary">
+					<div className="relative flex min-h-32 flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-primary/60 bg-[#f9fafb] p-5 text-center transition-colors hover:border-primary focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary">
 						<img src="/static/img/applications/upload.svg" width={24} height={24} alt="" />
-						<p className="max-w-full truncate text-[18px] font-semibold">{chosenLetter ? chosenLetter.name : "Déposer votre lettre de motivation"}</p>
-						<p id="cover-letter-hint" className="text-[14px] text-[#6b7280]">Fichier unique • 10 Mo max</p>
+						<p className="max-w-full truncate text-sm sm:text-base font-semibold">{chosenLetter ? chosenLetter.name : "Déposer votre lettre de motivation"}</p>
+						<p id="cover-letter-hint" className="text-xs text-[#6b7280]">Fichier unique • 10 Mo max</p>
 						<input
 							id="cover-letter"
 							type="file"
@@ -112,27 +112,27 @@ export function DraftEditor({ application }: { application: ApplicationDetail })
 					</div>
 					{errors.coverLetter && <p id="cover-letter-error" className={fieldError}>{errors.coverLetter.message}</p>}
 					{savedLetter && (
-						<a href={savedLetter} download className={`w-fit rounded-sm text-[14px] font-semibold text-primary hover:underline ${focus}`}>
+						<a href={savedLetter} download className={`w-fit rounded-sm text-xs sm:text-sm font-semibold text-primary hover:underline ${focus}`}>
 							Télécharger la lettre enregistrée
 						</a>
 					)}
 				</div>
 
 				{formError && <p role="alert" className={fieldError}>{formError}</p>}
-				{saved && <p role="status" className="text-[14px] font-medium text-[#16803d]">Brouillon enregistré.</p>}
+				{saved && <p role="status" className="text-sm font-medium text-[#16803d]">Brouillon enregistré.</p>}
 
-				<div className="flex flex-col gap-3">
+				<div className="flex flex-col gap-3 pt-1">
 					<button type="submit" disabled={isSubmitting} className={`${button} bg-primary text-on-primary hover:bg-primary/90`}>
 						{isSubmitting && sending ? "Envoi…" : "Confirmer ma candidature"}
 					</button>
-					<p className="text-center text-[14px] text-[#6b7280]">
+					<p className="text-center text-xs text-[#6b7280]">
 						En cliquant sur Confirmer, vous acceptez que votre CV soit traité pour cette opportunité.
 					</p>
 					<button
 						type="button"
 						disabled={isSubmitting}
 						onClick={save(false)}
-						className={`${button} border border-[#d1d5db] bg-white text-[#111827] hover:bg-[#f9fafb]`}
+						className={`${button} border border-[#d1d5db] bg-surface text-ink hover:bg-[#f9fafb]`}
 					>
 						{isSubmitting && !sending ? "Enregistrement…" : "Enregistrer le brouillon"}
 					</button>

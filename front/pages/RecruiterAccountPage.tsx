@@ -19,17 +19,17 @@ import { REQUEST_ERRORS } from "../utils/validation";
 
 type Errors = Partial<Record<CompanyFormField, string>>;
 
-const panel = "mx-auto flex max-w-6xl flex-col gap-6 rounded-[25px] bg-surface p-5 shadow-[0_4px_12px_rgba(0,0,0,0.1)] md:p-10";
-const label = "text-[15px] font-semibold text-[#111827]";
+const panel = "mx-auto flex max-w-[1236px] flex-col gap-6 rounded-2xl border border-[#e5e7eb] bg-surface p-5 shadow-xs md:p-8";
+const label = "text-sm font-semibold text-ink";
 const fieldBox = (error?: string) =>
-	`w-full rounded-[12px] border bg-white px-4 py-2.5 text-[15px] text-[#111827] outline-none placeholder:text-[#9ca3af] focus:border-primary ${
+	`w-full rounded-xl border bg-surface px-4 py-2.5 text-sm sm:text-base text-ink outline-none placeholder:text-[#9ca3af] focus:border-primary focus:ring-2 focus:ring-primary/20 ${
 		error ? "border-[#dc2626]" : "border-[#d1d5db]"
 	}`;
 
 // Onglet « Compte et abonnement » : #compte, ou #notifications pour le lien « Préférences e-mail » de la cloche (JOB-046)
 const ACCOUNT_TAB = "#compte";
 const tabClass = (active: boolean) =>
-	`rounded-full border px-4 py-1.5 text-[14px] ${active ? "border-primary bg-[#dae8ff] font-semibold text-primary" : "border-[#d1d5db] bg-white text-[#111827] hover:bg-slate-50"} ${focus}`;
+	`rounded-full border px-4 py-1.5 text-xs sm:text-sm ${active ? "border-primary bg-[#dbeafe] font-semibold text-primary" : "border-[#d1d5db] bg-surface text-ink hover:bg-[#f9fafb]"} ${focus}`;
 
 type CompanyPreviewProps = {
 	form: CompanyForm;
@@ -44,18 +44,18 @@ export function CompanyPreview({ form, logoUrl, activeOffers }: CompanyPreviewPr
 	const name = form.name.trim() || "Nom de l’entreprise";
 	const details = [form.sector === "" ? "" : sectorLabel(form.sector), form.city.trim()].filter(Boolean).join(" • ");
 	return (
-		<div className="flex flex-col gap-3 rounded-2xl border border-[#e5e7eb] bg-white p-5">
+		<div className="flex flex-col gap-3 rounded-2xl border border-[#e5e7eb] bg-[#f9fafb] p-5">
 			<div className="flex items-center gap-3">
-				<CompanyLogo name={name} logoUrl={logoUrl} className="size-12 rounded-[12px] text-[18px]" />
+				<CompanyLogo name={name} logoUrl={logoUrl} className="size-12 rounded-xl text-lg" />
 				<div className="min-w-0">
-					<p className="truncate text-[18px] font-semibold">{name}</p>
-					{details && <p className="text-[13px] text-[#6b7280]">{details}</p>}
+					<p className="truncate text-base sm:text-lg font-semibold">{name}</p>
+					{details && <p className="text-xs sm:text-sm text-[#6b7280]">{details}</p>}
 				</div>
 			</div>
-			<p className={`line-clamp-3 text-[14px] leading-5 whitespace-pre-line ${form.description.trim() ? "text-[#6b7280]" : "text-[#9ca3af] italic"}`}>
+			<p className={`line-clamp-3 text-sm leading-5 whitespace-pre-line ${form.description.trim() ? "text-[#6b7280]" : "text-[#9ca3af] italic"}`}>
 				{form.description.trim() || "Ajoutez une présentation pour donner envie aux étudiants de postuler."}
 			</p>
-			<span className="w-fit rounded-full bg-[#dae8ff] px-3 py-1 text-[13px] font-semibold text-primary">{activeOffersLabel(activeOffers)}</span>
+			<span className="w-fit rounded-full bg-[#dbeafe] px-3 py-1 text-xs font-semibold text-primary">{activeOffersLabel(activeOffers)}</span>
 		</div>
 	);
 }
@@ -64,8 +64,8 @@ export function CompanyPreview({ form, logoUrl, activeOffers }: CompanyPreviewPr
 export function NoCompany() {
 	return (
 		<div className="flex flex-col items-center gap-3 py-10 text-center">
-			<h2 className="text-2xl font-semibold">Aucune entreprise rattachée</h2>
-			<p className="max-w-lg text-[#6b7280]">
+			<h2 className="text-xl font-semibold">Aucune entreprise rattachée</h2>
+			<p className="max-w-lg text-sm text-[#6b7280]">
 				Votre compte n’est rattaché à aucune entreprise : la page entreprise ne peut pas encore être renseignée. Contactez l’équipe JobUp pour rattacher votre
 				entreprise.
 			</p>
@@ -181,25 +181,25 @@ export default function RecruiterAccountPage() {
 
 	const errorOf = (field: CompanyFormField) =>
 		errors[field] && (
-			<p id={`company-${field}-error`} className="text-[13px] font-medium text-[#dc2626]">
+			<p id={`company-${field}-error`} className="text-xs font-medium text-[#dc2626]">
 				{errors[field]}
 			</p>
 		);
 	const described = (field: CompanyFormField) => (errors[field] ? { "aria-invalid": true, "aria-describedby": `company-${field}-error` } : {});
 
 	return (
-		<div className="min-h-dvh bg-[#f0f0f0]">
-			<header className="p-4">
+		<div className="min-h-dvh bg-[#f8fafc] px-4 pt-4 pb-16 text-ink md:px-6 md:pt-6">
+			<header>
 				<RecruiterNavbar />
 			</header>
 
-			<main className="px-4 pt-6 pb-16 md:px-6 md:pt-9">
+			<main className="mt-8">
 				<section aria-labelledby="account-title" className={panel}>
 					<div className="flex flex-col gap-1">
-						<h1 id="account-title" className="text-[28px] font-semibold">
+						<h1 id="account-title" className="text-2xl font-bold tracking-tight sm:text-3xl">
 							Mon espace
 						</h1>
-						<p className="text-[#6b7280]">Présentez votre entreprise aux étudiants.</p>
+						<p className="text-sm sm:text-base text-[#6b7280]">Présentez votre entreprise aux étudiants.</p>
 					</div>
 
 					{/* Onglets de la maquette. « Compte et abonnement » n'a encore que le bloc « Notifications » (JOB-046) :
@@ -229,7 +229,7 @@ export default function RecruiterAccountPage() {
 
 					{!accountTab && loaded?.ok === false && loaded.reason !== "noCompany" && loaded.reason !== "invalid" && loaded.reason !== "unauthenticated" && (
 						<div role="alert" className="flex flex-col items-center gap-4 py-10 text-center">
-							<p>{REQUEST_ERRORS[loaded.reason]}</p>
+							<p className="text-sm">{REQUEST_ERRORS[loaded.reason]}</p>
 							<Button
 								onClick={() => {
 									setLoaded(null);
@@ -242,21 +242,21 @@ export default function RecruiterAccountPage() {
 					)}
 
 					{!accountTab && company && (
-						<div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
+						<div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
 							<form noValidate onSubmit={submit} className="flex flex-col gap-4">
 								<div className="flex flex-wrap items-center gap-4">
-									<CompanyLogo name={form.name || company.name} logoUrl={logoPreview ?? company.logo_url} className="size-16 rounded-[14px] text-[24px]" />
+									<CompanyLogo name={form.name || company.name} logoUrl={logoPreview ?? company.logo_url} className="size-16 rounded-2xl text-xl" />
 									<div className="flex-1">
 										<p className={label}>Logo de l’entreprise</p>
-										<p className="text-[13px] text-[#6b7280]">JPG ou PNG • 2 Mo maximum</p>
-										{logo && <p className="text-[13px] text-[#6b7280]">Nouveau logo recadré : il sera enregistré avec la page.</p>}
+										<p className="text-xs text-[#6b7280]">JPG ou PNG • 2 Mo maximum</p>
+										{logo && <p className="text-xs text-[#6b7280]">Nouveau logo recadré : il sera enregistré avec la page.</p>}
 									</div>
 									<button
 										id="company-logo-button"
 										type="button"
 										onClick={() => logoInput.current?.click()}
 										{...described("logo")}
-										className={`flex cursor-pointer items-center gap-2 rounded-[12px] border border-[#d1d5db] bg-white px-4 py-2 text-[14px] font-semibold hover:bg-slate-50 ${focus}`}
+										className={`flex cursor-pointer items-center gap-2 rounded-xl border border-[#d1d5db] bg-surface px-4 py-2 text-sm font-semibold hover:bg-[#f9fafb] ${focus}`}
 									>
 										<UploadIcon width={16} height={16} />
 										Changer le logo
@@ -352,14 +352,14 @@ export default function RecruiterAccountPage() {
 									{errorOf("description")}
 								</div>
 
-								<p className="text-[13px] text-[#6b7280]">* Champs obligatoires</p>
+								<p className="text-xs text-[#6b7280]">* Champs obligatoires</p>
 
 								{saveError && (
-									<p role="alert" className="rounded-[12px] bg-[#fef2f2] px-4 py-3 text-[#b91c1c]">
+									<p role="alert" className="rounded-xl bg-[#fef2f2] px-4 py-3 text-sm text-[#b91c1c]">
 										{saveError}
 									</p>
 								)}
-								<p role="status" className="text-[14px] font-medium text-[#15803d] empty:hidden">
+								<p role="status" className="text-sm font-medium text-[#15803d] empty:hidden">
 									{saved}
 								</p>
 
@@ -374,12 +374,12 @@ export default function RecruiterAccountPage() {
 							</form>
 
 							<aside aria-labelledby="preview-title" className="flex flex-col gap-3">
-								<h2 id="preview-title" className="flex items-center gap-2 text-[15px] font-semibold">
+								<h2 id="preview-title" className="flex items-center gap-2 text-sm font-semibold">
 									<EyeIcon width={18} height={18} className="text-[#6b7280]" />
 									Aperçu côté étudiant
 								</h2>
 								<CompanyPreview form={form} logoUrl={logoPreview ?? company.logo_url} activeOffers={company.active_offers} />
-								<Link to={`/companies/${company.id}`} className={`self-start rounded-sm text-[14px] font-semibold text-primary hover:underline ${focus}`}>
+								<Link to={`/companies/${company.id}`} className={`self-start rounded-sm text-sm font-semibold text-primary hover:underline ${focus}`}>
 									Voir la page publique
 								</Link>
 							</aside>

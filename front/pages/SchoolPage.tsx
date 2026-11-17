@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
-import Navbar, { NavbarLink } from "../components/Navbar";
-import Button from "../components/Button";
+import Footer from "../components/Footer";
+import PublicNavbar from "../components/PublicNavbar";
 import HandshakeIcon from "../components/HandshakeIcon";
 import Filter from "../components/Filter";
 import Megaphone from "../components/Megaphone";
@@ -23,55 +23,87 @@ const features = [
 	},
 ];
 
-const focus = "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary";
+const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
 
 export default function SchoolPage() {
 	return (
-		<div className="min-h-dvh bg-[#f0f0f0] pb-16 font-sans text-[#151a29]">
-			<header className="relative p-4 md:p-6">
-				<Navbar variant="glass">
-					{/* Hidden on small screens: the full bar does not fit on a phone. */}
-					<div className="hidden gap-12 lg:flex">
-						<NavbarLink to="/offers">Trouver une alternance</NavbarLink>
-						<NavbarLink to="/companies">Explorer les entreprises</NavbarLink>
-						<NavbarLink to="/pricing">Tarifs</NavbarLink>
-					</div>
-					<NavbarLink to="/signup?role=school" className="ml-auto">Inscription</NavbarLink>
-					<Button to="/login">Connexion</Button>
-				</Navbar>
-			</header>
+		<div className="flex min-h-dvh flex-col bg-[#f8fafc] font-sans text-ink">
+			<div className="hero-mesh border-b border-[#e5e7eb]">
+				<header className="px-4 pt-4 md:px-6 md:pt-6">
+					<PublicNavbar variant="glass" signupTo="/signup?role=school" />
+				</header>
 
-			<main className="mx-auto max-w-[1272px] px-5 md:px-10">
-				<section aria-labelledby="school-title" className="grid items-center gap-9 py-12 md:py-16 lg:grid-cols-[1.08fr_1fr] lg:gap-14 lg:px-11">
-					<div>
-						<span className="inline-block rounded-full bg-[#dae8ff] px-3 py-1 text-sm font-semibold text-[#1950ff]">Pour les écoles et CFA</span>
-						<h1 id="school-title" className="mt-4 text-4xl leading-[0.98] font-bold tracking-tight md:text-5xl">
+				<section aria-labelledby="school-title" className="mx-auto grid max-w-[1236px] items-center gap-10 px-4 pt-10 pb-16 md:px-6 md:py-20 lg:grid-cols-[1.08fr_0.92fr] lg:gap-14">
+					<div className="flex flex-col items-start">
+						<span className="inline-block rounded-full bg-[#dbeafe] px-3.5 py-1 text-xs sm:text-sm font-semibold text-[#1d4ed8]">
+							Pour les écoles et CFA
+						</span>
+						<h1 id="school-title" className="hero-title mt-4 text-3xl leading-tight font-extrabold tracking-tight sm:text-4xl lg:text-5xl">
 							Suivez l’alternance de vos étudiants en temps réel.
 						</h1>
-						<p className="mt-5 max-w-[590px] text-lg leading-tight text-[#6c7386]">
+						<p className="mt-4 max-w-[590px] text-base leading-relaxed text-[#6b7280] sm:text-lg">
 							Validez vos étudiants, suivez leurs candidatures et retrouvez tous leurs contrats d’alternance au même endroit.
 						</p>
-						<div className="mt-5 flex flex-wrap gap-3">
-							<Link to="/signup?role=school" className={`rounded-2xl bg-primary px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-600 ${focus}`}>Inscrire mon établissement</Link>
-							<Link to="/pricing" className={`rounded-2xl border border-[#cfd4de] bg-white px-6 py-3 font-semibold transition-colors hover:bg-slate-50 ${focus}`}>Voir les tarifs</Link>
+						<div className="mt-6 flex flex-wrap gap-3">
+							<Link to="/signup?role=school" className={`rounded-xl bg-primary px-6 py-3 text-sm sm:text-base font-semibold text-on-primary shadow-xs transition-all hover:bg-primary/90 ${focus}`}>
+								Inscrire mon établissement
+							</Link>
+							<Link to="/pricing" className={`rounded-xl border border-[#d1d5db] bg-surface px-6 py-3 text-sm sm:text-base font-semibold text-ink transition-colors hover:bg-[#f9fafb] ${focus}`}>
+								Voir les tarifs
+							</Link>
 						</div>
-						<Link to="/login" className={`mt-4 inline-block text-primary hover:underline ${focus}`}>Déjà inscrit ? Se connecter</Link>
+						<Link to="/login" className={`mt-4 inline-block text-sm font-medium text-primary hover:underline ${focus}`}>
+							Déjà inscrit ? Se connecter
+						</Link>
 					</div>
-					<img src="/static/img/home_bg_image.webp" alt="Un espace de travail avec un bureau et un écran d’ordinateur" className="aspect-[1.44] w-full rounded-[26px] object-cover" />
-				</section>
 
-				<section aria-label="Les avantages JobUp pour les écoles" className="grid gap-5 md:grid-cols-3">
+					{/* Interactive School Dashboard Preview */}
+					<div className="animate-float flex flex-col gap-4 rounded-3xl border border-[#e5e7eb] bg-surface p-6 shadow-xl">
+						<div className="flex items-center justify-between border-b border-[#e5e7eb] pb-3">
+							<div>
+								<p className="text-sm font-bold text-ink">Tableau de bord Promotion M2</p>
+								<p className="text-xs text-[#6b7280]">Suivi des placements en alternance</p>
+							</div>
+							<span className="rounded-full bg-[#dcfce7] px-3 py-1 text-xs font-semibold text-[#15803d]">
+								86% placés
+							</span>
+						</div>
+						<div className="grid grid-cols-3 gap-3 text-center">
+							<div className="rounded-2xl border border-[#e5e7eb] bg-[#f9fafb] p-3">
+								<p className="text-lg font-bold text-primary">142</p>
+								<p className="text-xs text-[#6b7280]">Étudiants</p>
+							</div>
+							<div className="rounded-2xl border border-[#e5e7eb] bg-[#f9fafb] p-3">
+								<p className="text-lg font-bold text-[#15803d]">122</p>
+								<p className="text-xs text-[#6b7280]">Contrats signés</p>
+							</div>
+							<div className="rounded-2xl border border-[#e5e7eb] bg-[#f9fafb] p-3">
+								<p className="text-lg font-bold text-ink">20</p>
+								<p className="text-xs text-[#6b7280]">En recherche</p>
+							</div>
+						</div>
+						<div className="rounded-2xl bg-[#eff6ff] px-4 py-3 text-xs text-ink">
+							<span className="font-semibold text-primary">Alertes automatiques :</span> identifiez immédiatement les étudiants ayant besoin d’accompagnement.
+						</div>
+					</div>
+				</section>
+			</div>
+
+			<main className="mx-auto flex w-full max-w-[1236px] flex-1 flex-col gap-16 px-4 py-16 md:px-6 md:py-20">
+				<section aria-label="Les avantages JobUp pour les écoles" className="grid gap-6 md:grid-cols-3">
 					{features.map(({ title, description, Icon }) => (
-						<article key={title} className="rounded-[22px] bg-white p-6 shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
-							<div className="mb-2 flex size-[50px] items-center justify-center rounded-2xl bg-[#dae8ff] text-primary">
+						<article key={title} className="group flex flex-col gap-3 rounded-2xl border border-[#e5e7eb] bg-surface p-6 shadow-xs motion-safe:transition-all motion-safe:duration-300 motion-safe:hover:-translate-y-1 hover:shadow-md">
+							<div className="flex size-12 items-center justify-center rounded-xl bg-[#dbeafe] text-primary motion-safe:transition-transform motion-safe:duration-300 group-hover:scale-110">
 								<Icon className="size-6" />
 							</div>
-							<h2 className="text-xl leading-tight font-semibold">{title}</h2>
-							<p className="mt-2 text-[15px] leading-tight text-[#6c7386]">{description}</p>
+							<h2 className="text-lg font-semibold text-ink">{title}</h2>
+							<p className="text-sm leading-relaxed text-[#6b7280]">{description}</p>
 						</article>
 					))}
 				</section>
 			</main>
+
+			<Footer />
 		</div>
 	);
 }

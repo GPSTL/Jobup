@@ -5,6 +5,7 @@ import MenuIcon from "./MenuIcon";
 import Navbar, { NavbarLink, navbarItemClass } from "./Navbar";
 import NotificationBell from "./NotificationBell";
 import UserIcon from "./UserIcon";
+import ThemeToggle from "./ThemeToggle";
 import { logout } from "../services/auth";
 import type { NotificationRole } from "../utils/notifications";
 import { MESSAGES } from "../utils/validation";
@@ -63,9 +64,9 @@ export default function AccountNavbar({ links, showBell = false, notifications, 
 
 	return (
 		<Navbar variant={variant}>
-			<div className={`relative ml-auto flex min-w-0 items-center ${hoverHighlight ? "account-nav-hover" : ""} ${compact ? "gap-4 lg:gap-6" : "gap-12"}`} onKeyDown={onKeyDown}>
+			<div className={`account-navigation relative ml-auto flex min-w-0 flex-1 items-center ${hoverHighlight ? "account-nav-hover" : ""} ${compact ? "gap-2 lg:gap-3" : "gap-2 lg:gap-3"}`} onKeyDown={onKeyDown}>
 				{/* Large screens: the links are in the bar */}
-				<div className={`hidden lg:flex ${compact ? "min-w-0 flex-wrap justify-end gap-x-6 gap-y-4" : "gap-12"}`}>
+				<div className={`mr-auto hidden lg:flex ${compact ? "min-w-0 flex-wrap justify-end gap-x-2 gap-y-2" : "gap-2 lg:gap-3"}`}>
 					{links.map(({ label, to }) => (
 						to ? <NavbarLink key={label} to={to}>{label}</NavbarLink>
 							: <span key={label} aria-disabled="true" title="Bientôt disponible" className={navbarItemClass}>{label}</span>
@@ -101,16 +102,18 @@ export default function AccountNavbar({ links, showBell = false, notifications, 
 					<button ref={accountButtonRef} type="button" aria-label="Compte utilisateur" aria-expanded={accountOpen} aria-controls={accountMenuId} onClick={() => setAccountOpen((value) => !value)} className={`flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary hover:bg-primary/20 ${focus}`}>
 						<UserIcon />
 					</button>
-					<div id={accountMenuId} hidden={!accountOpen} className="absolute top-full right-0 z-20 mt-3 min-w-48 rounded-2xl bg-surface p-2 shadow-[0_4px_12px_rgba(0,0,0,0.16)]">
-						<button type="button" onClick={onLogout} disabled={pending} className="w-full rounded-xl px-4 py-3 text-left text-red-700 hover:bg-red-50 disabled:opacity-60">
-							{pending ? "Déconnexion…" : "Déconnexion"}
+					<div id={accountMenuId} hidden={!accountOpen} className="absolute top-full right-0 z-20 mt-3 w-52 rounded-xl border border-[#e5e7eb] bg-surface p-1.5 shadow-[0_8px_24px_rgba(15,23,42,0.12)]">
+						<button type="button" onClick={onLogout} disabled={pending} className={`flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 disabled:cursor-wait disabled:opacity-60 ${focus}`}>
+							<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M9 5H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4M14 8l4 4-4 4M9 12h12" /></svg>
+							{pending ? "Déconnexion…" : "Se déconnecter"}
 						</button>
 					</div>
 				</div>
 
-				{notifications && <NotificationBell role={notifications} />}
 				{/* Notifications of this role are not integrated yet: static icon, no fictitious unread count. */}
 				{showBell && !notifications && <span role="img" aria-label="Notifications"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" strokeLinecap="round" strokeLinejoin="round" /></svg></span>}
+				{notifications && <NotificationBell role={notifications} />}
+				<ThemeToggle />
 				{error && <span role="alert" className="sr-only">{error}</span>}
 			</div>
 		</Navbar>

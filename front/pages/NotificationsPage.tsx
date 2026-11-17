@@ -80,59 +80,57 @@ export default function NotificationsPage({ role = "student" }: NotificationsPag
 	if (noSession) return <Navigate to="/login" replace />;
 
 	return (
-		<div className="min-h-dvh bg-[#f0f0f0] text-[#111827]">
-			<header className="p-4">{role === "recruiter" ? <RecruiterNavbar /> : <StudentNavbar />}</header>
-			<main className="px-4 pt-6 pb-16 md:px-6 md:pt-9">
-				<div className="mx-auto flex max-w-[1000px] flex-col gap-5 rounded-[25px] bg-white px-4 pt-8 pb-9 leading-[normal] shadow-[0_4px_12px_rgba(0,0,0,0.1)] md:px-10">
-					<div className="flex flex-wrap items-end gap-3">
-						<div className="flex flex-col gap-1.5">
-							<h1 className="text-[32px] font-semibold">Notifications</h1>
-							<p className="text-[16px] text-[#6b7280]">{ROLE_NOTIFICATIONS[role].description}</p>
-						</div>
-						<div className="ml-auto flex items-center gap-4 text-[14px]">
-							<Link to={ROLE_NOTIFICATIONS[role].preferences} className={`flex items-center gap-1.5 rounded-sm font-medium text-[#6b7280] hover:underline ${focus}`}>
-								<img src="/static/img/notifications/settings.svg" width={16} height={16} alt="" />
-								Préférences e-mail
-							</Link>
-							{unread > 0 && (
-								<button type="button" onClick={readAll} className={`cursor-pointer rounded-sm font-semibold text-primary hover:underline ${focus}`}>
-									Tout marquer comme lu
-								</button>
-							)}
-						</div>
+		<div className="min-h-dvh bg-[#f8fafc] px-4 pt-4 pb-16 text-ink md:px-6 md:pt-6">
+			<header>{role === "recruiter" ? <RecruiterNavbar /> : <StudentNavbar />}</header>
+			<main className="mx-auto mt-8 flex max-w-[1000px] flex-col gap-5 rounded-2xl border border-[#e5e7eb] bg-surface px-5 py-7 shadow-xs md:px-10 md:py-8">
+				<div className="flex flex-wrap items-end gap-3">
+					<div className="flex flex-col gap-1">
+						<h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Notifications</h1>
+						<p className="text-sm sm:text-base text-[#6b7280]">{ROLE_NOTIFICATIONS[role].description}</p>
 					</div>
-
-					{notifications === null && !error && (
-						<p role="status" className="text-[16px] text-[#6b7280]">
-							Chargement des notifications…
-						</p>
-					)}
-					{error && (
-						<div role="alert" className="flex flex-col items-start gap-4">
-							<p className="text-[16px]">{error}</p>
-							<Button onClick={() => setAttempt(attempt + 1)}>Réessayer</Button>
-						</div>
-					)}
-					{notifications?.length === 0 && <p className="text-[16px] text-[#6b7280]">Aucune notification pour l’instant.</p>}
-					{notifications && notifications.length > 0 && (
-						<div className="overflow-hidden rounded-2xl border border-[#e5e7eb] [&>ul>li:first-child>*]:border-t-0">
-							<NotificationList notifications={notifications} onOpen={open} role={role} />
-						</div>
-					)}
-					{hasMore && (
-						<div className="flex flex-col items-center gap-2">
-							<button
-								type="button"
-								onClick={loadMore}
-								disabled={loadingMore}
-								className={`cursor-pointer rounded-[14px] border border-[#d1d5db] bg-white px-[22px] py-3 text-[15px] font-semibold disabled:cursor-wait disabled:opacity-70 ${focus}`}
-							>
-								{loadingMore ? "Chargement…" : "Afficher plus"}
+					<div className="ml-auto flex items-center gap-4 text-sm">
+						<Link to={ROLE_NOTIFICATIONS[role].preferences} className={`flex items-center gap-1.5 rounded-sm font-medium text-[#6b7280] hover:underline ${focus}`}>
+							<img src="/static/img/notifications/settings.svg" width={16} height={16} alt="" />
+							Préférences e-mail
+						</Link>
+						{unread > 0 && (
+							<button type="button" onClick={readAll} className={`cursor-pointer rounded-sm font-semibold text-primary hover:underline ${focus}`}>
+								Tout marquer comme lu
 							</button>
-							{moreError && <p role="alert" className="text-[14px] text-[#b91c1c]">{moreError}</p>}
-						</div>
-					)}
+						)}
+					</div>
 				</div>
+
+				{notifications === null && !error && (
+					<p role="status" className="text-sm text-[#6b7280]">
+						Chargement des notifications…
+					</p>
+				)}
+				{error && (
+					<div role="alert" className="flex flex-col items-start gap-4">
+						<p className="text-sm">{error}</p>
+						<Button onClick={() => setAttempt(attempt + 1)}>Réessayer</Button>
+					</div>
+				)}
+				{notifications?.length === 0 && <p className="text-sm text-[#6b7280]">Aucune notification pour l’instant.</p>}
+				{notifications && notifications.length > 0 && (
+					<div className="overflow-hidden rounded-2xl border border-[#e5e7eb] [&>ul>li:first-child>*]:border-t-0">
+						<NotificationList notifications={notifications} onOpen={open} role={role} />
+					</div>
+				)}
+				{hasMore && (
+					<div className="flex flex-col items-center gap-2">
+						<button
+							type="button"
+							onClick={loadMore}
+							disabled={loadingMore}
+							className={`cursor-pointer rounded-xl border border-[#d1d5db] bg-surface px-5 py-2.5 text-sm font-semibold hover:bg-[#f9fafb] disabled:cursor-wait disabled:opacity-70 ${focus}`}
+						>
+							{loadingMore ? "Chargement…" : "Afficher plus"}
+						</button>
+						{moreError && <p role="alert" className="text-xs text-[#b91c1c]">{moreError}</p>}
+					</div>
+				)}
 			</main>
 		</div>
 	);

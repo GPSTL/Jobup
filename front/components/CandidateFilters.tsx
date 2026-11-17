@@ -4,10 +4,10 @@ import type { CandidateFilters, FilterOptions } from "../services/candidates";
 import { activeFilters, matchCount, NO_FILTERS, type ActiveFilter } from "../utils/candidateFilters";
 import { focus } from "../utils/searchPageStyles";
 
-const label = "text-[14px] font-semibold text-[#111827]";
+const label = "text-sm font-medium text-ink";
 const control = [
-	"w-full rounded-[12px] border border-[#d1d5db] bg-white py-[11px] pr-10 pl-[14px] text-[15px] outline-none",
-	"focus:border-primary focus:ring-2 focus:ring-primary/25",
+	"w-full rounded-xl border border-[#d1d5db] bg-surface py-2.5 pr-10 pl-3.5 text-sm outline-none",
+	"focus:border-primary focus:ring-2 focus:ring-primary/20",
 ].join(" ");
 // Icône à droite du champ, comme la maquette ; elle laisse passer les clics vers le champ
 const fieldIcon = "pointer-events-none absolute top-1/2 right-3 -translate-y-1/2";
@@ -37,13 +37,13 @@ function FilterSelect({ id, label: text, allLabel, value, choices, onChange, dis
 					value={value}
 					disabled={disabled}
 					onChange={(event) => onChange(event.target.value)}
-					className={`${control} cursor-pointer appearance-none disabled:cursor-wait ${value ? "text-[#111827]" : "text-[#9ca3af]"}`}
+					className={`${control} cursor-pointer appearance-none disabled:cursor-wait ${value ? "text-ink" : "text-[#9ca3af]"}`}
 				>
-					<option value="" className="text-[#111827]">
+					<option value="" className="text-ink">
 						{allLabel}
 					</option>
 					{shown.map((choice) => (
-						<option key={choice.value} value={choice.value} className="text-[#111827]">
+						<option key={choice.value} value={choice.value} className="text-ink">
 							{choice.label}
 						</option>
 					))}
@@ -89,20 +89,20 @@ export default function CandidateFilterPanel({ applied, options, optionsError, o
 			role="search"
 			aria-labelledby="filters-title"
 			onSubmit={submit}
-			className={`flex flex-col gap-4 rounded-[22px] bg-white p-6 leading-[normal] text-[#111827] shadow-[0_4px_6px_rgba(0,0,0,0.1)] ${className}`}
+			className={`flex flex-col gap-4 rounded-2xl border border-[#e5e7eb] bg-surface p-6 text-ink shadow-xs ${className}`}
 		>
 			<div className="flex items-center gap-2">
 				<img src="/static/img/candidates/filter.svg" width={18} height={18} alt="" />
-				<h2 id="filters-title" className="text-[20px] font-semibold">
+				<h2 id="filters-title" className="text-lg font-semibold">
 					Filtres
 				</h2>
-				<button type="button" onClick={reset} className={`ml-auto cursor-pointer rounded-sm text-[14px] font-semibold text-primary hover:underline ${focus}`}>
+				<button type="button" onClick={reset} className={`ml-auto cursor-pointer rounded-sm text-xs sm:text-sm font-semibold text-primary hover:underline ${focus}`}>
 					Réinitialiser
 				</button>
 			</div>
 
 			{optionsError && (
-				<div role="alert" className="flex flex-col items-start gap-2 rounded-[12px] bg-[#fef2f2] px-3 py-2.5 text-[13px] text-[#b91c1c]">
+				<div role="alert" className="flex flex-col items-start gap-2 rounded-xl bg-[#fef2f2] px-3 py-2.5 text-xs text-[#b91c1c]">
 					<p>{optionsError}</p>
 					<button type="button" onClick={onRetryOptions} className={`cursor-pointer rounded-sm font-semibold underline ${focus}`}>
 						Réessayer
@@ -156,10 +156,10 @@ export default function CandidateFilterPanel({ applied, options, optionsError, o
 				</div>
 			</div>
 
-			<button type="submit" className={`cursor-pointer rounded-[12px] bg-primary py-[13px] text-[15px] font-semibold text-on-primary hover:bg-primary/90 ${focus}`}>
+			<button type="submit" className={`cursor-pointer rounded-xl bg-primary py-3 text-sm font-semibold text-on-primary hover:bg-primary/90 ${focus}`}>
 				Rechercher les candidats
 			</button>
-			<p role="status" className={`min-h-4 text-[13px] font-medium ${count === 0 ? "text-[#dc2626]" : "text-[#6b7280]"}`}>
+			<p role="status" className={`min-h-4 text-xs font-medium ${count === 0 ? "text-[#dc2626]" : "text-[#6b7280]"}`}>
 				{count === null ? "" : matchCount(count)}
 			</p>
 		</form>
@@ -177,12 +177,12 @@ type NoMatchingCandidatesProps = {
 // État « aucun résultat » (maquette « Candidats – aucun résultat »)
 export function NoMatchingCandidates({ filters, options, onRemove, onReset }: NoMatchingCandidatesProps) {
 	return (
-		<div className="mx-auto flex w-full max-w-[640px] flex-col items-center gap-5 rounded-[25px] bg-white px-6 py-11 text-center leading-[normal] text-[#111827] shadow-[0_4px_12px_rgba(0,0,0,0.1)] sm:px-10">
-			<span className="flex size-20 items-center justify-center rounded-full bg-[#dbeafe]">
-				<img src="/static/img/candidates/users.svg" width={36} height={36} alt="" />
+		<div className="mx-auto flex w-full max-w-[640px] flex-col items-center gap-4 rounded-2xl border border-[#e5e7eb] bg-surface px-6 py-10 text-center text-ink shadow-xs sm:px-10">
+			<span className="flex size-16 items-center justify-center rounded-full bg-[#dbeafe]">
+				<img src="/static/img/candidates/users.svg" width={32} height={32} alt="" />
 			</span>
-			<h2 className="text-[24px] font-semibold">Aucun candidat ne correspond à vos critères</h2>
-			<p className="text-[16px] text-[#6b7280]">Essayez d’élargir la région ou de retirer un logiciel.</p>
+			<h2 className="text-xl font-semibold">Aucun candidat ne correspond à vos critères</h2>
+			<p className="text-sm text-[#6b7280]">Essayez d’élargir la région ou de retirer un logiciel.</p>
 			<ul aria-label="Filtres actifs" className="flex flex-wrap justify-center gap-2">
 				{activeFilters(filters, options).map((filter) => (
 					<li key={filter.key}>
@@ -190,7 +190,7 @@ export function NoMatchingCandidates({ filters, options, onRemove, onReset }: No
 							type="button"
 							onClick={() => onRemove(filter.key)}
 							aria-label={`Retirer le filtre ${filter.label}`}
-							className={`flex cursor-pointer items-center gap-1.5 rounded-full border border-[#d1d5db] bg-[#f9fafb] py-1.5 pr-2.5 pl-3 text-[14px] font-medium hover:bg-white ${focus}`}
+							className={`flex cursor-pointer items-center gap-1.5 rounded-full border border-[#d1d5db] bg-[#f9fafb] py-1.5 pr-2.5 pl-3 text-xs font-medium hover:bg-surface ${focus}`}
 						>
 							{filter.label}
 							<img src="/static/img/candidates/x.svg" width={14} height={14} alt="" />
@@ -201,7 +201,7 @@ export function NoMatchingCandidates({ filters, options, onRemove, onReset }: No
 			<button
 				type="button"
 				onClick={onReset}
-				className={`cursor-pointer rounded-[14px] border border-[#d1d5db] bg-white px-[22px] py-3.5 text-[16px] font-semibold hover:bg-[#f9fafb] ${focus}`}
+				className={`cursor-pointer rounded-xl border border-[#d1d5db] bg-surface px-5 py-2.5 text-sm font-semibold hover:bg-[#f9fafb] ${focus}`}
 			>
 				Réinitialiser les filtres
 			</button>
