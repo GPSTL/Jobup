@@ -117,7 +117,7 @@ After `make migrate`, `make seed` (or `python manage.py seed_demo`) creates a re
 |---|---|---|---|
 | Recruiter | `recruteur@demo.jobup.fr` | `Demo1234` | `/recruiter/candidates`, a profile with its exchange history, `/recruiter/shortlist` |
 | Student | `lucas.martin@demo.jobup.fr` | `Demo1234` | `/messages` (the conversation with the file to download), `/applications` |
-| School employee | `ecole@demo.jobup.fr` | `Demo1234` | the other side of Lucas's second conversation |
+| School employee | `ecole@demo.jobup.fr` | `Demo1234` | `/school`: students, a pending request, contracts at different steps, the other side of Lucas's second conversation |
 
 The recruiter's message page (JOB-041) does not exist yet: the files sent by the recruiter are seen and downloaded from the student account.
 

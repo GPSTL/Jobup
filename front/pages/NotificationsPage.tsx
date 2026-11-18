@@ -4,6 +4,7 @@ import { Link, Navigate } from "react-router-dom";
 import Button from "../components/Button";
 import NotificationList from "../components/NotificationList";
 import RecruiterNavbar from "../components/RecruiterNavbar";
+import SchoolNavbar from "../components/SchoolNavbar";
 import StudentNavbar from "../components/StudentNavbar";
 import { getNotifications, markAllRead, markRead, type AppNotification } from "../services/notifications";
 import { ROLE_NOTIFICATIONS, type NotificationRole } from "../utils/notifications";
@@ -81,7 +82,7 @@ export default function NotificationsPage({ role = "student" }: NotificationsPag
 
 	return (
 		<div className="min-h-dvh bg-[#f8fafc] px-4 pt-4 pb-16 text-ink md:px-6 md:pt-6">
-			<header>{role === "recruiter" ? <RecruiterNavbar /> : <StudentNavbar />}</header>
+			<header>{role === "recruiter" ? <RecruiterNavbar /> : role === "school" ? <SchoolNavbar /> : <StudentNavbar />}</header>
 			<main className="mx-auto mt-8 flex max-w-[1000px] flex-col gap-5 rounded-2xl border border-[#e5e7eb] bg-surface px-5 py-7 shadow-xs md:px-10 md:py-8">
 				<div className="flex flex-wrap items-end gap-3">
 					<div className="flex flex-col gap-1">

@@ -12,10 +12,10 @@ const sample: RecruiterApplication = {
 	id: 20,
 	offer: { id: 12, title: "Développeur Java", description: "Alternance", created_at: "2026-10-01T09:00:00Z", is_active: true },
 	candidate: { id: 7, first_name: "Lucas", last_name: "Martin", school: null, education: null, description: "", photo_url: null, cv_url: null },
-	status: STATUS.IN_REVIEW, submitted_at: "2026-10-10T09:00:00Z", message: "Je suis motivé", decision_message: "", conversation_id: null,
+	status: STATUS.IN_REVIEW, submitted_at: "2026-10-10T09:00:00Z", message: "Je suis motivé", decision_message: "", conversation_id: null, contract: null,
 };
 const render = (application: RecruiterApplication) => renderToStaticMarkup(
-	<MemoryRouter><RecruiterApplicationContent application={application} saving={false} error="" onDecision={() => {}} /></MemoryRouter>,
+	<MemoryRouter><RecruiterApplicationContent application={application} saving={false} error="" onDecision={() => {}} onDeposit={() => {}} /></MemoryRouter>,
 );
 const realFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = realFetch; });
@@ -51,7 +51,7 @@ test("l’étudiant voit le message associé à la décision, sans altérer sa p
 	const html = renderToStaticMarkup(<MemoryRouter><ApplicationDetailView application={{
 		id: 20, offer: { id: 12, title: "Développeur Java" }, company: "Acme", status: STATUS.ACCEPTED,
 		status_label: "Accepted", submitted_at: sample.submitted_at, updated_at: sample.submitted_at,
-		message: "Je suis motivé", decision_message: "Bienvenue !", documents: { resume: null, cover_letter: null },
+		message: "Je suis motivé", decision_message: "Bienvenue !", contract: null, school: null, documents: { resume: null, cover_letter: null },
 	}} /></MemoryRouter>);
 	assert.match(html, /Message du recruteur/);
 	assert.match(html, /Bienvenue !/);

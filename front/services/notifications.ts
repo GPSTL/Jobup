@@ -7,7 +7,7 @@
 //   GET  /api/notifications/preferences      préférences de l'utilisateur
 //   PUT  /api/notifications/preferences      les modifier (seuls les champs envoyés changent)
 
-export type NotificationKind = "message" | "application_update" | "application_accepted" | "application_refused" | "new_application";
+export type NotificationKind = "message" | "application_update" | "application_accepted" | "application_refused" | "new_application" | "school_request" | "contract_update";
 
 export type AppNotification = {
 	id: number;
@@ -27,6 +27,8 @@ export type NotificationPreferences = {
 	application_status: boolean;
 	/** Recruteur : notification à chaque candidature reçue sur une de ses offres */
 	new_applications: boolean;
+	/** Étudiant et école : demandes de rattachement et suivi des contrats */
+	school_updates: boolean;
 	/** E-mail en plus de la notification dans l'application */
 	email: boolean;
 };

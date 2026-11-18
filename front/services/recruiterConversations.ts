@@ -20,10 +20,11 @@ export type RecruiterConversationsResult =
 	| { ok: true; conversations: RecruiterConversation[] }
 	| { ok: false; reason: "noSession" | "network" | "server" };
 
-export async function getRecruiterConversations(): Promise<RecruiterConversationsResult> {
+// L'école lit les siennes au même format, sur /api/school/conversations
+export async function getRecruiterConversations(url = "/api/recruiter/conversations"): Promise<RecruiterConversationsResult> {
 	let response: Response;
 	try {
-		response = await fetch("/api/recruiter/conversations", { credentials: "same-origin" });
+		response = await fetch(url, { credentials: "same-origin" });
 	} catch {
 		return { ok: false, reason: "network" };
 	}

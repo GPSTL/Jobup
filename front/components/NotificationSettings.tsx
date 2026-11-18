@@ -12,6 +12,7 @@ const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visi
 const LAYOUT: Record<NotificationRole, { section: string; heading: string }> = {
 	student: { section: "gap-2", heading: "text-lg font-semibold" },
 	recruiter: { section: "gap-4", heading: "text-[20px] font-semibold text-[#111827]" },
+	school: { section: "gap-4", heading: "text-[20px] font-semibold text-[#111827]" },
 };
 
 type SettingsCardProps = {

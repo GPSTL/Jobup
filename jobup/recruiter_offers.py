@@ -3,6 +3,7 @@
 from collections.abc import Mapping
 from typing import Any
 from urllib.parse import urlsplit
+
 from django.db import transaction
 from django.db.models import Count, Q
 from rest_framework import serializers
@@ -11,7 +12,15 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from .candidates import candidateCard, isRecruiter
-from .models import ApplicationStatus, Conversation, JobApplication, Offer, Recruiter
+from .models import (
+    ApplicationStatus,
+    Contract,
+    Conversation,
+    JobApplication,
+    Offer,
+    Recruiter,
+)
+from .notifications import notifyContract
 
 
 def submittedApplications():
@@ -202,6 +211,7 @@ class DecisionSerializer(serializers.Serializer):
 
 
 def applicationDetail(application: JobApplication) -> dict:
+    contract = Contract.objects.filter(application=application).first()
     conversation = (
         Conversation.objects.filter(
             student=application.student, recruiter=application.offer.recruiter
@@ -218,6 +228,8 @@ def applicationDetail(application: JobApplication) -> dict:
         "message": application.message,
         "decision_message": application.decision_message,
         "conversation_id": conversation.pk if conversation else None,
+        # Contrat déposé pour cette candidature acceptée, suivi ensuite par l'école et l'étudiant
+        "contract": contract.to_dict() if contract else None,
     }
 
 
@@ -273,3 +285,40 @@ def recruiter_application(request: Request, id: int) -> Response:
                 student=application.student, recruiter=application.offer.recruiter
             )
         return Response(applicationDetail(application))
+
+
+@api_view(["POST"])
+def application_contract(request: Request, id: int) -> Response:
+    # Dépôt du contrat d'une candidature acceptée, par le recruteur propriétaire de l'offre :
+    # il arrive dans l'espace de l'école de l'étudiant. Renvoyer la demande ne crée rien de plus.
+    if not isRecruiter(request.user):
+        return Response({"error": "Forbidden"}, status=403)
+    application = (
+        submittedApplications()
+        .select_related("offer__recruiter__company", "student__user", "student__school")
+        .filter(pk=id, offer__recruiter__user=request.user)
+        .first()
+    )
+    if application is None:
+        return Response({"error": "Application not found"}, status=404)
+    company = application.offer.recruiter.company
+    if application.status != ApplicationStatus.ACCEPTED or company is None:
+        return Response({"error": "Application not accepted"}, status=409)
+    school = application.student.school
+    if school is None:
+        return Response({"error": "Student has no school"}, status=409)
+    with transaction.atomic():
+        contract, created = Contract.objects.get_or_create(
+            application=application,
+            defaults={
+                "school": school,
+                "company": company,
+                "student": application.student,
+            },
+        )
+        if created:
+            contract_id, stage = contract.pk, contract.stage
+            transaction.on_commit(
+                lambda: notifyContract(contract_id, stage), robust=True
+            )
+    return Response(applicationDetail(application), status=201 if created else 200)

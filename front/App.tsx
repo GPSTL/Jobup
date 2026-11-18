@@ -31,6 +31,12 @@ import RecruiterApplicationPage from "./pages/RecruiterApplicationPage";
 
 import RecruiterMessagesPage from "./pages/RecruiterMessagesPage";
 import RecruiterAccountPage from "./pages/RecruiterAccountPage";
+import RequireManager from "./components/RequireManager";
+import SchoolDashboardPage from "./pages/SchoolDashboardPage";
+import SchoolStudentsPage from "./pages/SchoolStudentsPage";
+import SchoolStudentPage from "./pages/SchoolStudentPage";
+import SchoolContractsPage from "./pages/SchoolContractsPage";
+import SchoolMessagesPage from "./pages/SchoolMessagesPage";
 import RequireAdmin from "./components/RequireAdmin";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
@@ -66,6 +72,12 @@ function App() {
 				<Route path="/recruiter/notifications" element={<RequireRecruiter>{() => <NotificationsPage role="recruiter" />}</RequireRecruiter>} />
 				{/* Recruiter pages not built yet (RecruiterNavbar). The routes above, more specific, take precedence. */}
 				<Route path="/recruiter/*" element={<ComingSoonPage />} />
+				<Route path="/school" element={<RequireManager>{() => <SchoolDashboardPage />}</RequireManager>} />
+				<Route path="/school/students" element={<RequireManager>{() => <SchoolStudentsPage />}</RequireManager>} />
+				<Route path="/school/students/:id" element={<RequireManager>{() => <SchoolStudentPage />}</RequireManager>} />
+				<Route path="/school/contracts" element={<RequireManager>{() => <SchoolContractsPage />}</RequireManager>} />
+				<Route path="/school/messages/:id?" element={<RequireManager>{() => <SchoolMessagesPage />}</RequireManager>} />
+				<Route path="/school/notifications" element={<RequireManager>{() => <NotificationsPage role="school" />}</RequireManager>} />
 				<Route path="/applications" element={<RequireStudent>{() => <ApplicationsPage />}</RequireStudent>} />
 				<Route path="/applications/:id" element={<RequireStudent>{() => <ApplicationDetailPage />}</RequireStudent>} />
 				<Route path="/applications/:id/edit" element={<RequireStudent>{() => <ApplicationDraftPage />}</RequireStudent>} />

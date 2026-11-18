@@ -34,7 +34,7 @@ export const formatDate = (iso: string) =>
 	new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
 
 // « 08 oct. »
-const formatShortDate = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
+export const formatShortDate = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
 
 // « Envoyée le 08 oct. 2026 », ou rien pour une candidature pas encore envoyée
 export const sentDate = ({ submitted_at }: ApplicationSummary) =>

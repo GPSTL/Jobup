@@ -179,9 +179,11 @@ class RecruiterMessageTests(RecruiterNotificationTestCase):
         self.assertEqual(len(self.notificationsOf(self.student)), 1)
 
     def test_a_message_to_the_school_notifies_no_recruiter(self):
-        # Le destinataire côté école viendra avec ECO-21
         self.send(self.student, "Ma convention est signée.", self.with_school)
-        self.assertEqual(Notification.objects.count(), 0)
+        # Seul l'employé d'école de la conversation est notifié
+        (notification,) = Notification.objects.all()
+        self.assertEqual(notification.recipient, self.with_school.school_manager.user)
+        self.assertEqual(notification.link, f"/school/messages/{self.with_school.pk}")
 
     def test_file_only_message(self):
         with self.captureOnCommitCallbacks(execute=True):
@@ -221,6 +223,7 @@ class RecruiterPreferenceTests(RecruiterNotificationTestCase):
                 "messages": True,
                 "application_status": True,
                 "new_applications": True,
+                "school_updates": True,
                 "email": True,
             },
         )

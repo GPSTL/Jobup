@@ -1,15 +1,16 @@
-import { Navigate, useLocation } from "react-router-dom";
+import { Link, Navigate, useLocation } from "react-router-dom";
 
 import ApplicationLoader from "../components/ApplicationLoader";
 import ApplicationsLayout, { BackToApplications } from "../components/ApplicationsLayout";
 import ApplicationStatusChip from "../components/ApplicationStatusChip";
 import type { ApplicationDetail } from "../services/applications";
 import { applicationSteps, companyInitials, sentDate, STATUS, type ApplicationStep } from "../utils/applications";
+import { contractSteps } from "../utils/school";
 import { focus } from "../utils/searchPageStyles";
 
 const sectionTitle = "text-lg font-semibold";
 
-function Steps({ steps }: { steps: ApplicationStep[] }) {
+export function Steps({ steps }: { steps: ApplicationStep[] }) {
 	return (
 		<ol className="flex flex-col gap-3 md:flex-row md:items-center">
 			{steps.map((step, index) => {
@@ -92,6 +93,18 @@ export function ApplicationDetailView({ application, submitted = false }: Applic
 
 			<h2 className={sectionTitle}>Suivi</h2>
 			<Steps steps={applicationSteps(application)} />
+
+			{application.status === STATUS.ACCEPTED && (
+				<section aria-labelledby="contract-tracking" className="flex flex-col gap-5">
+					<h2 id="contract-tracking" className={sectionTitle}>Suivi du contrat</h2>
+					<Steps steps={contractSteps(application.contract, application.updated_at)} />
+					{application.school === null ? (
+						<p className="text-sm text-[#6b7280]">Votre école n’est pas renseignée : <Link to="/student#school" className={`font-semibold text-primary hover:underline ${focus}`}>indiquez-la dans Mon espace</Link> pour que votre contrat soit suivi.</p>
+					) : !application.contract && (
+						<p className="text-sm text-[#6b7280]">L’entreprise doit déposer le contrat ; {application.school} le validera ensuite.</p>
+					)}
+				</section>
+			)}
 
 			<h2 className={sectionTitle}>Documents envoyés</h2>
 			{resume && <SentDocument label="CV" downloadLabel="Télécharger le CV" url={resume} />}

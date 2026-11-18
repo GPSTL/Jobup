@@ -5,23 +5,6 @@ from django.contrib.staticfiles.views import serve
 from django.urls import path, re_path
 
 from jobup import api, candidates, exclusions, notifications, shortlist
-from jobup.companies import cities, companies, company
-from jobup.conversations import (
-    conversation_messages,
-    message_attachment,
-    recruiter_conversations,
-    recruiter_conversation_recipients,
-    student_conversations,
-)
-from jobup.offers import offer, offers, savedOffers
-from jobup.profile import student, student_photo
-from jobup.recruiter_company import recruiter_company
-from jobup.recruiter_offers import (
-    offer_applicants,
-    recruiter_application,
-    recruiter_offers,
-)
-from jobup.resume import student_resume
 from jobup.administration import (
     admin_login,
     admin_login_page,
@@ -31,6 +14,36 @@ from jobup.administration import (
     user_filters,
     user_list,
     user_suspension,
+)
+from jobup.companies import cities, companies, company
+from jobup.conversations import (
+    conversation_messages,
+    message_attachment,
+    recruiter_conversation_recipients,
+    recruiter_conversations,
+    student_conversations,
+)
+from jobup.offers import offer, offers, savedOffers
+from jobup.profile import student, student_photo
+from jobup.recruiter_company import recruiter_company
+from jobup.recruiter_offers import (
+    application_contract,
+    offer_applicants,
+    recruiter_application,
+    recruiter_offers,
+)
+from jobup.resume import student_resume
+from jobup.school import (
+    school,
+    school_contract,
+    school_contracts,
+    school_conversations,
+    school_request,
+    school_requests,
+    school_student,
+    school_students,
+    student_school,
+    student_school_request,
 )
 
 urlpatterns = [
@@ -56,6 +69,8 @@ urlpatterns = [
     path("api/student/<int:id>/photo", student_photo),
     path("api/student/<int:id>/resume", student_resume),
     path("api/student/conversations", student_conversations),
+    path("api/student/school", student_school),
+    path("api/student/school-request", student_school_request),
     path("api/applications", api.applications),
     path("api/applications/draft", api.application_draft),
     path("api/applications/<int:id>", api.application),
@@ -73,12 +88,21 @@ urlpatterns = [
     path("api/recruiter/offers", recruiter_offers),
     path("api/recruiter/offers/<int:id>/applicants", offer_applicants),
     path("api/recruiter/applications/<int:id>", recruiter_application),
+    path("api/recruiter/applications/<int:id>/contract", application_contract),
     path("api/recruiter/candidates/<int:id>/shortlist", shortlist.shortlist_candidate),
     path("api/recruiter/candidates/<int:id>/exclusion", exclusions.exclude_candidate),
     path("api/recruiter/shortlist", shortlist.shortlist),
     path("api/recruiter/conversations", recruiter_conversations),
     path("api/recruiter/company", recruiter_company),
     path("api/recruiter/conversation-recipients", recruiter_conversation_recipients),
+    path("api/school", school),
+    path("api/school/students", school_students),
+    path("api/school/students/<int:id>", school_student),
+    path("api/school/requests", school_requests),
+    path("api/school/requests/<int:id>", school_request),
+    path("api/school/contracts", school_contracts),
+    path("api/school/contracts/<int:id>", school_contract),
+    path("api/school/conversations", school_conversations),
     path("api/companies", companies),
     path("api/companies/cities", cities),
     path("api/companies/<int:id>", company),
