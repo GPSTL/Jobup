@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { Link, Navigate, useSearchParams } from "react-router-dom";
 
 import Button from "../components/Button";
@@ -19,7 +19,7 @@ import {
 	type FilterOptions,
 } from "../services/candidates";
 import { filtersFromParams, hasFilters, NO_FILTERS, withCandidate, withFilters } from "../utils/candidateFilters";
-import { cardIndex, fullName } from "../utils/candidates";
+import { cardIndex, fullName, swipeAction } from "../utils/candidates";
 import { focus } from "../utils/searchPageStyles";
 import { REQUEST_ERRORS } from "../utils/validation";
 
@@ -49,10 +49,37 @@ type CandidateDeckProps = {
 
 // Cards shown one at a time, the next one peeking out underneath (mockup "Swipe – carte 2").
 // ♥ and 🚫 (JOB-037, JOB-038) take the card out of the deck and show the next one; the arrows only browse.
+// Swiping the card to the right does the same as ♥, to the left the same as 🚫.
 export function CandidateDeck({ candidates, index, onSelect, onKeep, keeping, onExclude, excluding }: CandidateDeckProps) {
 	const candidate = candidates[index];
 	const hasPrevious = index > 0;
 	const hasNext = index < candidates.length - 1;
+	const busy = keeping || excluding;
+	const swipeStart = useRef<number | null>(null);
+	// Offset of the card while it is dragged; a drag is not a click on the link that covers the card
+	const [drag, setDrag] = useState(0);
+	const dragged = useRef(false);
+
+	// The pointer is captured only once the card moves, so that a simple click still reaches the links
+	const moveSwipe = (event: PointerEvent<HTMLElement>) => {
+		if (swipeStart.current === null || busy) return;
+		const distance = event.clientX - swipeStart.current;
+		if (!dragged.current && Math.abs(distance) > 8) {
+			dragged.current = true;
+			event.currentTarget.setPointerCapture(event.pointerId);
+		}
+		if (dragged.current) setDrag(distance);
+	};
+	const endSwipe = (event: PointerEvent<HTMLElement>) => {
+		if (swipeStart.current === null) return;
+		const distance = event.clientX - swipeStart.current;
+		swipeStart.current = null;
+		setDrag(0);
+		if (event.type === "pointercancel") return;
+		const action = swipeAction(distance);
+		if (action === "keep") onKeep?.();
+		else if (action === "exclude") onExclude?.();
+	};
 
 	return (
 		// Small screens: arrows and position above the card. Large screens: arrows on each side of the card.
@@ -82,8 +109,37 @@ export function CandidateDeck({ candidates, index, onSelect, onKeep, keeping, on
 
 			<div className={`relative isolate col-span-3 row-start-2 sm:col-span-1 sm:col-start-2 sm:row-start-1 ${hasNext ? "mb-8" : ""}`}>
 				{hasNext && <div aria-hidden="true" className={`absolute inset-x-3 top-6 -bottom-6 -z-10 rounded-2xl bg-surface ${shadow}`} />}
-				<CandidateCard candidate={candidate} onKeep={onKeep} keeping={keeping} onExclude={onExclude} excluding={excluding} />
+				<div
+					onPointerDown={(event) => {
+						if (busy || event.button !== 0 || (event.target as HTMLElement).closest("button, [download]")) return;
+						swipeStart.current = event.clientX;
+						dragged.current = false;
+					}}
+					onPointerMove={moveSwipe}
+					onPointerUp={endSwipe}
+					onPointerCancel={endSwipe}
+					// The link and the picture would start a native drag, which cancels the swipe
+					onDragStart={(event) => event.preventDefault()}
+					onClickCapture={(event) => {
+						if (dragged.current) event.preventDefault();
+						dragged.current = false;
+					}}
+					style={{ transform: `translateX(${drag}px) rotate(${drag / 25}deg)` }}
+					className="relative touch-pan-y"
+				>
+					{Math.abs(drag) > 25 && (
+						<span aria-hidden="true" className={`pointer-events-none absolute top-4 z-20 rounded-xl border-2 bg-surface px-3 py-2 text-sm font-bold ${drag > 0 ? "right-4 border-primary text-primary" : "left-4 border-[#b91c1c] text-[#b91c1c]"}`}>
+							{drag > 0 ? "♥ Retenir" : "Écarter"}
+						</span>
+					)}
+					<CandidateCard candidate={candidate} onKeep={onKeep} keeping={keeping} onExclude={onExclude} excluding={excluding} />
+				</div>
 			</div>
+			{(onKeep || onExclude) && (
+				<p className="col-span-3 row-start-3 text-center text-xs text-[#6b7280] sm:col-span-1 sm:col-start-2 sm:row-start-2 sm:text-sm">
+					Glissez à gauche pour écarter, à droite pour retenir.
+				</p>
+			)}
 		</div>
 	);
 }
