@@ -4,7 +4,7 @@ from django.contrib import admin
 from django.contrib.staticfiles.views import serve
 from django.urls import path, re_path
 
-from jobup import api, candidates, exclusions, notifications, shortlist
+from jobup import api, candidates, exclusions, exports, notifications, shortlist
 from jobup.administration import (
     admin_login,
     admin_login_page,
@@ -51,6 +51,7 @@ urlpatterns = [
     path("api/administration/login", admin_login),
     path("api/administration/users", user_list),
     path("api/administration/users/filters", user_filters),
+    path("api/administration/users/export", exports.users_export),
     path("api/administration/users/<int:id>", user_detail),
     path("api/administration/users/<int:id>/cv", user_cv),
     path("api/administration/users/<int:id>/suspension", user_suspension),
@@ -63,6 +64,7 @@ urlpatterns = [
     path("api/me", api.me),
     path("api/offers", offers),
     path("api/offers/<int:id>", offer),
+    path("api/offers/<int:id>/export", exports.offer_export),
     path("api/student/saved-offers", savedOffers),
     path("api/student/saved-offers/<int:id>", savedOffers),
     path("api/student/<int:id>", student),
@@ -72,6 +74,7 @@ urlpatterns = [
     path("api/student/school", student_school),
     path("api/student/school-request", student_school_request),
     path("api/applications", api.applications),
+    path("api/applications/export", exports.applications_export),
     path("api/applications/draft", api.application_draft),
     path("api/applications/<int:id>", api.application),
     path("api/applications/<int:id>/submit", api.application_submit),
@@ -86,6 +89,7 @@ urlpatterns = [
     path("api/recruiter/candidates/<int:id>", candidates.candidate_detail),
     path("api/recruiter/candidates/<int:id>/cv", candidates.candidate_cv),
     path("api/recruiter/offers", recruiter_offers),
+    path("api/recruiter/offers/export", exports.recruiter_offers_export),
     path("api/recruiter/offers/<int:id>/applicants", offer_applicants),
     path("api/recruiter/applications/<int:id>", recruiter_application),
     path("api/recruiter/applications/<int:id>/contract", application_contract),
@@ -97,6 +101,7 @@ urlpatterns = [
     path("api/recruiter/conversation-recipients", recruiter_conversation_recipients),
     path("api/school", school),
     path("api/school/students", school_students),
+    path("api/school/students/export", exports.school_students_export),
     path("api/school/students/<int:id>", school_student),
     path("api/school/requests", school_requests),
     path("api/school/requests/<int:id>", school_request),

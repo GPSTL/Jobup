@@ -2,9 +2,11 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";
 
 import Button from "../components/Button";
+import ExportPanel from "../components/ExportPanel";
 import RecruiterNavbar from "../components/RecruiterNavbar";
 import { getRecruiterOffers, type OfferResult, type OfferSummary } from "../services/recruiterOffers";
 import { formatDate } from "../utils/applications";
+import { APPLICATION_STATUS_OPTIONS, type ExportField } from "../utils/exports";
 import { focus } from "../utils/searchPageStyles";
 import { REQUEST_ERRORS } from "../utils/validation";
 
@@ -54,6 +56,13 @@ export function RecruiterOfferList({ offers }: { offers: OfferSummary[] }) {
 	);
 }
 
+// Filtres de l'export : les offres ou leurs candidats, les offres publiées ou clôturées, et quelles candidatures
+const exportFields: ExportField[] = [
+	{ kind: "select", key: "content", label: "Contenu", options: [{ value: "offers", label: "Une ligne par offre" }, { value: "candidates", label: "Une ligne par candidat" }] },
+	{ kind: "select", key: "offer_status", label: "Offres", options: [{ value: "", label: "Toutes les offres" }, { value: "active", label: "Publiées" }, { value: "closed", label: "Clôturées" }] },
+	{ kind: "checkboxes", key: "status", label: "Statut des candidatures", options: APPLICATION_STATUS_OPTIONS.filter(({ value }) => value !== "draft") },
+];
+
 // Read-only entry for JOB-040 while offer authoring remains in JOB-022.
 export default function RecruiterOffersPage() {
 	// Titre de l'offre qui vient d'être publiée depuis « Créer une offre » (JOB-065)
@@ -80,6 +89,7 @@ export default function RecruiterOffersPage() {
 			<p role="status" className="mb-6 rounded-xl bg-[#ecfdf3] px-4 py-3 text-sm font-medium text-[#15803d] empty:hidden">
 				{created ? `Votre offre « ${created} » est publiée.` : ""}
 			</p>
+			{result?.ok && result.data.length > 0 && <div className="mb-6"><ExportPanel url="/api/recruiter/offers/export" fields={exportFields} defaults={{ content: "offers" }} /></div>}
 			{result?.ok ? <RecruiterOfferList offers={result.data} /> : <div className={offerPanel}><OfferRequestState result={result} retry={() => { setResult(null); setAttempt(attempt + 1); }} /></div>}
 		</RecruiterOffersLayout>
 	);

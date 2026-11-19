@@ -245,6 +245,11 @@ button, a {
   background-color: #1e293b;
 }
 
+/* The hover variants have their own class names: the light grays would stay white when hovered */
+[data-theme="dark"] :is([class~="hover:bg-[#f9fafb]"], [class~="hover:bg-slate-50"]):hover {
+  background-color: #1e293b;
+}
+
 [data-theme="dark"] :is([class~="bg-[#f6faff]"], [class~="bg-[#eff6ff]"]) {
   background-color: #172554;
 }

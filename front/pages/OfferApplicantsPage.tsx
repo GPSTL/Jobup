@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import { CandidateAvatar, EducationLine } from "../components/CandidateIdentity";
+import ExportPanel from "../components/ExportPanel";
 import { getOfferApplicants, type OfferApplicants, type OfferResult } from "../services/recruiterOffers";
 import { formatDate, STATUS, statusChip } from "../utils/applications";
 import { fullName } from "../utils/candidates";
+import { APPLICATION_STATUS_OPTIONS, type ExportField } from "../utils/exports";
 import { focus } from "../utils/searchPageStyles";
 import { offerPanel, OfferRequestState, RecruiterOffersLayout } from "./RecruiterOffersPage";
 
@@ -14,6 +16,12 @@ export const applicantFilters = [
 	{ key: "review", label: "En cours d’étude", statuses: [STATUS.READ, STATUS.IN_REVIEW] },
 	{ key: "accepted", label: "Acceptée", statuses: [STATUS.ACCEPTED] },
 	{ key: "refused", label: "Refusée", statuses: [STATUS.REFUSED] },
+];
+
+// Export de l'offre : son résumé (nombre de candidatures par statut) ou la liste de ses candidats
+const exportFields: ExportField[] = [
+	{ kind: "select", key: "content", label: "Contenu", options: [{ value: "offers", label: "Résumé de l’offre" }, { value: "candidates", label: "Liste des candidats" }] },
+	{ kind: "checkboxes", key: "status", label: "Statut des candidatures", options: APPLICATION_STATUS_OPTIONS.filter(({ value }) => value !== "draft") },
 ];
 
 export function OfferApplicantsContent({ data }: { data: OfferApplicants }) {
@@ -27,6 +35,7 @@ export function OfferApplicantsContent({ data }: { data: OfferApplicants }) {
 				<h1 className="text-2xl leading-tight font-bold sm:text-3xl">{data.offer.title}</h1>
 				<p className="text-sm text-[#6b7280]">{data.applications.length} candidature{data.applications.length === 1 ? "" : "s"} • Publiée le {formatDate(data.offer.created_at)}{!data.offer.is_active && " • Offre clôturée"}</p>
 			</header>
+			<ExportPanel url="/api/recruiter/offers/export" params={{ offer: String(data.offer.id) }} fields={exportFields} defaults={{ content: "candidates" }} />
 			<div role="group" aria-label="Filtrer les candidatures par statut" className="flex flex-wrap gap-2">
 				{applicantFilters.map((filter) => (
 					<button key={filter.key} type="button" aria-pressed={filter === selected} onClick={() => { const next = new URLSearchParams(params); next.set("status", filter.key); setParams(next, { replace: true }); }} className={`cursor-pointer rounded-full border px-4 py-2 text-xs sm:text-sm ${filter === selected ? "border-primary bg-[#dbeafe] font-semibold text-primary" : "border-[#d1d5db] bg-surface hover:bg-[#f9fafb]"} ${focus}`}>

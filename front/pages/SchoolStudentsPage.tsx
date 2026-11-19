@@ -2,10 +2,12 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { CandidateAvatar } from "../components/CandidateIdentity";
+import ExportPanel from "../components/ExportPanel";
 import { FilterChips, schoolPanel, SchoolLayout, SchoolRequestState, useSchoolData } from "../components/SchoolLayout";
 import { decideSchoolRequest, getSchoolRequests, getSchoolStudents, type StudentStatus } from "../services/school";
 import { formatDate } from "../utils/applications";
 import { fullName } from "../utils/candidates";
+import type { ExportField } from "../utils/exports";
 import { STUDENT_STATUS } from "../utils/school";
 import { focus } from "../utils/searchPageStyles";
 import { REQUEST_ERRORS } from "../utils/validation";
@@ -13,6 +15,12 @@ import { REQUEST_ERRORS } from "../utils/validation";
 const filters: { key: "all" | StudentStatus; label: string }[] = [
 	{ key: "all", label: "Tous" },
 	...(Object.entries(STUDENT_STATUS) as [StudentStatus, { label: string }][]).map(([key, { label }]) => ({ key, label })),
+];
+
+// Filtres de l'export : l'avancement, et la recherche en cours s'il y en a une
+const exportFields = (query: string): ExportField[] => [
+	{ kind: "checkboxes", key: "status", label: "Avancement", options: filters.filter(({ key }) => key !== "all").map(({ key, label }) => ({ value: key, label })) },
+	...(query ? [{ kind: "toggle", key: "q", label: `Appliquer la recherche « ${query} »`, value: query } as const] : []),
 ];
 
 // Étudiants de l'école et demandes de rattachement à valider (ETU : « Mon école » dans leur espace)
@@ -82,6 +90,13 @@ export default function SchoolStudentsPage() {
 							<label htmlFor="student-search" className="text-sm font-medium">Rechercher un étudiant</label>
 							<input id="student-search" type="search" value={query} onChange={(event) => setQuery(event.target.value)} className={`min-h-11 w-full max-w-md rounded-xl border border-[#d1d5db] bg-surface px-3.5 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20`} />
 						</div>
+						{all.length > 0 && (
+							<ExportPanel
+								url="/api/school/students/export"
+								fields={exportFields(query.trim())}
+								defaults={{ status: selected === "all" ? [] : [selected] }}
+							/>
+						)}
 						<FilterChips
 							label="Filtrer les étudiants par avancement"
 							filters={filters.map(({ key, label }) => ({ key, label, count: matching.filter((student) => key === "all" || student.status === key).length }))}

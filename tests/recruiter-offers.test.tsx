@@ -34,6 +34,8 @@ test("candidats : contexte de l’offre, statuts, dates, identité partagée et 
 	const html = render(<OfferApplicantsContent data={data} />);
 	assert.match(html, /<h1[^>]*>Développeur Java<\/h1>/);
 	assert.match(html, /5 candidatures/);
+	// Export of this offer, from its own page
+	assert.match(html, />Exporter en CSV</);
 	assert.match(html, /Toutes \(5\)/);
 	assert.match(html, /En cours d’étude \(2\)/);
 	assert.match(html, /École non renseignée/);
