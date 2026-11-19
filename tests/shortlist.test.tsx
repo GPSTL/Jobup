@@ -5,6 +5,7 @@ import { MemoryRouter } from "react-router-dom";
 import CandidateCard from "../front/components/CandidateCard";
 import { CandidateDeck } from "../front/pages/CandidatesPage";
 import { ShortlistView } from "../front/pages/ShortlistPage";
+import { swipeAction } from "../front/utils/candidates";
 import { excludeCandidate, getShortlist, keepCandidate, removeFromShortlist, type CandidateSummary, type ShortlistedCandidate } from "../front/services/candidates";
 
 const lucas: CandidateSummary = {
@@ -123,6 +124,21 @@ test("carte : pendant une exclusion, 🚫 et ♥ sont inactifs mais restent des 
 	const html = render(<CandidateCard candidate={lucas} onExclude={noop} onKeep={noop} excluding />);
 	assert.equal(html.match(/aria-disabled="true"/g)?.length, 2);
 	assert.doesNotMatch(html, / disabled=/);
+});
+
+test("cartes : le glissement à droite retient, à gauche écarte, seulement au-delà du seuil", () => {
+	assert.equal(swipeAction(91), "keep");
+	assert.equal(swipeAction(-91), "exclude");
+	assert.equal(swipeAction(90), null);
+	assert.equal(swipeAction(-90), null);
+	assert.equal(swipeAction(0), null);
+});
+
+test("cartes : l'invite à glisser n'apparaît que si une action est disponible", () => {
+	const deck = (props: { onKeep?: () => void; onExclude?: () => void }) => render(<CandidateDeck candidates={[lucas, sarah]} index={0} onSelect={noop} {...props} />);
+	assert.match(deck({ onKeep: noop, onExclude: noop }), /Glissez à gauche pour écarter, à droite pour retenir\./);
+	assert.match(deck({ onKeep: noop }), /Glissez/);
+	assert.doesNotMatch(deck({}), /Glissez/);
 });
 
 test("cartes : le 🚫 porte sur la carte affichée", () => {

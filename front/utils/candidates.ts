@@ -32,3 +32,7 @@ export function exchangeText(exchange: Exchange, candidate: Pick<CandidateSummar
 	if (exchange.kind === "application") return `Candidature reçue — ${exchange.offer_title}`;
 	return `${exchange.from_me ? "Vous" : candidate.first_name} : « ${exchange.body} »`;
 }
+
+// Action of a swipe of the card, by its horizontal distance in px: right retains, left sets aside
+export const SWIPE_DISTANCE = 90;
+export const swipeAction = (distance: number) => (distance > SWIPE_DISTANCE ? "keep" : distance < -SWIPE_DISTANCE ? "exclude" : null);
