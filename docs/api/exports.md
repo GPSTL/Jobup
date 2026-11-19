@@ -34,7 +34,7 @@ Seulement ses offres : l'identifiant d'une offre d'un autre recruteur est ignor�
 
 ## Administration — `GET /api/administration/users/export`
 
-Les comptes de tous les rôles, par nom.
+Les comptes de tous les rôles, par nom. Le panneau d'export de la liste des comptes étudiants part de `role=student`, comme le tableau : les autres rôles s'y choisissent explicitement.
 
 - Filtres : `q`, `status` (`active`, `suspended`) et `school` comme `/api/administration/users` ; `role` (`student`, `school`, `recruiter`, `admin`) ; `ids` (liste d'au plus 500 identifiants de comptes : la sélection cochée dans la liste, qui respecte les autres filtres).
 - Colonnes : Id, Prénom, Nom, E-mail, Rôle, École (celle du profil étudiant ou du compte école), Entreprise, Inscription, Statut, Suspendu le.

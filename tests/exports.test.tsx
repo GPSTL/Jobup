@@ -4,9 +4,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 
 import ExportPanel, { ExportForm } from "../front/components/ExportPanel";
-import { AdminUsersTable, exportFields } from "../front/pages/AdminUsersPage";
+import { AdminUsersTable, exportDefaults, exportFields } from "../front/pages/AdminUsersPage";
 import type { AdminUser } from "../front/services/adminUsers";
-import { downloadCsv } from "../front/services/exports";
+import { downloadCsv, REVOKE_DELAY, saveFile } from "../front/services/exports";
 import { DEFAULT_QUERY, MAX_SELECTION, readSelection, saveSelection, toggleIds } from "../front/utils/adminUsers";
 import { exportQuery, initialValues, type ExportField } from "../front/utils/exports";
 
@@ -117,6 +117,39 @@ test("export admin : filtres de la liste, et sélection ou recherche seulement q
 	assert.deepEqual(ids, { kind: "toggle", key: "ids", label: "Seulement les 2 comptes sélectionnés", value: "4,5" });
 	// The list of schools failed to load: only "Toutes les écoles" remains
 	assert.equal((exportFields(DEFAULT_QUERY, "error", [])[2] as { options: unknown[] }).options.length, 1);
+});
+
+test("export admin : part des comptes étudiants, comme le tableau, avec ses filtres", () => {
+	const query = { ...DEFAULT_QUERY, status: "suspended" as const, school: "3" };
+	assert.deepEqual(exportDefaults(query), { role: "student", status: "suspended", school: "3" });
+	const form = renderToStaticMarkup(<ExportForm url="/api/administration/users/export" fields={exportFields(query, [{ id: 3, name: "ISEG" }], [])} defaults={exportDefaults(query)} />);
+	assert.match(form, /<option value="student" selected="">Étudiants/);
+	assert.match(form, /<option value="suspended" selected="">Suspendus/);
+	assert.match(form, /<option value="3" selected="">ISEG/);
+	// Every role stays available, chosen on purpose
+	assert.match(form, /<option value="">Tous les rôles/);
+});
+
+test("téléchargement : le lien est cliqué dans la page, et l'adresse du fichier libérée plus tard", async () => {
+	const events: string[] = [];
+	const link = { href: "", download: "", click: () => events.push("click"), remove: () => events.push("remove") };
+	const realDocument = globalThis.document;
+	const { createObjectURL, revokeObjectURL } = URL;
+	Object.assign(globalThis, { document: { createElement: () => link, body: { append: () => events.push("append") } } });
+	URL.createObjectURL = () => "blob:export";
+	URL.revokeObjectURL = (href: string) => { events.push(`revoke ${href}`); };
+	try {
+		saveFile(new Blob(["a;b"]), "offres-2026-11-19.csv");
+		assert.deepEqual(link, { ...link, href: "blob:export", download: "offres-2026-11-19.csv" });
+		// Released right after the click, some browsers would cancel the download
+		assert.deepEqual(events, ["append", "click", "remove"]);
+		await new Promise((resolve) => setTimeout(resolve, REVOKE_DELAY + 50));
+		assert.deepEqual(events, ["append", "click", "remove", "revoke blob:export"]);
+	} finally {
+		Object.assign(globalThis, { document: realDocument });
+		URL.createObjectURL = createObjectURL;
+		URL.revokeObjectURL = revokeObjectURL;
+	}
 });
 
 test("sélection : gardée pour l'onglet, valeurs invalides ignorées, page sans stockage", () => {

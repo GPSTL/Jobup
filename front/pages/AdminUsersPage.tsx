@@ -27,7 +27,7 @@ import {
 	type AdminUsersQuery,
 	type SortColumn,
 } from "../utils/adminUsers";
-import type { ExportField } from "../utils/exports";
+import type { ExportField, ExportValues } from "../utils/exports";
 import { field, focus, input, select } from "../utils/searchPageStyles";
 
 const COLUMNS: { column: SortColumn; label: string }[] = [
@@ -283,7 +283,11 @@ export function AdminUsersResults({ result, loading, query, onChange, onRetry, o
 	);
 }
 
-// Filters of the export: the current ones of the table, and the ticked accounts; every role unless one is chosen
+// Starting values of the export: the accounts of the table, students, with its current filters.
+// The other roles stay in the list, to be chosen on purpose
+export const exportDefaults = (query: AdminUsersQuery): ExportValues => ({ role: "student", status: query.status, school: query.school });
+
+// Filters of the export: the current ones of the table, and the ticked accounts
 export function exportFields(query: AdminUsersQuery, schools: AdminSchool[] | "error" | null, selected: number[]): ExportField[] {
 	const fields: ExportField[] = [
 		{ kind: "select", key: "role", label: "Rôle", options: [{ value: "", label: "Tous les rôles" }, { value: "student", label: "Étudiants" }, { value: "school", label: "Écoles" }, { value: "recruiter", label: "Recruteurs" }, { value: "admin", label: "Administrateurs" }] },
@@ -346,7 +350,7 @@ export default function AdminUsersPage() {
 				</div>
 				<AdminUsersToolbar query={query} schools={schools} onSearch={onSearch} onChange={update} onReset={onReset} />
 				<div className="mb-6 flex flex-col gap-3">
-					<ExportPanel url="/api/administration/users/export" fields={exportFields(query, schools, selected)} defaults={{ status: query.status, school: query.school }} />
+					<ExportPanel url="/api/administration/users/export" fields={exportFields(query, schools, selected)} defaults={exportDefaults(query)} />
 					{selected.length > 0 && (
 						<p role="status" className="text-sm text-[#6b7280]">
 							<strong className="text-ink">{selected.length}</strong> compte{selected.length > 1 ? "s" : ""} sélectionné{selected.length > 1 ? "s" : ""}{selected.length === MAX_SELECTION ? ` (${MAX_SELECTION} au maximum)` : ""}

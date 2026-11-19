@@ -2,13 +2,21 @@
 
 export type ExportResult = { ok: true; filename: string } | { ok: false; reason: "unauthenticated" | "invalid" | "server" | "network" };
 
+// Délai avant de libérer l'adresse du fichier : la libérer dès le clic annule le téléchargement
+// dans certains navigateurs (Firefox, Safari), qui le lancent après coup
+export const REVOKE_DELAY = 1000;
+
 // Enregistre le fichier comme un téléchargement du navigateur
-function saveFile(blob: Blob, filename: string) {
+export function saveFile(blob: Blob, filename: string) {
+	const href = URL.createObjectURL(blob);
 	const link = document.createElement("a");
-	link.href = URL.createObjectURL(blob);
+	link.href = href;
 	link.download = filename;
+	// Dans la page le temps du clic : certains navigateurs ignorent le clic sur un lien détaché
+	document.body.append(link);
 	link.click();
-	URL.revokeObjectURL(link.href);
+	link.remove();
+	setTimeout(() => URL.revokeObjectURL(href), REVOKE_DELAY);
 }
 
 /** `url` : route d'export avec sa query string (exportQuery() dans utils/exports.ts) */
