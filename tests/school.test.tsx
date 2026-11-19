@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 
 import ContractCard from "../front/components/ContractCard";
+import SchoolNavbar from "../front/components/SchoolNavbar";
 import { RecruiterApplicationContent } from "../front/pages/RecruiterApplicationPage";
 import { ApplicationDetailView } from "../front/pages/ApplicationDetailPage";
 import { advanceContract, cancelSchoolRequest, createSchool, requestSchool, type ContractProgress, type SchoolContract } from "../front/services/school";
@@ -173,4 +174,14 @@ test("notifications : l'école règle les demandes et contrats, l'étudiant le s
 	assert.deepEqual(ROLE_NOTIFICATIONS.school.settings.map(({ key }) => key), ["school_updates", "messages", "email"]);
 	assert.equal(ROLE_NOTIFICATIONS.school.page, "/school/notifications");
 	assert.ok(ROLE_NOTIFICATIONS.student.settings.some(({ key }) => key === "school_updates"));
+});
+
+test("barre de l'école : seul l'onglet de la page courante est actif, le tableau de bord seulement sur sa page", () => {
+	// Each link is in the bar and in the menu of the small screens
+	const active = (path: string) => [...new Set([...renderToStaticMarkup(<MemoryRouter initialEntries={[path]}><SchoolNavbar /></MemoryRouter>).matchAll(/<a [^>]*aria-current="page"[^>]*>([^<]+)</g)].map(([, label]) => label))];
+	assert.deepEqual(active("/school"), ["Tableau de bord"]);
+	assert.deepEqual(active("/school/students"), ["Étudiants"]);
+	assert.deepEqual(active("/school/students/7"), ["Étudiants"]);
+	assert.deepEqual(active("/school/contracts"), ["Contrats"]);
+	assert.deepEqual(active("/school/messages/4"), ["Messages"]);
 });

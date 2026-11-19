@@ -3,7 +3,7 @@ import AccountNavbar from "./AccountNavbar";
 type Props = { variant?: "glass" | "solid" };
 
 const links = [
-	{ label: "Tableau de bord", to: "/school" },
+	{ label: "Tableau de bord", to: "/school", end: true },
 	{ label: "Étudiants", to: "/school/students" },
 	{ label: "Contrats", to: "/school/contracts" },
 	{ label: "Messages", to: "/school/messages" },

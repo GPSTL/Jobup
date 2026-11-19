@@ -31,6 +31,8 @@ export default function Navbar({ children, variant = "solid" }: NavbarProps) {
 type NavbarLinkProps = {
 	children: ReactNode;
 	to: string;
+	/** Only the exact page highlights the link, not the pages under it (e.g. "/school" and "/school/students") */
+	end?: boolean;
 	/** Extra classes */
 	className?: string;
 };
@@ -48,9 +50,9 @@ const linkStates = {
 };
 
 /** Text link of a navigation bar. Highlighted when it leads to the current page. */
-export function NavbarLink({ children, to, className = "" }: NavbarLinkProps) {
+export function NavbarLink({ children, to, end, className = "" }: NavbarLinkProps) {
 	return (
-		<NavLink to={to} className={({ isActive }) => `${navbarItemClass} ${linkStates[isActive ? "active" : "idle"]} ${className}`}>
+		<NavLink to={to} end={end} className={({ isActive }) => `${navbarItemClass} ${linkStates[isActive ? "active" : "idle"]} ${className}`}>
 			{children}
 		</NavLink>
 	);

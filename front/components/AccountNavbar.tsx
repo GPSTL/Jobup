@@ -12,7 +12,7 @@ import { MESSAGES } from "../utils/validation";
 
 type AccountNavbarProps = {
 	/** Pages of the role, in the order of the mockup */
-	links: { label: string; to?: string }[];
+	links: { label: string; to?: string; end?: boolean }[];
 	/** Static bell, for the roles whose notifications are not built yet */
 	showBell?: boolean;
 	/** Bell with the unread count and the panel of the notifications of this role (JOB-042, JOB-046) */
@@ -67,8 +67,8 @@ export default function AccountNavbar({ links, showBell = false, notifications, 
 			<div className={`account-navigation relative ml-auto flex min-w-0 flex-1 items-center ${hoverHighlight ? "account-nav-hover" : ""} ${compact ? "gap-2 lg:gap-3" : "gap-2 lg:gap-3"}`} onKeyDown={onKeyDown}>
 				{/* Large screens: the links are in the bar */}
 				<div className={`mr-auto hidden lg:flex ${compact ? "min-w-0 flex-wrap justify-end gap-x-2 gap-y-2" : "gap-2 lg:gap-3"}`}>
-					{links.map(({ label, to }) => (
-						to ? <NavbarLink key={label} to={to}>{label}</NavbarLink>
+					{links.map(({ label, to, end }) => (
+						to ? <NavbarLink key={label} to={to} end={end}>{label}</NavbarLink>
 							: <span key={label} aria-disabled="true" title="Bientôt disponible" className={navbarItemClass}>{label}</span>
 					))}
 				</div>
@@ -92,9 +92,9 @@ export default function AccountNavbar({ links, showBell = false, notifications, 
 					onClick={() => setOpen(false)}
 					className={`absolute top-full right-0 z-10 mt-6 flex w-56 flex-col gap-5 rounded-3xl bg-surface p-6 shadow-[0_4px_12px_rgba(0,0,0,0.1)] lg:hidden`}
 				>
-					{links.map(({ label, to }) => (
+					{links.map(({ label, to, end }) => (
 						<li key={label}>
-							{to ? <NavbarLink to={to}>{label}</NavbarLink> : <span aria-disabled="true" title="Bientôt disponible" className={navbarItemClass}>{label}</span>}
+							{to ? <NavbarLink to={to} end={end}>{label}</NavbarLink> : <span aria-disabled="true" title="Bientôt disponible" className={navbarItemClass}>{label}</span>}
 						</li>
 					))}
 				</ul>
