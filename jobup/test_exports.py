@@ -137,6 +137,8 @@ class SchoolExportTests(ExportTestCase):
         self.assertEqual(rows[0][:3], ["Prénom", "Nom", "E-mail"])
         # Neither the students of another school nor those without one
         self.assertEqual(len(rows), 2)
+        # Dernière candidature (JOB-047) : sa date d'envoi, à l'heure de Paris
+        sent = JobApplication.objects.get(student=self.alice).submitted_at
         self.assertEqual(
             rows[1],
             [
@@ -146,6 +148,7 @@ class SchoolExportTests(ExportTestCase):
                 "Bac + 4",
                 "Contrat signé",
                 "1",
+                timezone.localtime(sent).strftime("%d/%m/%Y %H:%M"),
                 "Thales",
                 "Signé",
             ],

@@ -9,10 +9,16 @@ export type Person = { id: number; first_name: string; last_name: string; photo_
 
 export type SchoolDashboard = {
 	school: SchoolInfo | null;
-	stats?: { students: number; searching: number; signed: number; pending_requests: number; contracts_to_validate: number };
+	/** found (JOB-047) : étudiants ayant une candidature acceptée, quel que soit leur contrat */
+	stats?: { students: number; searching: number; signed: number; found: number; pending_requests: number; contracts_to_validate: number };
 };
 
-export type SchoolStudent = Person & { status: StudentStatus; application_count: number };
+export type SchoolStudent = Person & {
+	status: StudentStatus;
+	application_count: number;
+	/** Date d'envoi de la dernière candidature (JOB-047), null sans candidature */
+	last_application_at: string | null;
+};
 
 /** Étapes d'un contrat : 1 déposé, 2 validé par l'école, 3 signé (ContractStage dans jobup/models.py) */
 export type ContractProgress = {

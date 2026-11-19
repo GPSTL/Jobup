@@ -3,12 +3,13 @@ import { Link, useLocation } from "react-router-dom";
 
 import { CandidateAvatar } from "../components/CandidateIdentity";
 import ExportPanel from "../components/ExportPanel";
+import { SortArrows } from "./AdminUsersPage";
 import { FilterChips, schoolPanel, SchoolLayout, SchoolRequestState, useSchoolData } from "../components/SchoolLayout";
-import { decideSchoolRequest, getSchoolRequests, getSchoolStudents, type StudentStatus } from "../services/school";
+import { decideSchoolRequest, getSchoolRequests, getSchoolStudents, type SchoolStudent, type StudentStatus } from "../services/school";
 import { formatDate } from "../utils/applications";
 import { fullName } from "../utils/candidates";
 import type { ExportField } from "../utils/exports";
-import { STUDENT_STATUS } from "../utils/school";
+import { nextStudentSort, sortStudents, STUDENT_STATUS, type StudentSort, type StudentSortColumn } from "../utils/school";
 import { focus } from "../utils/searchPageStyles";
 import { REQUEST_ERRORS } from "../utils/validation";
 
@@ -23,12 +24,71 @@ const exportFields = (query: string): ExportField[] => [
 	...(query ? [{ kind: "toggle", key: "q", label: `Appliquer la recherche « ${query} »`, value: query } as const] : []),
 ];
 
+const cell = "px-4 py-3.5";
+const COLUMNS: { column: StudentSortColumn; label: string }[] = [
+	{ column: "name", label: "Étudiant" },
+	{ column: "status", label: "Avancement" },
+	{ column: "application_count", label: "Candidatures envoyées" },
+	{ column: "last_application_at", label: "Dernière candidature" },
+];
+
+type StudentsTableProps = {
+	students: SchoolStudent[];
+	sort: StudentSort;
+	onSort: (sort: StudentSort) => void;
+};
+
+// Tableau des étudiants (JOB-047, ECO-05), trié par colonne ; défile seul sur petit écran
+export function SchoolStudentsTable({ students, sort, onSort }: StudentsTableProps) {
+	return (
+		<div role="region" aria-label="Étudiants de l’école" tabIndex={0} className={`overflow-x-auto rounded-2xl border border-[#e5e7eb] ${focus}`}>
+			<table className="w-full min-w-[720px] border-collapse text-left text-sm text-ink">
+				<thead className="bg-[#f9fafb] text-xs text-[#6b7280]">
+					<tr>
+						{COLUMNS.map(({ column, label }) => {
+							const direction = sort === column ? "ascending" : sort === `-${column}` ? "descending" : undefined;
+							return (
+								<th key={column} scope="col" aria-sort={direction} className={`${cell} font-semibold`}>
+									<button type="button" onClick={() => onSort(nextStudentSort(sort, column))} className={`inline-flex cursor-pointer items-center gap-1.5 rounded-sm whitespace-nowrap hover:text-ink ${direction ? "text-ink" : ""} ${focus}`}>
+										{label}
+										<SortArrows direction={direction} />
+									</button>
+								</th>
+							);
+						})}
+						<th scope="col" className={cell}><span className="sr-only">Suivi</span></th>
+					</tr>
+				</thead>
+				<tbody>
+					{sortStudents(students, sort).map((student) => (
+						<tr key={student.id} className="border-t border-[#e5e7eb] hover:bg-[#f9fafb]">
+							<th scope="row" className={`${cell} font-medium`}>
+								<span className="flex items-center gap-3">
+									<CandidateAvatar candidate={student} className="size-9 text-sm" />
+									<span className="break-words">{fullName(student)}</span>
+								</span>
+							</th>
+							<td className={cell}><span className={`rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${STUDENT_STATUS[student.status].className}`}>{STUDENT_STATUS[student.status].label}</span></td>
+							<td className={cell}>{student.application_count}</td>
+							<td className={`${cell} whitespace-nowrap`}>{student.last_application_at ? <time dateTime={student.last_application_at}>{formatDate(student.last_application_at)}</time> : <span className="text-[#9ca3af]">Aucune</span>}</td>
+							<td className={`${cell} text-right`}>
+								<Link to={`/school/students/${student.id}`} className={`text-sm font-semibold whitespace-nowrap text-primary hover:underline ${focus}`}>Voir le suivi<span className="sr-only"> de {fullName(student)}</span></Link>
+							</td>
+						</tr>
+					))}
+				</tbody>
+			</table>
+		</div>
+	);
+}
+
 // Étudiants de l'école et demandes de rattachement à valider (ETU : « Mon école » dans leur espace)
 export default function SchoolStudentsPage() {
 	const students = useSchoolData(getSchoolStudents);
 	const requests = useSchoolData(getSchoolRequests);
 	const [selected, setSelected] = useState<"all" | StudentStatus>("all");
 	const [query, setQuery] = useState("");
+	const [sort, setSort] = useState<StudentSort>("name");
 	// Demande en cours de décision, et message d'échec
 	const [deciding, setDeciding] = useState<number | null>(null);
 	const [error, setError] = useState("");
@@ -109,19 +169,7 @@ export default function SchoolStudentsPage() {
 						{visible.length === 0 ? (
 							<p role="status" className="rounded-2xl border border-[#e5e7eb] bg-[#f9fafb] p-5 text-sm text-[#6b7280]">{all.length === 0 ? "Aucun étudiant rattaché à votre école pour le moment." : "Aucun étudiant ne correspond."}</p>
 						) : (
-							<ul aria-label="Étudiants de l’école" className="flex flex-col gap-2.5">
-								{visible.map((student) => (
-									<li key={student.id} className="flex flex-wrap items-center gap-4 rounded-2xl border border-[#e5e7eb] bg-[#f9fafb] px-5 py-3.5">
-										<CandidateAvatar candidate={student} className="size-11 text-base" />
-										<div className="min-w-0 flex-1 basis-40">
-											<h2 className="text-base font-semibold break-words">{fullName(student)}</h2>
-											<p className="text-xs sm:text-sm text-[#6b7280]">{student.application_count} candidature{student.application_count === 1 ? "" : "s"} envoyée{student.application_count === 1 ? "" : "s"}</p>
-										</div>
-										<span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STUDENT_STATUS[student.status].className}`}>{STUDENT_STATUS[student.status].label}</span>
-										<Link to={`/school/students/${student.id}`} className={`text-sm font-semibold text-primary hover:underline ${focus}`}>Voir le suivi<span className="sr-only"> de {fullName(student)}</span></Link>
-									</li>
-								))}
-							</ul>
+							<SchoolStudentsTable students={visible} sort={sort} onSort={setSort} />
 						)}
 					</>
 				)}

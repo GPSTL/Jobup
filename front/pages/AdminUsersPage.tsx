@@ -43,7 +43,7 @@ const chevron = "pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2
 const arrow = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><path d="m9 5 7 7-7 7" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 
 // Both triangles, the one of the current direction in the color of the text
-function SortArrows({ direction }: { direction: "ascending" | "descending" | undefined }) {
+export function SortArrows({ direction }: { direction: "ascending" | "descending" | undefined }) {
 	return (
 		<svg width="10" height="14" viewBox="0 0 10 14" aria-hidden="true" className="shrink-0">
 			<path d="M5 1 9 6H1z" fill={direction === "ascending" ? "currentColor" : "#c4c8d0"} />

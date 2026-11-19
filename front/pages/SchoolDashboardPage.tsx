@@ -6,6 +6,7 @@ import Field from "../components/Field";
 import NotificationSettings from "../components/NotificationSettings";
 import { schoolPanel, SchoolLayout, SchoolRequestState, useSchoolData } from "../components/SchoolLayout";
 import { createSchool, getSchool, type SchoolDashboard, type SchoolInfo } from "../services/school";
+import { foundRate } from "../utils/school";
 import { focus } from "../utils/searchPageStyles";
 import { REQUEST_ERRORS } from "../utils/validation";
 
@@ -42,7 +43,8 @@ function SchoolSetup({ onCreated }: { onCreated: (school: SchoolInfo) => void })
 }
 
 function Overview({ school, stats }: Required<SchoolDashboard> & { school: SchoolInfo }) {
-	const placed = stats.students ? Math.round((stats.signed / stats.students) * 100) : 0;
+	// JOB-047 : alternance trouvée dès qu'une candidature est acceptée
+	const found = foundRate(stats);
 	const todo = [
 		{ count: stats.pending_requests, label: "demande de rattachement", plural: "demandes de rattachement", to: "/school/students" },
 		{ count: stats.contracts_to_validate, label: "contrat à valider", plural: "contrats à valider", to: "/school/contracts" },
@@ -67,9 +69,9 @@ function Overview({ school, stats }: Required<SchoolDashboard> & { school: Schoo
 			<dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 				{[
 					["Étudiants rattachés", stats.students],
-					["En recherche", stats.searching],
+					["Sans candidature", stats.searching],
+					["Alternance trouvée", `${stats.found} (${found} %)`],
 					["Contrats signés", stats.signed],
-					["Taux de placement", `${placed} %`],
 				].map(([label, value]) => (
 					<div key={label} className={statCard}>
 						<dt className="text-sm text-[#6b7280]">{label}</dt>
@@ -113,7 +115,7 @@ export default function SchoolDashboardPage() {
 			{dashboard && (dashboard.school && dashboard.stats ? (
 				<Overview school={dashboard.school} stats={dashboard.stats} />
 			) : (
-				<SchoolSetup onCreated={(school) => setData({ school, stats: { students: 0, searching: 0, signed: 0, pending_requests: 0, contracts_to_validate: 0 } })} />
+				<SchoolSetup onCreated={(school) => setData({ school, stats: { students: 0, searching: 0, signed: 0, found: 0, pending_requests: 0, contracts_to_validate: 0 } })} />
 			))}
 		</SchoolLayout>
 	);
