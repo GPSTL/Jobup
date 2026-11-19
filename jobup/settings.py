@@ -28,6 +28,10 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.SessionAuthentication"
     ],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+    "DEFAULT_THROTTLE_RATES": {
+        # Renvoi de l'e-mail de confirmation, par adresse IP (jobup/email_confirmation.py)
+        "resend_confirmation": "10/hour",
+    },
 }
 
 # Application definition
@@ -137,6 +141,7 @@ MAILERS = {
         "BACKEND": "django.core.mail.backends.smtp.EmailBackend",
         "OPTIONS": {
             "host": "smtp.gmail.com",
+            "port": 587,
             "use_tls": True,
             "username": os.getenv("THE_EMAIL_ADDRESS"),
             "password": os.getenv("THE_PASSWORD"),
@@ -150,3 +155,19 @@ if not os.getenv("THE_EMAIL_ADDRESS"):
 DEFAULT_FROM_EMAIL = os.getenv("THE_EMAIL_ADDRESS", "JobUp <notifications@jobup.local>")
 # Adresse du site, pour les liens des e-mails
 SITE_URL = os.getenv("SITE_URL", "http://127.0.0.1:8000")
+
+
+# Confirmation de l'adresse e-mail à l'inscription.
+# Interrupteur : EMAIL_CONFIRMATION_REQUIRED=true (ou 1, yes, on) l'active. Désactivé par défaut :
+# l'inscription ouvre alors la session directement, comme avant. Voir docs/api/email-confirmation.md
+EMAIL_CONFIRMATION_REQUIRED = os.getenv(
+    "EMAIL_CONFIRMATION_REQUIRED", "false"
+).strip().lower() in ("1", "true", "yes", "on")
+# Durée de validité du lien de confirmation, en secondes (3 jours par défaut)
+EMAIL_CONFIRMATION_MAX_AGE = int(
+    os.getenv("EMAIL_CONFIRMATION_MAX_AGE", str(3 * 24 * 3600))
+)
+# Délai minimal entre deux e-mails de confirmation pour un même compte, en secondes
+EMAIL_CONFIRMATION_RESEND_DELAY = int(
+    os.getenv("EMAIL_CONFIRMATION_RESEND_DELAY", "60")
+)

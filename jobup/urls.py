@@ -4,8 +4,16 @@ from django.contrib import admin
 from django.contrib.staticfiles.views import serve
 from django.urls import path, re_path
 
-from jobup import api, candidates, exclusions, exports, notifications, shortlist
 from jobup.contracts import contract_file, student_contracts
+from jobup import (
+    api,
+    candidates,
+    email_confirmation,
+    exclusions,
+    exports,
+    notifications,
+    shortlist,
+)
 from jobup.administration import (
     admin_login,
     admin_login_page,
@@ -61,6 +69,8 @@ urlpatterns = [
     re_path(r"^administration/.+$", admin_page),
     path("api/csrf", api.csrf),
     path("api/signup", api.signup),
+    path("api/signup/confirm", email_confirmation.confirm_email),
+    path("api/signup/resend-confirmation", email_confirmation.resend_confirmation),
     path("api/login", api.api_login),
     path("api/logout", api.api_logout),
     path("api/me", api.me),

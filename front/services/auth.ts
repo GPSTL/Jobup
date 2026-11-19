@@ -20,7 +20,7 @@ export const ADMIN_ROLE = 127;
 
 export type LoginResult =
 	| { ok: true; user: User }
-	| { ok: false; reason: "invalidCredentials" | "suspended" | "server" | "network" };
+	| { ok: false; reason: "invalidCredentials" | "suspended" | "emailNotConfirmed" | "server" | "network" };
 
 // Django exige ce jeton pour un POST dès qu'une session est ouverte (ex. juste après l'inscription)
 export async function getCsrfToken(): Promise<string | null> {
@@ -62,7 +62,11 @@ async function postCredentials(url: string, email: string, password: string): Pr
 
 	if (response.status === 401) return { ok: false, reason: "invalidCredentials" };
 	// Right password of an account suspended by an administrator (ADM-03); a 403 can also be a CSRF refusal
-	if (response.status === 403 && (await errorOf(response)) === "Account suspended") return { ok: false, reason: "suspended" };
+	// Read once: the body of a response can only be consumed one time
+	const error403 = response.status === 403 ? await errorOf(response) : undefined;
+	if (error403 === "Account suspended") return { ok: false, reason: "suspended" };
+	// Right password, but the address was never confirmed: only when EMAIL_CONFIRMATION_REQUIRED is on
+	if (error403 === "Email not confirmed") return { ok: false, reason: "emailNotConfirmed" };
 	if (!response.ok) return { ok: false, reason: "server" };
 
 	try {
@@ -123,7 +127,8 @@ export async function logout(): Promise<{ ok: true } | { ok: false; reason: "ser
 
 export type SignupPayload = { first_name: string; last_name: string; email: string; password: string; role: RoleApiName };
 type SignupResult =
-	| { ok: true; user: User }
+	// emailConfirmationRequired: the server did not open a session, a confirmation e-mail was sent instead
+	| { ok: true; user: User; emailConfirmationRequired?: true }
 	| { ok: false; reason: "validation"; errors: Partial<Record<"first_name" | "last_name" | "email" | "password" | "role", string>> }
 	| { ok: false; reason: "server" | "network" };
 
@@ -172,7 +177,12 @@ export async function signup(payload: SignupPayload): Promise<SignupResult> {
 			body: JSON.stringify(payload),
 		});
 		// Le compte créé (avec son rôle) sert à choisir la page d'arrivée
-		if (response.status === 201) return { ok: true, user: (await response.json()) as User };
+		if (response.status === 201) {
+			const body = await response.json();
+			return body?.email_confirmation_required === true
+				? { ok: true, user: body as User, emailConfirmationRequired: true }
+				: { ok: true, user: body as User };
+		}
 		if (response.status === 400 || response.status === 409) {
 			const errors = toSignupErrors(await response.json());
 			// Sans erreur sur un champ du formulaire (ex. rôle refusé), message générique
@@ -181,5 +191,57 @@ export async function signup(payload: SignupPayload): Promise<SignupResult> {
 		return { ok: false, reason: "server" };
 	} catch (error) {
 		return { ok: false, reason: error instanceof TypeError ? "network" : "server" };
+	}
+}
+
+// E-mail confirmation (jobup/email_confirmation.py)
+
+export type ConfirmEmailResult =
+	| { ok: true }
+	| { ok: false; reason: "expired" | "invalid" | "server" | "network" };
+
+// The link of the e-mail opens /confirm-email?token=…, which sends the token here
+export async function confirmEmail(token: string): Promise<ConfirmEmailResult> {
+	try {
+		const csrfToken = await getCsrfToken();
+		if (!csrfToken) return { ok: false, reason: "server" };
+		const response = await fetch("/api/signup/confirm", {
+			method: "POST",
+			credentials: "same-origin",
+			headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+			body: JSON.stringify({ token }),
+		});
+		if (response.ok) return { ok: true };
+		if (response.status === 400) {
+			const error = await errorOf(response);
+			return { ok: false, reason: error === "expired" ? "expired" : "invalid" };
+		}
+		return { ok: false, reason: "server" };
+	} catch {
+		return { ok: false, reason: "network" };
+	}
+}
+
+export type ResendConfirmationResult =
+	| { ok: true }
+	| { ok: false; reason: "tooManyRequests" | "disabled" | "server" | "network" };
+
+// The answer is the same whether or not the address is registered
+export async function resendConfirmation(email: string): Promise<ResendConfirmationResult> {
+	try {
+		const csrfToken = await getCsrfToken();
+		if (!csrfToken) return { ok: false, reason: "server" };
+		const response = await fetch("/api/signup/resend-confirmation", {
+			method: "POST",
+			credentials: "same-origin",
+			headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+			body: JSON.stringify({ email }),
+		});
+		if (response.ok) return { ok: true };
+		if (response.status === 429) return { ok: false, reason: "tooManyRequests" };
+		if (response.status === 404) return { ok: false, reason: "disabled" };
+		return { ok: false, reason: "server" };
+	} catch {
+		return { ok: false, reason: "network" };
 	}
 }

@@ -14,6 +14,8 @@ import { MESSAGES } from "../utils/validation";
 const FORM_ERRORS = {
 	invalidCredentials: MESSAGES.invalidCredentials,
 	suspended: MESSAGES.accountSuspended,
+	// Never returned by the administration login; keeps the map complete for LoginResult
+	emailNotConfirmed: MESSAGES.emailNotConfirmed,
 	server: MESSAGES.serverError,
 	network: MESSAGES.networkError,
 };
