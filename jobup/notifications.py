@@ -319,7 +319,7 @@ def notifySchoolRemoval(
     )
 
 
-def notifyContract(contract_id: int, stage: int) -> None:
+def notifyContract(contract_id: int, stage: int, version: int | None = None) -> None:
     # Contrat déposé : l'étudiant le suit, l'école doit le valider. Validé puis signé :
     # l'étudiant en est informé, l'école étant celle qui l'a fait avancer.
     contract = (
@@ -333,7 +333,12 @@ def notifyContract(contract_id: int, stage: int) -> None:
         return
     student = contract.student.user
     title = contract.application.offer.title
+    # Chaque version du PDF (JOB-045) est un nouvel événement ; la première garde la clé d'avant
+    version = version or contract.version
     event = f"contract:{contract.pk}:{stage}"
+    if version > 1:
+        event += f":v{version}"
+    replaced = stage == ContractStage.DEPOSITED and version > 1
     link = f"/applications/{contract.application.pk}"
     if stage == ContractStage.DEPOSITED:
         for manager in SchoolManager.objects.filter(
@@ -344,12 +349,14 @@ def notifyContract(contract_id: int, stage: int) -> None:
                     manager.user,
                     NotificationKind.CONTRACT_UPDATE,
                     event,
-                    "Nouveau contrat à valider",
-                    f"{contract.company.name} a déposé le contrat de {student.first_name} {student.last_name} (« {title} »).",
+                    "Contrat remplacé à valider"
+                    if replaced
+                    else "Nouveau contrat à valider",
+                    f"{contract.company.name} a {'remplacé' if replaced else 'déposé'} le contrat de {student.first_name} {student.last_name} (« {title} »).",
                     "/school/contracts",
                 )
-        heading = "Contrat déposé"
-        body = f"{contract.company.name} a déposé votre contrat « {title} » : {contract.school.name} doit maintenant le valider."
+        heading = "Contrat remplacé" if replaced else "Contrat déposé"
+        body = f"{contract.company.name} a {'remplacé' if replaced else 'déposé'} votre contrat « {title} » : {contract.school.name} doit maintenant le valider."
     elif stage == ContractStage.VALIDATED:
         heading = "Contrat validé par votre école"
         body = f"{contract.school.name} a validé votre contrat « {title} » : il ne reste que la signature."

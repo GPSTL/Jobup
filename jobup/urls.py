@@ -5,6 +5,7 @@ from django.contrib.staticfiles.views import serve
 from django.urls import path, re_path
 
 from jobup import api, candidates, exclusions, exports, notifications, shortlist
+from jobup.contracts import contract_file, student_contracts
 from jobup.administration import (
     admin_login,
     admin_login_page,
@@ -93,6 +94,8 @@ urlpatterns = [
     path("api/recruiter/offers/<int:id>/applicants", offer_applicants),
     path("api/recruiter/applications/<int:id>", recruiter_application),
     path("api/recruiter/applications/<int:id>/contract", application_contract),
+    path("api/contracts/<int:id>/file", contract_file),
+    path("api/student/contracts", student_contracts),
     path("api/recruiter/candidates/<int:id>/shortlist", shortlist.shortlist_candidate),
     path("api/recruiter/candidates/<int:id>/exclusion", exclusions.exclude_candidate),
     path("api/recruiter/shortlist", shortlist.shortlist),

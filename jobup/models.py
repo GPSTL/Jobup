@@ -421,6 +421,27 @@ class Exclusion(models.Model):
         ]
 
 
+# Stockage des pièces jointes (JOB-043) : un dossier à part, hors de MEDIA_ROOT. Aucune URL
+# publique n'en est déduite (url() échoue) : le téléchargement passe par l'API, qui vérifie
+# que l'utilisateur participe à la conversation. Lu à chaque appel pour suivre les réglages.
+class PrivateStorage(FileSystemStorage):
+    @property
+    def base_location(self) -> str:  # type: ignore[override]
+        return str(settings.PRIVATE_MEDIA_ROOT)
+
+    @property
+    def location(self) -> str:  # type: ignore[override]
+        return os.path.abspath(self.base_location)
+
+    @property
+    def base_url(self) -> None:  # type: ignore[override]
+        return None
+
+
+# Dossier créé pour chaque contrat déposé : contracts/<32 chiffres hexadécimaux>
+CONTRACT_FOLDER = re.compile(r"contracts/[0-9a-f]{32}")
+
+
 class Contract(models.Model):
     school = models.ForeignKey(School, models.PROTECT)
     company = models.ForeignKey(Company, models.PROTECT)
@@ -439,6 +460,22 @@ class Contract(models.Model):
     deposited_at = models.DateTimeField(default=timezone.now)
     validated_at = models.DateTimeField(null=True, blank=True)
     signed_at = models.DateTimeField(null=True, blank=True)
+    # PDF déposé par le recruteur (JOB-045, REC-26) ; vide pour un contrat déposé avant
+    file = models.FileField(
+        upload_to="contracts", storage=PrivateStorage(), max_length=255, blank=True
+    )
+    # Dates de l'alternance ; vides pour un contrat déposé avant JOB-045
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    # Augmente à chaque remplacement du PDF : chaque version est notifiée une fois
+    version = models.PositiveSmallIntegerField(default=1)
+
+    if TYPE_CHECKING:
+        application_id: int | None
+
+    @property
+    def file_name(self) -> str | None:
+        return os.path.basename(self.file.name) if self.file else None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -447,7 +484,30 @@ class Contract(models.Model):
             "deposited_at": self.deposited_at,
             "validated_at": self.validated_at,
             "signed_at": self.signed_at,
+            "start_date": self.start_date,
+            "end_date": self.end_date,
+            "file_name": self.file_name,
+            # Même route pour le recruteur, l'étudiant et l'école, qui vérifie l'accès
+            "file_url": f"/api/contracts/{self.pk}/file" if self.file else None,
         }
+
+    @staticmethod
+    def discardFile(storage: FileSystemStorage, name: str) -> None:
+        # Le fichier et son dossier, maintenant vide : jamais contracts lui-même
+        if not name:
+            return
+        storage.delete(name)
+        folder = os.path.dirname(name)
+        if CONTRACT_FOLDER.fullmatch(folder):
+            storage.delete(folder)
+
+
+# Un contrat supprimé emporte son PDF, une fois la suppression validée en base
+@receiver(post_delete, sender=Contract)
+def delete_contract_file(instance: Contract, **_: Any) -> None:
+    storage, name = instance.file.storage, instance.file.name
+    if name:
+        transaction.on_commit(lambda: Contract.discardFile(storage, name))
 
 
 # Demande de l'étudiant pour être rattaché à une école (Student.school). Tant qu'elle n'est pas
@@ -521,23 +581,6 @@ class Message(models.Model):
         sender_id: int
         conversation_id: int
         attachment: MessageAttachment
-
-
-# Stockage des pièces jointes (JOB-043) : un dossier à part, hors de MEDIA_ROOT. Aucune URL
-# publique n'en est déduite (url() échoue) : le téléchargement passe par l'API, qui vérifie
-# que l'utilisateur participe à la conversation. Lu à chaque appel pour suivre les réglages.
-class PrivateStorage(FileSystemStorage):
-    @property
-    def base_location(self) -> str:  # type: ignore[override]
-        return str(settings.PRIVATE_MEDIA_ROOT)
-
-    @property
-    def location(self) -> str:  # type: ignore[override]
-        return os.path.abspath(self.base_location)
-
-    @property
-    def base_url(self) -> None:  # type: ignore[override]
-        return None
 
 
 # Dossier créé pour chaque pièce jointe : message_attachments/<32 chiffres hexadécimaux>

@@ -1,3 +1,6 @@
+import tempfile
+
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
@@ -398,14 +401,32 @@ class SchoolRequestTests(SchoolTestCase):
 
 
 class ContractDepositTests(SchoolTestCase):
+    def setUp(self):
+        super().setUp()
+        # Les PDF déposés (JOB-045) vont dans un dossier temporaire, supprimé après le test
+        private = self.enterContext(tempfile.TemporaryDirectory())
+        self.enterContext(self.settings(PRIVATE_MEDIA_ROOT=private))
+
     def url(self, application):
         return f"{RECRUITER_APPLICATION}/{application.pk}/contract"
+
+    def deposit(self, url):
+        # Depuis JOB-045, le dépôt envoie le PDF et les dates de l'alternance
+        return self.client.post(
+            url,
+            {
+                "file": SimpleUploadedFile("contrat.pdf", b"%PDF-1.4 contrat"),
+                "start_date": "2099-09-01",
+                "end_date": "2100-08-31",
+            },
+            format="multipart",
+        )
 
     def test_deposit_after_acceptance_notifies_the_school_and_the_student(self):
         application = self.apply(self.alice, ApplicationStatus.ACCEPTED)
         self.login(self.recruiter.user)
         with self.captureOnCommitCallbacks(execute=True):
-            response = self.client.post(self.url(application))
+            response = self.deposit(self.url(application))
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json()["contract"]["stage"], ContractStage.DEPOSITED)
         contract = Contract.objects.get()
@@ -421,15 +442,15 @@ class ContractDepositTests(SchoolTestCase):
         self.assertEqual(for_student.link, f"/applications/{application.pk}")
         self.assertEqual(self.notificationsOf(self.other_manager.user), [])
 
-    def test_deposit_twice_changes_nothing(self):
+    def test_deposit_twice_replaces_the_contract(self):
+        # JOB-045 : un second dépôt remplace le PDF, sans créer un autre contrat
         application = self.apply(self.alice, ApplicationStatus.ACCEPTED)
         self.login(self.recruiter.user)
-        self.client.post(self.url(application))
-        with self.captureOnCommitCallbacks(execute=True):
-            response = self.client.post(self.url(application))
+        self.deposit(self.url(application))
+        response = self.deposit(self.url(application))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Contract.objects.count(), 1)
-        self.assertEqual(Notification.objects.count(), 0)
+        self.assertEqual(Contract.objects.get().version, 2)
 
     def test_the_decision_page_of_the_recruiter_shows_the_contract(self):
         application = self.apply(self.alice, ApplicationStatus.ACCEPTED)
@@ -439,7 +460,7 @@ class ContractDepositTests(SchoolTestCase):
                 "contract"
             ]
         )
-        self.client.post(self.url(application))
+        self.deposit(self.url(application))
         shown = self.client.get(f"{RECRUITER_APPLICATION}/{application.pk}").json()
         self.assertEqual(shown["contract"]["stage"], ContractStage.DEPOSITED)
 
@@ -449,16 +470,16 @@ class ContractDepositTests(SchoolTestCase):
         no_school = self.apply(self.bob, ApplicationStatus.ACCEPTED)
         draft = JobApplication.objects.create(student=self.carol, offer=self.newOffer())
         self.login(self.recruiter.user)
-        self.assertEqual(self.client.post(self.url(pending)).status_code, 409)
-        self.assertEqual(self.client.post(self.url(no_school)).status_code, 409)
-        self.assertEqual(self.client.post(self.url(draft)).status_code, 404)
+        self.assertEqual(self.deposit(self.url(pending)).status_code, 409)
+        self.assertEqual(self.deposit(self.url(no_school)).status_code, 409)
+        self.assertEqual(self.deposit(self.url(draft)).status_code, 404)
         self.assertEqual(
-            self.client.post(f"{RECRUITER_APPLICATION}/9999/contract").status_code, 404
+            self.deposit(f"{RECRUITER_APPLICATION}/9999/contract").status_code, 404
         )
         self.assertEqual(Contract.objects.count(), 0)
         for user in (self.alice.user, self.manager.user):
             self.login(user)
-            self.assertEqual(self.client.post(self.url(accepted)).status_code, 403)
+            self.assertEqual(self.deposit(self.url(accepted)).status_code, 403)
 
     def test_another_recruiter_cannot_deposit(self):
         application = self.apply(self.alice, ApplicationStatus.ACCEPTED)
@@ -467,7 +488,7 @@ class ContractDepositTests(SchoolTestCase):
             company=self.recruiter.company,
         )
         self.login(colleague.user)
-        self.assertEqual(self.client.post(self.url(application)).status_code, 404)
+        self.assertEqual(self.deposit(self.url(application)).status_code, 404)
 
     def test_the_student_follows_the_contract(self):
         application = self.apply(self.alice, ApplicationStatus.ACCEPTED)

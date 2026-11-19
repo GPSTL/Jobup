@@ -21,11 +21,24 @@ export type ContractProgress = {
 	deposited_at: string;
 	validated_at: string | null;
 	signed_at: string | null;
+	/** Dates de l'alternance (AAAA-MM-JJ) et PDF (JOB-045) ; null pour un contrat déposé avant */
+	start_date: string | null;
+	end_date: string | null;
+	file_name: string | null;
+	file_url: string | null;
 };
 
 export type SchoolContract = ContractProgress & {
 	student: Person;
 	company: string;
+	offer_title: string;
+	application_id: number | null;
+};
+
+/** Contrat de l'étudiant dans « Mon espace » (JOB-045) */
+export type StudentContract = ContractProgress & {
+	company: string;
+	school: string;
 	offer_title: string;
 	application_id: number | null;
 };
@@ -99,7 +112,43 @@ export const startSchoolConversation = (studentId: number) => call<{ id: number 
 export const getStudentSchool = () => call<StudentSchool>("/api/student/school");
 export const requestSchool = (schoolId: number) => call<StudentSchool>("/api/student/school-request", "POST", { school_id: schoolId });
 export const cancelSchoolRequest = () => call<StudentSchool>("/api/student/school-request", "DELETE");
+export const getStudentContracts = () => call<StudentContract[]>("/api/student/contracts");
 
 // ----- Recruteur : dépôt du contrat d'une candidature acceptée -----
 
-export const depositContract = <T>(applicationId: number) => call<T>(`/api/recruiter/applications/${applicationId}/contract`, "POST");
+export type ContractValues = { file: File; start_date: string; end_date: string };
+/** Erreurs par champ, en français, renvoyées par l'API */
+export type ContractErrors = Partial<Record<keyof ContractValues, string>>;
+export type DepositResult<T> = { ok: true; data: T } | (SchoolFailure & { errors: ContractErrors });
+
+// Dépôt ou remplacement du PDF (JOB-045) : envoyé en multipart, avec le jeton CSRF
+export async function depositContract<T>(applicationId: number, values: ContractValues): Promise<DepositResult<T>> {
+	try {
+		const csrf = await fetch("/api/csrf", { credentials: "same-origin" });
+		if (!csrf.ok) return { ok: false, reason: "server", errors: {} };
+		const body = new FormData();
+		body.append("file", values.file);
+		body.append("start_date", values.start_date);
+		body.append("end_date", values.end_date);
+		const response = await fetch(`/api/recruiter/applications/${applicationId}/contract`, {
+			method: "POST",
+			credentials: "same-origin",
+			headers: { "X-CSRFToken": (await csrf.json()).csrfToken },
+			body,
+		});
+		if (response.ok) return { ok: true, data: (await response.json()) as T };
+		const data = await response.json().catch(() => ({}));
+		const errors: ContractErrors = {};
+		for (const key of ["file", "start_date", "end_date"] as const) {
+			const message = data?.errors?.[key]?.[0];
+			if (typeof message === "string") errors[key] = message;
+		}
+		if (response.status === 401 || response.status === 403) return { ok: false, reason: "unauthenticated", errors };
+		if (response.status === 404) return { ok: false, reason: "notFound", errors };
+		if (response.status === 400) return { ok: false, reason: "invalid", errors };
+		if (response.status === 409) return { ok: false, reason: "conflict", errors };
+		return { ok: false, reason: "server", errors };
+	} catch (error) {
+		return { ok: false, reason: error instanceof TypeError ? "network" : "server", errors: {} };
+	}
+}
