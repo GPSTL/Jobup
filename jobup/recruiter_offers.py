@@ -12,9 +12,11 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from .candidates import candidateCard, isRecruiter
+from .contracts import ContractUpload, storeContract
 from .models import (
     ApplicationStatus,
     Contract,
+    ContractStage,
     Conversation,
     JobApplication,
     Offer,
@@ -307,18 +309,21 @@ def application_contract(request: Request, id: int) -> Response:
     school = application.student.school
     if school is None:
         return Response({"error": "Student has no school"}, status=409)
-    with transaction.atomic():
-        contract, created = Contract.objects.get_or_create(
-            application=application,
-            defaults={
-                "school": school,
-                "company": company,
-                "student": application.student,
-            },
-        )
-        if created:
-            contract_id, stage = contract.pk, contract.stage
-            transaction.on_commit(
-                lambda: notifyContract(contract_id, stage), robust=True
-            )
+    # JOB-045 : le PDF et les dates sont obligatoires ; renvoyer un contrat remplace le précédent
+    upload = ContractUpload(request)
+    if upload.errors:
+        return Response({"errors": upload.errors}, status=400)
+    stored = storeContract(
+        application,
+        upload,
+        {"school": school, "company": company, "student": application.student},
+    )
+    if isinstance(stored, Response):
+        return stored
+    contract, created = stored
+    contract_id, version = contract.pk, contract.version
+    transaction.on_commit(
+        lambda: notifyContract(contract_id, ContractStage.DEPOSITED, version),
+        robust=True,
+    )
     return Response(applicationDetail(application), status=201 if created else 200)

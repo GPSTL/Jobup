@@ -15,7 +15,7 @@ const sample: RecruiterApplication = {
 	status: STATUS.IN_REVIEW, submitted_at: "2026-10-10T09:00:00Z", message: "Je suis motivé", decision_message: "", conversation_id: null, contract: null,
 };
 const render = (application: RecruiterApplication) => renderToStaticMarkup(
-	<MemoryRouter><RecruiterApplicationContent application={application} saving={false} error="" onDecision={() => {}} onDeposit={() => {}} /></MemoryRouter>,
+	<MemoryRouter><RecruiterApplicationContent application={application} saving={false} error="" onDecision={() => {}} onContract={() => {}} /></MemoryRouter>,
 );
 const realFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = realFetch; });
