@@ -1,5 +1,7 @@
 // Appels à l'API de suivi des candidatures (JOB-033, ETU-14).
 
+import type { ContractProgress } from "./school";
+
 export type ApplicationSummary = {
 	id: number;
 	offer: { id: number; title: string };
@@ -15,6 +17,10 @@ export type ApplicationSummary = {
 export type ApplicationDetail = ApplicationSummary & {
 	message: string;
 	decision_message: string;
+	/** Contrat déposé pour une candidature acceptée, null tant qu'il ne l'est pas */
+	contract: ContractProgress | null;
+	/** École de l'étudiant, null s'il n'en a pas (le contrat n'est alors pas suivi) */
+	school: string | null;
 	/** URL de téléchargement, null quand le document n'existe pas */
 	documents: { resume: string | null; cover_letter: string | null };
 };

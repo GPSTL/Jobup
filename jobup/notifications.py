@@ -16,12 +16,17 @@ from rest_framework.response import Response
 from .conversations import interlocutor
 from .models import (
     ApplicationStatus,
+    Contract,
+    ContractStage,
     JobApplication,
     Message,
     Notification,
     NotificationKind,
     NotificationPreference,
     Role,
+    SchoolManager,
+    SchoolRequest,
+    SchoolRequestStatus,
     User,
 )
 
@@ -98,9 +103,8 @@ def messagePreview(message: Message) -> str:
 
 def notifyNewMessage(message_id: int) -> Notification | None:
     # Nouveau message pour l'autre participant de la conversation, le seul qui y a accès :
-    # l'étudiant quand le recruteur ou l'école écrit (JOB-042), le recruteur de la
-    # conversation quand l'étudiant écrit (JOB-046). Les écoles (ECO-21) brancheront le
-    # leur sur le même socle : un message de l'étudiant à l'école ne notifie encore personne.
+    # l'étudiant quand le recruteur ou l'école écrit (JOB-042), le recruteur ou l'employé
+    # d'école de la conversation quand l'étudiant écrit (JOB-046).
     message = (
         Message.objects.select_related(
             "attachment",
@@ -118,6 +122,8 @@ def notifyNewMessage(message_id: int) -> Notification | None:
     conversation = message.conversation
     student = conversation.student.user
     if message.sender_id == student.pk:
+        if conversation.school_manager is not None:
+            return notifyManagerOfMessage(message)
         return notifyRecruiterOfMessage(message)
     if not preferencesOf(student).messages:
         return None
@@ -150,6 +156,22 @@ def notifyRecruiterOfMessage(message: Message) -> Notification | None:
         f"Nouveau message de {student.first_name} {student.last_name}",
         messagePreview(message),
         f"/recruiter/messages/{conversation.pk}",
+    )
+
+
+def notifyManagerOfMessage(message: Message) -> Notification | None:
+    # Message de l'étudiant : seul l'employé d'école de la conversation le voit
+    manager = message.conversation.school_manager
+    if manager is None or not preferencesOf(manager.user).messages:
+        return None
+    student = message.conversation.student.user
+    return notify(
+        manager.user,
+        NotificationKind.MESSAGE,
+        f"message:{message.pk}",
+        f"Nouveau message de {student.first_name} {student.last_name}",
+        messagePreview(message),
+        f"/school/messages/{message.conversation_id}",
     )
 
 
@@ -224,6 +246,97 @@ def notifyNewApplication(application: JobApplication) -> Notification | None:
     )
 
 
+def notifySchoolRequest(request_id: int) -> None:
+    # Demande de rattachement : tous les employés de l'école la voient
+    request = (
+        SchoolRequest.objects.select_related("student__user", "school")
+        .filter(pk=request_id)
+        .first()
+    )
+    if request is None:
+        return
+    student = request.student.user
+    for manager in SchoolManager.objects.filter(school=request.school).select_related(
+        "user"
+    ):
+        if preferencesOf(manager.user).school_updates:
+            notify(
+                manager.user,
+                NotificationKind.SCHOOL_REQUEST,
+                f"school-request:{request.pk}",
+                "Nouvelle demande de rattachement",
+                f"{student.first_name} {student.last_name} souhaite être rattaché(e) à {request.school.name}.",
+                "/school/students",
+            )
+
+
+def notifySchoolRequestDecision(request_id: int) -> Notification | None:
+    request = (
+        SchoolRequest.objects.select_related("student__user", "school")
+        .filter(pk=request_id)
+        .first()
+    )
+    if request is None or request.status == SchoolRequestStatus.PENDING:
+        return None
+    student = request.student.user
+    if not preferencesOf(student).school_updates:
+        return None
+    accepted = request.status == SchoolRequestStatus.ACCEPTED
+    return notify(
+        student,
+        NotificationKind.SCHOOL_REQUEST,
+        f"school-request:{request.pk}:{'accepted' if accepted else 'refused'}",
+        "Rattachement accepté" if accepted else "Rattachement refusé",
+        (
+            f"{request.school.name} a accepté votre demande."
+            if accepted
+            else f"{request.school.name} n’a pas accepté votre demande."
+        ),
+        "/student#school",
+    )
+
+
+def notifyContract(contract_id: int, stage: int) -> None:
+    # Contrat déposé : l'étudiant le suit, l'école doit le valider. Validé puis signé :
+    # l'étudiant en est informé, l'école étant celle qui l'a fait avancer.
+    contract = (
+        Contract.objects.select_related(
+            "student__user", "company", "school", "application__offer"
+        )
+        .filter(pk=contract_id)
+        .first()
+    )
+    if contract is None or contract.application is None:
+        return
+    student = contract.student.user
+    title = contract.application.offer.title
+    event = f"contract:{contract.pk}:{stage}"
+    link = f"/applications/{contract.application.pk}"
+    if stage == ContractStage.DEPOSITED:
+        for manager in SchoolManager.objects.filter(
+            school=contract.school
+        ).select_related("user"):
+            if preferencesOf(manager.user).school_updates:
+                notify(
+                    manager.user,
+                    NotificationKind.CONTRACT_UPDATE,
+                    event,
+                    "Nouveau contrat à valider",
+                    f"{contract.company.name} a déposé le contrat de {student.first_name} {student.last_name} (« {title} »).",
+                    "/school/contracts",
+                )
+        heading = "Contrat déposé"
+        body = f"{contract.company.name} a déposé votre contrat « {title} » : {contract.school.name} doit maintenant le valider."
+    elif stage == ContractStage.VALIDATED:
+        heading = "Contrat validé par votre école"
+        body = f"{contract.school.name} a validé votre contrat « {title} » : il ne reste que la signature."
+    else:
+        heading = "Contrat signé !"
+        body = f"Votre contrat « {title} » chez {contract.company.name} est signé."
+    if preferencesOf(student).school_updates:
+        notify(student, NotificationKind.CONTRACT_UPDATE, event, heading, body, link)
+
+
 # ----- API ----- #
 
 
@@ -237,6 +350,7 @@ class PreferencesSerializer(serializers.Serializer):
     messages = serializers.BooleanField(required=False)
     application_status = serializers.BooleanField(required=False)
     new_applications = serializers.BooleanField(required=False)
+    school_updates = serializers.BooleanField(required=False)
     email = serializers.BooleanField(required=False)
 
 
@@ -257,6 +371,7 @@ def preferencesDict(preferences: NotificationPreference) -> dict[str, bool]:
         "messages": preferences.messages,
         "application_status": preferences.application_status,
         "new_applications": preferences.new_applications,
+        "school_updates": preferences.school_updates,
         "email": preferences.email,
     }
 

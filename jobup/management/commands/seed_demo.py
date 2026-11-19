@@ -21,6 +21,8 @@ from jobup.management.commands.seed_candidates import (
 from jobup.models import (
     ApplicationStatus,
     Company,
+    Contract,
+    ContractStage,
     Conversation,
     Exclusion,
     JobApplication,
@@ -32,6 +34,7 @@ from jobup.models import (
     Role,
     School,
     SchoolManager,
+    SchoolRequest,
     Shortlist,
     Student,
     StudyDegree,
@@ -366,7 +369,9 @@ class Command(BaseCommand):
         # Conversations: the ones of the mockup "Messages", dated from today
         today = timezone.localtime()
         self.conversations(recruiter, recruiter_user, lucas, sophie, emma, today)
-        self.school(lucas, today)
+        self.school(
+            lucas, sophie, students["ines.diallo@demo.jobup.fr"], data_offer, today
+        )
         self.companies()
 
         self.stdout.write(
@@ -443,7 +448,14 @@ class Command(BaseCommand):
                 "Je suis disponible jeudi.",
             )
 
-    def school(self, lucas: Student, today: datetime) -> None:
+    def school(
+        self,
+        lucas: Student,
+        sophie: Student,
+        ines: Student,
+        offer: Offer,
+        today: datetime,
+    ) -> None:
         # A conversation with his school, for the student side
         school, _ = School.objects.get_or_create(name="Université Paris Nanterre")
         manager_user = demoUser(MANAGER_EMAIL, "Inès", "Roux", Role.MANAGER)
@@ -466,6 +478,36 @@ class Command(BaseCommand):
                 at(today - timedelta(days=5), 14, 20),
                 "Bonjour, je vous l'envoie dès que l'entreprise l'a signée.",
             )
+
+        # Tracking: a contract validated by the school (Lucas), one just deposited (Sophie)
+        # and a student asking to join the school (Inès)
+        for student, stage, days in (
+            (lucas, ContractStage.VALIDATED, 6),
+            (sophie, ContractStage.DEPOSITED, 2),
+        ):
+            application, _ = JobApplication.objects.get_or_create(
+                student=student, offer=offer
+            )
+            if application.is_draft:
+                application.submit()
+            JobApplication.objects.filter(pk=application.pk).update(
+                status=ApplicationStatus.ACCEPTED
+            )
+            deposited = today - timedelta(days=days)
+            Contract.objects.get_or_create(
+                application=application,
+                defaults={
+                    "school": school,
+                    "company": offer.recruiter.company,
+                    "student": student,
+                    "stage": stage,
+                    "deposited_at": deposited,
+                    "validated_at": deposited + timedelta(days=2)
+                    if stage == ContractStage.VALIDATED
+                    else None,
+                },
+            )
+        SchoolRequest.objects.get_or_create(student=ines, defaults={"school": school})
 
     def companies(self) -> None:
         # Annuaire des entreprises (JOB-021) : relançable sans doublons

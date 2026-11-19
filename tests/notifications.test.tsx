@@ -184,7 +184,7 @@ const recruiterNotification = (id: number, kind: AppNotification["kind"]): AppNo
 	body: kind === "new_application" ? "Lucas Martin a postulé à « Développeur Java en alternance »." : "« Je suis disponible jeudi. »",
 });
 
-const preferences = { messages: true, application_status: true, new_applications: false, email: true };
+const preferences = { messages: true, application_status: true, new_applications: false, school_updates: true, email: true };
 
 test("recruteur : icônes de la maquette « Notifications recruteur »", () => {
 	assert.deepEqual(kindIcon("new_application", "recruiter"), { src: "/static/img/notifications/user-plus.svg", background: "bg-[#dbeafe]" });

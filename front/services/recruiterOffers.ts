@@ -1,4 +1,5 @@
 import type { CandidateSummary } from "./candidates";
+import type { ContractProgress } from "./school";
 import { STATUS } from "../utils/applications";
 
 export type RecruiterOffer = {
@@ -99,6 +100,7 @@ export type RecruiterApplication = {
     message: string;
     decision_message: string;
     conversation_id: number | null;
+    contract: ContractProgress | null;
 };
 
 export const getRecruiterApplication = (id: string) => read<RecruiterApplication>(`/api/recruiter/applications/${encodeURIComponent(id)}`);

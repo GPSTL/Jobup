@@ -9,8 +9,7 @@ export const COUNT_REFRESH_DELAY = 30_000;
 // Préférence e-mail dans « Mon espace » : cible du lien « Préférences e-mail » du panneau
 export const PREFERENCES_ANCHOR = "notifications";
 
-// Rôles dont les notifications sont intégrées (les écoles viendront avec ECO-21)
-export type NotificationRole = "student" | "recruiter";
+export type NotificationRole = "student" | "recruiter" | "school";
 
 type RoleNotifications = {
 	/** Page « Voir toutes les notifications » */
@@ -28,10 +27,11 @@ export const ROLE_NOTIFICATIONS: Record<NotificationRole, RoleNotifications> = {
 	student: {
 		page: "/notifications",
 		preferences: `/student#${PREFERENCES_ANCHOR}`,
-		description: "Les nouveaux messages et les changements de vos candidatures.",
+		description: "Les nouveaux messages, les changements de vos candidatures et le suivi de votre contrat.",
 		settings: [
 			{ key: "messages", label: "Nouveaux messages" },
 			{ key: "application_status", label: "Changement de statut de candidature" },
+			{ key: "school_updates", label: "École et suivi du contrat" },
 			{ key: "email", label: "Recevoir aussi par e-mail" },
 		],
 	},
@@ -42,6 +42,16 @@ export const ROLE_NOTIFICATIONS: Record<NotificationRole, RoleNotifications> = {
 		description: "Les nouvelles candidatures à vos offres et les nouveaux messages des candidats.",
 		settings: [
 			{ key: "new_applications", label: "Nouvelles candidatures" },
+			{ key: "messages", label: "Nouveaux messages" },
+			{ key: "email", label: "Recevoir aussi par e-mail" },
+		],
+	},
+	school: {
+		page: "/school/notifications",
+		preferences: `/school#${PREFERENCES_ANCHOR}`,
+		description: "Les demandes de rattachement, les contrats à valider et les messages des étudiants.",
+		settings: [
+			{ key: "school_updates", label: "Demandes et contrats" },
 			{ key: "messages", label: "Nouveaux messages" },
 			{ key: "email", label: "Recevoir aussi par e-mail" },
 		],
@@ -87,6 +97,8 @@ export const KIND_ICONS: Record<NotificationKind, KindIcon> = {
 	// La maquette n'a pas d'icône pour un refus : celle d'une mise à jour
 	application_refused: { src: "/static/img/notifications/refresh.svg", background: "bg-[#fef3c7]" },
 	new_application: { src: "/static/img/notifications/user-plus.svg", background: "bg-[#dbeafe]" },
+	school_request: { src: "/static/img/notifications/user-plus.svg", background: "bg-[#dbeafe]" },
+	contract_update: { src: "/static/img/notifications/check.svg", background: "bg-[#dcfce7]" },
 };
 
 // Maquette « Notifications recruteur » : le bleu y est réservé aux candidatures, les messages sont en violet
@@ -94,7 +106,7 @@ const RECRUITER_ICONS: Partial<Record<NotificationKind, KindIcon>> = {
 	message: { src: "/static/img/notifications/message-violet.svg", background: "bg-[#ede7fe]" },
 };
 
-// Type inconnu (ajouté côté serveur par une autre story, comme ECO-21) : l'icône générique de la maquette
+// Type inconnu (ajouté côté serveur sans être branché ici) : l'icône générique de la maquette
 export const kindIcon = (kind: string, role: NotificationRole = "student") =>
 	(role === "recruiter" ? RECRUITER_ICONS[kind as NotificationKind] : undefined) ??
 	KIND_ICONS[kind as NotificationKind] ?? { src: "/static/img/notifications/mail.svg", background: "bg-[#ede7fe]" };

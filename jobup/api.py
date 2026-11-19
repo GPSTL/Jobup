@@ -36,7 +36,7 @@ def getOwnStudent(user: User) -> Student | None:
 def getApplication(student: Student, id: int) -> JobApplication | None:
     return (
         JobApplication.objects.filter(pk=id, student=student)
-        .select_related("student", "offer__recruiter__company")
+        .select_related("student__school", "offer__recruiter__company")
         .first()
     )
 

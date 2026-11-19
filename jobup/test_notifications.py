@@ -234,6 +234,7 @@ class PreferenceTests(NotificationTestCase):
                 "messages": True,
                 "application_status": True,
                 "new_applications": True,
+                "school_updates": True,
                 "email": False,
             },
         )
@@ -285,6 +286,7 @@ class PreferenceTests(NotificationTestCase):
                 "messages": True,
                 "application_status": True,
                 "new_applications": True,
+                "school_updates": True,
                 "email": True,
             },
         )
@@ -299,6 +301,7 @@ class PreferenceTests(NotificationTestCase):
                 "messages": False,
                 "application_status": True,
                 "new_applications": True,
+                "school_updates": True,
                 "email": True,
             },
         )

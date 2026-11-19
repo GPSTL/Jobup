@@ -108,6 +108,21 @@ class ApplicationStatus(models.IntegerChoices):
 FINAL_STATUSES = frozenset({ApplicationStatus.ACCEPTED, ApplicationStatus.REFUSED})
 
 
+# Étapes du contrat après l'acceptation de la candidature, vues par l'étudiant :
+# déposé par l'entreprise, validé puis signé par l'école. Elles s'enchaînent dans cet ordre.
+class ContractStage(models.IntegerChoices):
+    DEPOSITED = 1, "Deposited"
+    VALIDATED = 2, "Validated by the school"
+    SIGNED = 3, "Signed"
+
+
+# Demande de rattachement d'un étudiant à son école, à valider par l'école
+class SchoolRequestStatus(models.IntegerChoices):
+    PENDING = 0, "Pending"
+    ACCEPTED = 1, "Accepted"
+    REFUSED = 2, "Refused"
+
+
 # Type de contrat d'une offre (JOB-051) : valeurs envoyées par le formulaire « Créer une offre »
 class ContractType(models.TextChoices):
     APPRENTICESHIP = "alternance", "Alternance"
@@ -354,10 +369,15 @@ class JobApplication(models.Model):
 
     def to_detail_dict(self) -> dict[str, Any]:
         base = f"/api/applications/{self.pk}/documents"
+        contract = Contract.objects.filter(application=self).first()
         return {
             **self.to_dict(),
             "message": self.message,
             "decision_message": self.decision_message,
+            # Suivi du contrat d'une candidature acceptée ; l'école de l'étudiant sert à lui
+            # dire quand il lui manque pour que le contrat soit suivi
+            "contract": contract.to_dict() if contract else None,
+            "school": self.student.school.name if self.student.school else None,
             "documents": {
                 "resume": f"{base}/resume" if self.sent_resume else None,
                 "cover_letter": f"{base}/cover_letter" if self.cover_letter else None,
@@ -405,6 +425,42 @@ class Contract(models.Model):
     school = models.ForeignKey(School, models.PROTECT)
     company = models.ForeignKey(Company, models.PROTECT)
     student = models.ForeignKey(Student, models.PROTECT)
+    # Candidature acceptée dont il découle ; vide seulement pour un contrat créé avant ce lien
+    application = models.OneToOneField(
+        JobApplication,
+        models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="contract",
+    )
+    stage = models.SmallIntegerField(
+        choices=ContractStage.choices, default=ContractStage.DEPOSITED
+    )
+    deposited_at = models.DateTimeField(default=timezone.now)
+    validated_at = models.DateTimeField(null=True, blank=True)
+    signed_at = models.DateTimeField(null=True, blank=True)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.pk,
+            "stage": self.stage,
+            "deposited_at": self.deposited_at,
+            "validated_at": self.validated_at,
+            "signed_at": self.signed_at,
+        }
+
+
+# Demande de l'étudiant pour être rattaché à une école (Student.school). Tant qu'elle n'est pas
+# acceptée, l'école n'apparaît nulle part sur son profil. Une seule demande par étudiant.
+class SchoolRequest(models.Model):
+    student = models.OneToOneField(
+        Student, models.CASCADE, related_name="school_request"
+    )
+    school = models.ForeignKey(School, models.CASCADE, related_name="requests")
+    status = models.SmallIntegerField(
+        choices=SchoolRequestStatus.choices, default=SchoolRequestStatus.PENDING
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
 
 
 # ----- MESSAGING ----- #
@@ -549,6 +605,10 @@ class NotificationKind(models.TextChoices):
     APPLICATION_REFUSED = "application_refused", "Application refused"
     # Recruteur (JOB-046, REC-32) : candidature reçue sur une de ses offres
     NEW_APPLICATION = "new_application", "New application"
+    # École : demande de rattachement (reçue par l'école, décidée pour l'étudiant) et
+    # contrat (déposé pour l'école, puis suivi par l'étudiant)
+    SCHOOL_REQUEST = "school_request", "School request"
+    CONTRACT_UPDATE = "contract_update", "Contract updated"
 
 
 class Notification(models.Model):
@@ -585,6 +645,8 @@ class NotificationPreference(models.Model):
     messages = models.BooleanField(default=True)
     application_status = models.BooleanField(default=True)
     new_applications = models.BooleanField(default=True)
+    # Demandes de rattachement et contrats : reçus par l'école, suivis par l'étudiant
+    school_updates = models.BooleanField(default=True)
     # Recevoir aussi un e-mail pour ces notifications ; sans effet sur l'application
     email = models.BooleanField(default=False)
 

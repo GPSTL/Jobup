@@ -26,8 +26,8 @@ test("recruteur : une destination hors de l'espace recruteur est ignorée", () =
 	}
 });
 
-test("école : l'accueil, faute d'espace dédié", () => {
-	assert.equal(accountHome(MANAGER), "/");
+test("école : son tableau de bord", () => {
+	assert.equal(accountHome(MANAGER), "/school");
 });
 
 test("administrateur : la liste des utilisateurs", () => {

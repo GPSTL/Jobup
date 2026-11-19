@@ -14,6 +14,7 @@ export type User = {
 
 // Valeur de Role.STUDENT dans jobup/models.py
 export const STUDENT_ROLE = 1;
+export const MANAGER_ROLE = 2;
 export const RECRUITER_ROLE = 3;
 export const ADMIN_ROLE = 127;
 
