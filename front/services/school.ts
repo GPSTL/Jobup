@@ -66,6 +66,8 @@ async function call<T>(url: string, method: "GET" | "POST" | "PATCH" | "DELETE" 
 		}
 		if (body) headers["Content-Type"] = "application/json";
 		const response = await fetch(url, { method, credentials: "same-origin", headers, body: body && JSON.stringify(body) });
+		// 204 : rien à lire (retrait d'un étudiant, JOB-049)
+		if (response.status === 204) return { ok: true, data: undefined as T };
 		if (response.ok) return { ok: true, data: (await response.json()) as T };
 		if (response.status === 401 || response.status === 403) return { ok: false, reason: "unauthenticated" };
 		if (response.status === 404) return { ok: false, reason: "notFound" };
@@ -85,6 +87,7 @@ export const getSchool = () => call<SchoolDashboard>("/api/school");
 export const createSchool = (name: string) => call<{ school: SchoolInfo }>("/api/school", "POST", { name });
 export const getSchoolStudents = () => call<SchoolStudent[]>("/api/school/students");
 export const getSchoolStudent = (id: string) => call<SchoolStudentDetail>(`/api/school/students/${encodeURIComponent(id)}`);
+export const removeSchoolStudent = (id: number) => call<void>(`/api/school/students/${id}`, "DELETE");
 export const getSchoolRequests = () => call<SchoolRequest[]>("/api/school/requests");
 export const decideSchoolRequest = (id: number, status: "accepted" | "refused") => call<{ id: number; status: string }>(`/api/school/requests/${id}`, "PATCH", { status });
 export const getSchoolContracts = () => call<SchoolContract[]>("/api/school/contracts");

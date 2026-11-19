@@ -5,7 +5,7 @@ import Button from "../components/Button";
 import { CandidateAvatar } from "../components/CandidateIdentity";
 import ContractCard, { useAdvanceContract } from "../components/ContractCard";
 import { schoolPanel, SchoolLayout, SchoolRequestState, useSchoolData } from "../components/SchoolLayout";
-import { getSchoolStudent, startSchoolConversation } from "../services/school";
+import { getSchoolStudent, removeSchoolStudent, startSchoolConversation } from "../services/school";
 import { formatDate, statusChip } from "../utils/applications";
 import { fullName } from "../utils/candidates";
 import { STUDENT_STATUS } from "../utils/school";
@@ -13,6 +13,40 @@ import { focus } from "../utils/searchPageStyles";
 import { REQUEST_ERRORS } from "../utils/validation";
 
 const sectionTitle = "text-lg font-semibold";
+
+type RemoveStudentProps = {
+	name: string;
+	onRemove: () => void;
+	removing: boolean;
+	error: string;
+};
+
+// Retrait de l'étudiant de l'effectif suivi (JOB-049, ECO-15), confirmé avant l'envoi
+export function RemoveStudent({ name, onRemove, removing, error }: RemoveStudentProps) {
+	const [confirming, setConfirming] = useState(false);
+	return (
+		<section aria-label="Retirer l’étudiant" className="flex flex-col gap-3 border-t border-[#e5e7eb] pt-5">
+			{confirming ? (
+				<div className="flex flex-col gap-3 rounded-2xl border border-[#fecaca] bg-[#fef2f2] p-4">
+					<p className="text-sm">
+						Retirer <strong>{name}</strong> de votre école ? Vous ne verrez plus son suivi ni ses contrats. Son compte et ses candidatures sont conservés, et il pourra refaire une demande de rattachement.
+					</p>
+					<div className="flex flex-wrap gap-3">
+						<button type="button" onClick={onRemove} disabled={removing} className={`rounded-xl bg-[#b91c1c] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50 ${focus}`}>
+							{removing ? "Retrait…" : "Confirmer le retrait"}
+						</button>
+						<Button variant="outline" onClick={() => setConfirming(false)} disabled={removing}>Annuler</Button>
+					</div>
+				</div>
+			) : (
+				<button type="button" onClick={() => setConfirming(true)} className={`w-fit rounded-xl border border-[#b91c1c] px-5 py-2.5 text-sm font-semibold text-[#b91c1c] hover:bg-[#fef2f2] ${focus}`}>
+					Retirer de l’école
+				</button>
+			)}
+			{error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+		</section>
+	);
+}
 
 // Suivi d'un étudiant de l'école : ses candidatures envoyées et l'avancement de son contrat
 export default function SchoolStudentPage() {
@@ -22,6 +56,8 @@ export default function SchoolStudentPage() {
 	const { result, retry, setData } = useSchoolData(load);
 	const [starting, setStarting] = useState(false);
 	const [error, setError] = useState("");
+	const [removing, setRemoving] = useState(false);
+	const [removeError, setRemoveError] = useState("");
 	const advancing = useAdvanceContract((updated) => {
 		if (result?.ok) setData({ ...result.data, contracts: result.data.contracts.map((contract) => (contract.id === updated.id ? updated : contract)) });
 	});
@@ -34,6 +70,17 @@ export default function SchoolStudentPage() {
 		setStarting(false);
 		if (started.ok) navigate(`/school/messages/${started.data.id}`);
 		else setError(REQUEST_ERRORS[started.reason === "unauthenticated" || started.reason === "network" ? started.reason : "server"]);
+	};
+
+	const remove = async (studentId: number, name: string) => {
+		if (removing) return;
+		setRemoving(true);
+		setRemoveError("");
+		const removed = await removeSchoolStudent(studentId);
+		setRemoving(false);
+		// Déjà retiré ailleurs (404) : le résultat est le même
+		if (removed.ok || removed.reason === "notFound") navigate("/school/students", { replace: true, state: { removedStudent: name } });
+		else setRemoveError(REQUEST_ERRORS[removed.reason === "unauthenticated" || removed.reason === "network" ? removed.reason : "server"]);
 	};
 
 	const student = result?.ok ? result.data : null;
@@ -83,6 +130,8 @@ export default function SchoolStudentPage() {
 								))}
 							</ul>
 						)}
+
+						<RemoveStudent name={fullName(student)} onRemove={() => remove(student.id, fullName(student))} removing={removing} error={removeError} />
 					</>
 				)}
 			</section>

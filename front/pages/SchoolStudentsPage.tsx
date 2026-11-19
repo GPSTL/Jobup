@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import { CandidateAvatar } from "../components/CandidateIdentity";
 import ExportPanel from "../components/ExportPanel";
@@ -32,6 +32,8 @@ export default function SchoolStudentsPage() {
 	// Demande en cours de décision, et message d'échec
 	const [deciding, setDeciding] = useState<number | null>(null);
 	const [error, setError] = useState("");
+	// Étudiant que l'école vient de retirer depuis sa fiche (JOB-049)
+	const removed = (useLocation().state as { removedStudent?: string } | null)?.removedStudent;
 
 	const decide = async (id: number, status: "accepted" | "refused") => {
 		if (deciding !== null || !requests.result?.ok) return;
@@ -58,6 +60,7 @@ export default function SchoolStudentsPage() {
 					<h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Étudiants</h1>
 					<p className="text-sm text-[#6b7280]">Suivez la recherche d’alternance de vos étudiants, de leurs candidatures jusqu’à la signature du contrat.</p>
 				</header>
+				{removed && <p role="status" className="rounded-xl bg-[#dcfce7] px-4 py-3 text-sm text-[#166534]">{removed} a été retiré de votre école.</p>}
 				<SchoolRequestState result={students.result} retry={students.retry} />
 
 				{requests.result?.ok && requests.result.data.length > 0 && (
