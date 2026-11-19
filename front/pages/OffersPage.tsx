@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 
 import Button from "../components/Button";
 import ChevronDownIcon from "../components/ChevronDownIcon";
+import ExportPanel from "../components/ExportPanel";
 import Footer from "../components/Footer";
 import HeartIcon from "../components/HeartIcon";
 import LoginBanner from "../components/LoginBanner";
@@ -185,6 +186,7 @@ function OfferDetailRequest({ id }: { id: string }) {
 				<div className="flex flex-wrap items-center gap-3 border-t border-[#e5e7eb] pt-4">
 					{student ? <Button onClick={startApplication} disabled={applying}>{applying ? "Préparation…" : "Postuler"}</Button> : <Link to="/login" state={{ studentReturnTo: `/offers/${result.data.id}` }} className="inline-flex items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">Se connecter pour postuler</Link>}
 					{student ? <Button variant="outline" onClick={toggleSaved} disabled={saving}>{saving ? "Mise à jour…" : saved ? "Retirer des sauvegardées" : "Sauvegarder"}</Button> : <Button variant="outline" disabled title="Connectez-vous avec un compte étudiant pour sauvegarder cette offre">Sauvegarder</Button>}
+					{student && <ExportPanel url={`/api/offers/${result.data.id}/export`} fields={[]} />}
 					<Button variant="outline" disabled title="Le signalement des offres sera disponible prochainement">Signaler l’offre</Button>
 				</div>
 			</> : <>

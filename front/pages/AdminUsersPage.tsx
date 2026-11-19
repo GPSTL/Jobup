@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 
 import AdminNavbar from "../components/AdminNavbar";
 import ChevronDownIcon from "../components/ChevronDownIcon";
+import ExportPanel from "../components/ExportPanel";
 import Pagination from "../components/Pagination";
 import SearchIcon from "../components/SearchIcon";
 import { getAdminUserFilters, getAdminUsers, type AdminSchool, type AdminUser, type AdminUsersResult } from "../services/adminUsers";
@@ -10,18 +11,23 @@ import {
 	adminLoginLink,
 	formatDate,
 	hasCriteria,
+	MAX_SELECTION,
 	nextSort,
 	PAGE_SIZES,
 	queryFromParams,
 	rangeLabel,
+	readSelection,
+	saveSelection,
 	searchFromQuery,
 	sortDirection,
+	toggleIds,
 	withChanges,
 	type AdminUserSort,
 	type AdminUserStatus,
 	type AdminUsersQuery,
 	type SortColumn,
 } from "../utils/adminUsers";
+import type { ExportField } from "../utils/exports";
 import { field, focus, input, select } from "../utils/searchPageStyles";
 
 const COLUMNS: { column: SortColumn; label: string }[] = [
@@ -46,10 +52,18 @@ function SortArrows({ direction }: { direction: "ascending" | "descending" | und
 	);
 }
 
-function AccountRow({ user, returnTo }: { user: AdminUser; returnTo: string }) {
+const checkbox = "size-4 cursor-pointer accent-primary";
+
+function AccountRow({ user, returnTo, selection }: { user: AdminUser; returnTo: string; selection?: Selection }) {
 	const name = `${user.first_name} ${user.last_name}`;
+	const checked = selection?.ids.includes(user.id) ?? false;
 	return (
-		<tr className="border-t border-[#e1e3e8] hover:bg-[#f9fafb]">
+		<tr className={`border-t border-[#e1e3e8] ${checked ? "bg-[#eff6ff]" : "hover:bg-[#f9fafb]"}`}>
+			{selection && (
+				<td className={`${cell} w-10`}>
+					<input type="checkbox" checked={checked} onChange={(e) => selection.onChange(toggleIds(selection.ids, [user.id], e.target.checked))} aria-label={`Sélectionner ${name}`} className={checkbox} />
+				</td>
+			)}
 			<td className={cell}>{user.first_name}</td>
 			<td className={`${cell} font-medium`}>{user.last_name}</td>
 			<td className={`${cell} whitespace-nowrap`}>{user.email}</td>
@@ -79,22 +93,39 @@ function AccountRow({ user, returnTo }: { user: AdminUser; returnTo: string }) {
 	);
 }
 
+/** Accounts ticked in the table, from every page */
+type Selection = { ids: number[]; onChange: (ids: number[]) => void };
+
 type AdminUsersTableProps = {
 	users: AdminUser[];
 	sort: AdminUserSort;
 	onSort: (sort: AdminUserSort) => void;
+	/** Without it, the table has no checkboxes */
+	selection?: Selection;
 };
+
+// Ticks or unticks the accounts of the page; half ticked when only some of them are
+function SelectPage({ users, selection }: { users: AdminUser[]; selection: Selection }) {
+	const ids = users.map((user) => user.id);
+	const ticked = ids.filter((id) => selection.ids.includes(id)).length;
+	const ref = useRef<HTMLInputElement>(null);
+	useEffect(() => {
+		if (ref.current) ref.current.indeterminate = ticked > 0 && ticked < ids.length;
+	}, [ticked, ids.length]);
+	return <input ref={ref} type="checkbox" checked={ticked === ids.length} onChange={(e) => selection.onChange(toggleIds(selection.ids, ids, e.target.checked))} aria-label="Sélectionner tous les comptes de la page" className={checkbox} />;
+}
 
 // Wider than a phone: the table scrolls sideways inside its frame, never the page. The frame is
 // positioned so that the hidden header (sr-only, absolute) stays inside it too
-export function AdminUsersTable({ users, sort, onSort }: AdminUsersTableProps) {
+export function AdminUsersTable({ users, sort, onSort, selection }: AdminUsersTableProps) {
 	const location = useLocation();
 	const returnTo = location.pathname + location.search;
 	return (
 		<div role="region" aria-label="Comptes étudiants" tabIndex={0} className={`relative overflow-x-auto rounded-2xl border border-[#e1e3e8] ${focus}`}>
-			<table className="w-full min-w-[860px] border-collapse text-left text-sm text-ink">
+			<table className="w-full min-w-[900px] border-collapse text-left text-sm text-ink">
 				<thead className="bg-[#f9fafb] text-xs text-[#6b7280]">
 					<tr>
+						{selection && <th scope="col" className={`${cell} w-10`}><SelectPage users={users} selection={selection} /></th>}
 						{COLUMNS.map(({ column, label }) => {
 							const direction = sortDirection(sort, column);
 							return (
@@ -115,7 +146,7 @@ export function AdminUsersTable({ users, sort, onSort }: AdminUsersTableProps) {
 					</tr>
 				</thead>
 				<tbody>
-					{users.map((user) => <AccountRow key={user.id} user={user} returnTo={returnTo} />)}
+					{users.map((user) => <AccountRow key={user.id} user={user} returnTo={returnTo} selection={selection} />)}
 				</tbody>
 			</table>
 		</div>
@@ -206,9 +237,10 @@ type AdminUsersResultsProps = {
 	onChange: (changes: Partial<AdminUsersQuery>) => void;
 	onRetry: () => void;
 	onReset: () => void;
+	selection?: Selection;
 };
 
-export function AdminUsersResults({ result, loading, query, onChange, onRetry, onReset }: AdminUsersResultsProps) {
+export function AdminUsersResults({ result, loading, query, onChange, onRetry, onReset, selection }: AdminUsersResultsProps) {
 	if (!result) return <p role="status" className="py-16 text-center text-sm text-[#6b7280]">Chargement des utilisateurs…</p>;
 	if (!result.ok) {
 		return (
@@ -236,7 +268,7 @@ export function AdminUsersResults({ result, loading, query, onChange, onRetry, o
 	}
 	return (
 		<div className={loading ? "opacity-60" : ""}>
-			<AdminUsersTable users={result.results} sort={query.sort} onSort={(sort) => onChange({ sort })} />
+			<AdminUsersTable users={result.results} sort={query.sort} onSort={(sort) => onChange({ sort })} selection={selection} />
 			<div className="mt-6 flex flex-col items-center gap-4 text-xs sm:text-sm text-[#6b7280] lg:flex-row lg:justify-between">
 				<p role="status">{rangeLabel(result.count, result.page, result.page_size, result.results.length)}</p>
 				<Pagination currentPage={result.page} totalPages={result.total_pages} onPageChange={(page) => onChange({ page })} />
@@ -251,6 +283,18 @@ export function AdminUsersResults({ result, loading, query, onChange, onRetry, o
 	);
 }
 
+// Filters of the export: the current ones of the table, and the ticked accounts; every role unless one is chosen
+export function exportFields(query: AdminUsersQuery, schools: AdminSchool[] | "error" | null, selected: number[]): ExportField[] {
+	const fields: ExportField[] = [
+		{ kind: "select", key: "role", label: "Rôle", options: [{ value: "", label: "Tous les rôles" }, { value: "student", label: "Étudiants" }, { value: "school", label: "Écoles" }, { value: "recruiter", label: "Recruteurs" }, { value: "admin", label: "Administrateurs" }] },
+		{ kind: "select", key: "status", label: "Statut du compte", options: [{ value: "", label: "Tous les statuts" }, { value: "active", label: "Actifs" }, { value: "suspended", label: "Suspendus" }] },
+		{ kind: "select", key: "school", label: "École", options: [{ value: "", label: "Toutes les écoles" }, ...(Array.isArray(schools) ? schools : []).map(({ id, name }) => ({ value: String(id), label: name }))] },
+	];
+	if (selected.length > 0) fields.push({ kind: "toggle", key: "ids", label: `Seulement les ${selected.length} compte${selected.length > 1 ? "s" : ""} sélectionné${selected.length > 1 ? "s" : ""}`, value: selected.join(",") });
+	if (query.q) fields.push({ kind: "toggle", key: "q", label: `Appliquer la recherche « ${query.q} »`, value: query.q });
+	return fields;
+}
+
 // Data table of the student accounts (ADM-01): search, filters by status and school, sort by column, pagination
 export default function AdminUsersPage() {
 	const [params, setParams] = useSearchParams();
@@ -259,6 +303,9 @@ export default function AdminUsersPage() {
 	const [attempt, setAttempt] = useState(0);
 	const [loaded, setLoaded] = useState<{ search: string; attempt: number; result: AdminUsersResult } | null>(null);
 	const [schools, setSchools] = useState<AdminSchool[] | "error" | null>(null);
+	// Kept while a profile is open, so that « Retour à la liste » gives the table back as it was
+	const [selected, setSelected] = useState(readSelection);
+	useEffect(() => saveSelection(selected), [selected]);
 
 	useEffect(() => {
 		// A newer search cancels this request: its answer never replaces the newer one
@@ -298,7 +345,15 @@ export default function AdminUsersPage() {
 					<p className="text-sm text-[#6b7280]">Consultez et gérez les comptes étudiants inscrits sur la plateforme.</p>
 				</div>
 				<AdminUsersToolbar query={query} schools={schools} onSearch={onSearch} onChange={update} onReset={onReset} />
-				<AdminUsersResults result={shown} loading={current === null} query={query} onChange={update} onRetry={() => setAttempt(attempt + 1)} onReset={onReset} />
+				<div className="mb-6 flex flex-col gap-3">
+					<ExportPanel url="/api/administration/users/export" fields={exportFields(query, schools, selected)} defaults={{ status: query.status, school: query.school }} />
+					{selected.length > 0 && (
+						<p role="status" className="text-sm text-[#6b7280]">
+							<strong className="text-ink">{selected.length}</strong> compte{selected.length > 1 ? "s" : ""} sélectionné{selected.length > 1 ? "s" : ""}{selected.length === MAX_SELECTION ? ` (${MAX_SELECTION} au maximum)` : ""}
+						</p>
+					)}
+				</div>
+				<AdminUsersResults result={shown} loading={current === null} query={query} onChange={update} onRetry={() => setAttempt(attempt + 1)} onReset={onReset} selection={{ ids: selected, onChange: setSelected }} />
 			</main>
 		</div>
 	);

@@ -93,3 +93,33 @@ export const adminLoginLink = (path: string) => `/administration?${new URLSearch
 
 // « 09/10/2026 », in the time zone of the platform
 export const formatDate = (iso: string) => new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris" }).format(new Date(iso));
+
+// Same limit as the export of the API (MAX_IDS in jobup/exports.py)
+export const MAX_SELECTION = 500;
+
+// Accounts ticked in the table, kept from one page to the next; never more than the export accepts
+export function toggleIds(selected: number[], ids: number[], checked: boolean): number[] {
+	if (!checked) return selected.filter((id) => !ids.includes(id));
+	return [...selected, ...ids.filter((id) => !selected.includes(id))].slice(0, MAX_SELECTION);
+}
+
+const SELECTION_KEY = "adminUsersSelection";
+
+// The tick marks survive the visit of a profile: kept for the tab only, and the page works without storage
+export function readSelection(): number[] {
+	try {
+		const ids = JSON.parse(sessionStorage.getItem(SELECTION_KEY) ?? "[]");
+		return Array.isArray(ids) ? ids.filter((id): id is number => Number.isInteger(id) && id > 0).slice(0, MAX_SELECTION) : [];
+	} catch {
+		return [];
+	}
+}
+
+export function saveSelection(ids: number[]) {
+	try {
+		if (ids.length > 0) sessionStorage.setItem(SELECTION_KEY, JSON.stringify(ids));
+		else sessionStorage.removeItem(SELECTION_KEY);
+	} catch {
+		// Private window or blocked storage: the selection only lives in the page
+	}
+}

@@ -3,8 +3,10 @@ import { Navigate } from "react-router-dom";
 
 import ApplicationCard from "../components/ApplicationCard";
 import ApplicationsLayout, { LoadError, LoadingMessage } from "../components/ApplicationsLayout";
+import ExportPanel from "../components/ExportPanel";
 import { getApplications, type ApplicationSummary } from "../services/applications";
 import { byLastUpdate } from "../utils/applications";
+import { APPLICATION_STATUS_OPTIONS } from "../utils/exports";
 import { MESSAGES } from "../utils/validation";
 
 type ColumnProps = {
@@ -78,6 +80,10 @@ export default function ApplicationsPage() {
 					</div>
 				)}
 			</div>
+
+			{columns && columns.inProgress.length + columns.completed.length > 0 && (
+				<ExportPanel url="/api/applications/export" fields={[{ kind: "checkboxes", key: "status", label: "Statut des candidatures", options: APPLICATION_STATUS_OPTIONS }]} />
+			)}
 
 			{error && <LoadError message={error} onRetry={() => setAttempt(attempt + 1)} />}
 			{!error && columns === null && <LoadingMessage />}
