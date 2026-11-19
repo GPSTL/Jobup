@@ -6,7 +6,7 @@ Toutes les routes `/api/school*` sont réservées au rôle manager (`403` sinon)
 
 ## Compte de l'école
 
-- `GET /api/school` : `{ "school": null }` tant que l'école n'est pas choisie, sinon `{ school: { id, name }, stats: { students, searching, signed, pending_requests, contracts_to_validate } }`.
+- `GET /api/school` : `{ "school": null }` tant que l'école n'est pas choisie, sinon `{ school: { id, name }, stats: { students, searching, signed, found, pending_requests, contracts_to_validate } }`. `found` (JOB-047) : étudiants ayant trouvé leur alternance, c'est-à-dire une candidature acceptée (avancement `accepted`, `contract` ou `signed`).
 - `POST /api/school` : corps `{ "name": "..." }` (1 à 128 caractères), une seule fois par compte. `201 { school }`. `400 { errors: { name } }` si invalide, `409 { errors: { name } }` si l'établissement a déjà un compte école, `409 { error }` si le compte a déjà une école. Un établissement existant sans compte école peut être repris (les étudiants déjà rattachés y apparaissent). Aucune vérification de l'établissement par l'administration pour l'instant.
 
 ## Rattachement des étudiants
@@ -23,7 +23,7 @@ L'étudiant demande son école depuis « Mon espace » ; il n'est rattaché (`St
 
 `status` est l'étape la plus avancée de l'étudiant : `searching` (aucune candidature envoyée), `applying`, `accepted`, `contract` (contrat déposé ou validé), `signed`. Un brouillon n'est pas une candidature envoyée. `student.id` est l'identifiant du compte, comme pour `/api/recruiter/candidates/<id>`.
 
-- `GET /api/school/students` : `[{ id, first_name, last_name, photo_url, status, application_count }]`, par nom. Les comptes suspendus n'apparaissent pas.
+- `GET /api/school/students` : `[{ id, first_name, last_name, photo_url, status, application_count, last_application_at }]`, par nom. `last_application_at` (JOB-047) : date d'envoi de la dernière candidature, `null` sans candidature. Les comptes suspendus n'apparaissent pas.
 - `GET /api/school/students/<id>` : le même résumé plus `applications: [{ id, offer_title, company, status, submitted_at }]`, `contracts` (format ci-dessous) et `conversation_id` (`null` si aucune). `404` pour un étudiant inconnu ou d'une autre école.
 
 ## Contrats

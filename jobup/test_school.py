@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
@@ -167,6 +169,7 @@ class SchoolAccountTests(SchoolTestCase):
                 "students": 1,
                 "searching": 0,
                 "signed": 0,
+                "found": 0,
                 "pending_requests": 1,
                 "contracts_to_validate": 0,
             },
@@ -174,6 +177,8 @@ class SchoolAccountTests(SchoolTestCase):
         self.contract(self.alice)
         stats = self.client.get(SCHOOL).json()["stats"]
         self.assertEqual(stats["contracts_to_validate"], 1)
+        # JOB-047 : une candidature acceptée suffit pour avoir trouvé son alternance
+        self.assertEqual(stats["found"], 1)
 
 
 class SchoolStudentTests(SchoolTestCase):
@@ -216,6 +221,25 @@ class SchoolStudentTests(SchoolTestCase):
         self.assertEqual(self.statuses()[key], "signed")
         self.assertEqual(
             self.client.get(f"{SCHOOL}/students").json()[0]["application_count"], 1
+        )
+
+    def test_last_application_date(self):
+        # JOB-047 : date de la candidature envoyée la plus récente, rien sans candidature
+        self.login(self.manager.user)
+        self.assertIsNone(
+            self.client.get(f"{SCHOOL}/students").json()[0]["last_application_at"]
+        )
+        older = self.apply(self.alice)
+        JobApplication.objects.filter(pk=older.pk).update(
+            submitted_at=timezone.now() - timedelta(days=10)
+        )
+        newer = self.apply(self.alice)
+        # Un brouillon ne compte pas
+        JobApplication.objects.create(student=self.alice, offer=self.newOffer())
+        shown = self.client.get(f"{SCHOOL}/students").json()[0]
+        self.assertEqual(shown["application_count"], 2)
+        self.assertEqual(
+            datetime.fromisoformat(shown["last_application_at"]), newer.submitted_at
         )
 
     def test_detail(self):

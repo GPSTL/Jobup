@@ -3,6 +3,7 @@
 # Contrat avec le front end : docs/api/school.md
 from collections import defaultdict
 from collections.abc import Iterable
+from datetime import datetime
 from typing import Any
 
 from django.db import transaction
@@ -78,6 +79,11 @@ def person(student: Student) -> dict[str, Any]:
     }
 
 
+# Avancements où l'étudiant a trouvé son alternance (JOB-047, ECO-05) : une candidature
+# acceptée, puis le contrat
+FOUND = frozenset({ACCEPTED, CONTRACT, SIGNED})
+
+
 def progress(applications: Iterable[JobApplication], contracts: Iterable[Contract]):
     # Étape la plus avancée de l'étudiant : un brouillon n'est pas une candidature envoyée
     stages = {contract.stage for contract in contracts}
@@ -99,8 +105,9 @@ def sentApplications():
 
 def studentProgress(
     school: School, students: list[Student]
-) -> dict[int, tuple[str, int]]:
-    # Pour chaque étudiant : son avancement et son nombre de candidatures envoyées
+) -> dict[int, tuple[str, int, datetime | None]]:
+    # Pour chaque étudiant : son avancement, son nombre de candidatures envoyées et la date
+    # de la dernière (JOB-047), None sans candidature
     applications: dict[int, list[JobApplication]] = defaultdict(list)
     for application in sentApplications().filter(student__in=students):
         applications[application.student_id].append(application)
@@ -111,6 +118,10 @@ def studentProgress(
         student.pk: (
             progress(applications[student.pk], contracts[student.pk]),
             len(applications[student.pk]),
+            max(
+                (application.submitted_at for application in applications[student.pk]),
+                default=None,
+            ),
         )
         for student in students
     }
@@ -184,7 +195,7 @@ def school(request: Request) -> Response:
         return Response({"school": None})
     students = list(schoolStudents(manager.school))
     statuses = [
-        status for status, _ in studentProgress(manager.school, students).values()
+        status for status, _, _ in studentProgress(manager.school, students).values()
     ]
     return Response(
         {
@@ -193,6 +204,8 @@ def school(request: Request) -> Response:
                 "students": len(students),
                 "searching": statuses.count(SEARCHING),
                 "signed": statuses.count(SIGNED),
+                # JOB-047 : alternance trouvée dès qu'une candidature est acceptée
+                "found": sum(status in FOUND for status in statuses),
                 "pending_requests": SchoolRequest.objects.filter(
                     school=manager.school, status=SchoolRequestStatus.PENDING
                 ).count(),
@@ -222,6 +235,7 @@ def school_students(request: Request) -> Response:
                 **person(student),
                 "status": progresses[student.pk][0],
                 "application_count": progresses[student.pk][1],
+                "last_application_at": progresses[student.pk][2],
             }
             for student in students
         ]

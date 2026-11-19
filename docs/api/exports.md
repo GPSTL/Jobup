@@ -18,7 +18,7 @@ Ses candidatures, brouillons compris, de la plus récente à la plus ancienne.
 Les étudiants rattachés à l'école (hors comptes suspendus), par nom.
 
 - Filtres : `status` (liste d'avancements `searching`, `applying`, `accepted`, `contract`, `signed`, comme `/api/school/students`), `q` (mots du prénom ou du nom).
-- Colonnes : Prénom, Nom, E-mail, Niveau d'études, Avancement, Candidatures envoyées, Entreprise du contrat, Étape du contrat (le contrat le plus avancé).
+- Colonnes : Prénom, Nom, E-mail, Niveau d'études, Avancement, Candidatures envoyées, Dernière candidature (JOB-047), Entreprise du contrat, Étape du contrat (le contrat le plus avancé).
 
 ## Recruteur — `GET /api/recruiter/offers/export`
 

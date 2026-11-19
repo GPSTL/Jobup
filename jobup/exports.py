@@ -67,7 +67,7 @@ CONTRACT_LABELS = {
     ContractStage.SIGNED: "Signé",
 }
 PROGRESS_LABELS = {
-    SEARCHING: "En recherche",
+    SEARCHING: "Sans candidature",
     APPLYING: "Candidatures en cours",
     ACCEPTED: "Candidature acceptée",
     CONTRACT: "Contrat en cours",
@@ -322,7 +322,7 @@ def school_students_export(request: Request) -> Response | HttpResponse:
             contracts[contract.student_id] = contract
     rows = []
     for student in students:
-        status, count = progresses[student.pk]
+        status, count, last = progresses[student.pk]
         if filters.status and status not in filters.status:
             continue
         contract = contracts.get(student.pk)
@@ -334,6 +334,7 @@ def school_students_export(request: Request) -> Response | HttpResponse:
                 degree(student.study_degree),
                 PROGRESS_LABELS[status],
                 count,
+                last,
                 contract.company.name if contract else "",
                 CONTRACT_LABELS[contract.stage] if contract else "",
             ]
@@ -347,6 +348,7 @@ def school_students_export(request: Request) -> Response | HttpResponse:
             "Niveau d’études",
             "Avancement",
             "Candidatures envoyées",
+            "Dernière candidature",
             "Entreprise du contrat",
             "Étape du contrat",
         ],
