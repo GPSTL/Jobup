@@ -25,16 +25,20 @@ L'étudiant demande son école depuis « Mon espace » ; il n'est rattaché (`St
 
 - `GET /api/school/students` : `[{ id, first_name, last_name, photo_url, status, application_count, last_application_at }]`, par nom. `last_application_at` (JOB-047) : date d'envoi de la dernière candidature, `null` sans candidature. Les comptes suspendus n'apparaissent pas.
 - `GET /api/school/students/<id>` : le même résumé plus `applications: [{ id, offer_title, company, status, submitted_at }]`, `contracts` (format ci-dessous) et `conversation_id` (`null` si aucune). `404` pour un étudiant inconnu ou d'une autre école.
+- `DELETE /api/school/students/<id>` (JOB-049) : retire l'étudiant de l'effectif suivi, par exemple en fin de formation → `204`. L'école perd l'accès à sa fiche, à son suivi et à ses contrats (liste, validation, tableau de bord) ; son compte, ses candidatures et ses contrats sont gardés. Sa demande acceptée est effacée : il peut en refaire une. Il est notifié (`school_request`, lien `/student#school`). `404` si l'étudiant n'est pas rattaché à cette école.
 
 ## Contrats
 
 Étapes (`stage`) : `0` candidature acceptée (implicite, pas de contrat), `1` déposé, `2` validé par l'école, `3` signé. Le contrat est déposé par le recruteur (voir `recruiter-decisions.md`) ; l'école le fait avancer, une étape à la fois, sans retour en arrière.
 
-Format d'un contrat côté école : `{ id, stage, deposited_at, validated_at, signed_at, student, company, offer_title, application_id }`. Côté étudiant (`contract` dans `GET /api/applications/<id>`) et côté recruteur : `{ id, stage, deposited_at, validated_at, signed_at }` ou `null`.
+Format d'un contrat côté école : `{ id, stage, deposited_at, validated_at, signed_at, start_date, end_date, file_name, file_url, student, company, offer_title, application_id }`. Côté étudiant (`contract` dans `GET /api/applications/<id>`) et côté recruteur : `{ id, stage, deposited_at, validated_at, signed_at, start_date, end_date, file_name, file_url }` ou `null`. `start_date`/`end_date` (`AAAA-MM-JJ`), `file_name` et `file_url` valent `null` pour un contrat déposé avant JOB-045, sans PDF.
 
 - `GET /api/school/contracts` : contrats de l'école, les plus récents d'abord.
 - `PATCH /api/school/contracts/<id>` : `{ "stage": 2 | 3 }` → contrat à jour. `400` si l'étape est invalide, `409` si ce n'est pas l'étape suivante, `404` hors de l'école.
-- `POST /api/recruiter/applications/<id>/contract` : le recruteur propriétaire dépose le contrat d'une candidature **acceptée** dont l'étudiant a une école. `201` à la création, `200` si déjà déposé (idempotent) ; `409` si la candidature n'est pas acceptée ou si l'étudiant n'a pas d'école.
+- `POST /api/recruiter/applications/<id>/contract` (JOB-045, REC-26) : le recruteur propriétaire dépose le contrat d'une candidature **acceptée** dont l'étudiant a une école. Corps `multipart/form-data` : `file` (PDF reconnu au contenu, 10 Mo au plus), `start_date` et `end_date` (`AAAA-MM-JJ`, fin après début). Réponse : le détail de la candidature, `201` à la création, `200` pour un remplacement. `400 { errors: { file | start_date | end_date: [message] } }` si le fichier ou les dates sont invalides ; `409` si la candidature n'est pas acceptée ou si l'étudiant n'a pas d'école ; `409 { errors: { file } }` si le contrat ne peut plus être remplacé ; `503 { errors: { file } }` si le fichier n'a pas pu être stocké.
+- Remplacement : renvoyer un contrat remplace le PDF et les dates, jusqu'à la veille de la date de début (heure de Paris) et tant qu'il n'est pas signé. Le contrat revient à l'étape `1` (déposé) et l'école doit le valider de nouveau ; l'école et l'étudiant sont notifiés (« Contrat remplacé »). Seule la dernière version est gardée ; un remplacement refusé ou échoué laisse le contrat précédent intact.
+- `GET /api/contracts/<id>/file` : télécharge le PDF (`application/pdf`, en pièce jointe, `Cache-Control: private, no-store`). Accès : le recruteur de l'offre, l'étudiant du contrat et les comptes de son école tant qu'il y est rattaché. `404` pour tous les autres, et pour un contrat sans PDF.
+- `GET /api/student/contracts` (étudiant, « Mon espace ») : ses contrats, les plus récents d'abord, au format étudiant plus `company`, `school`, `offer_title` et `application_id`. `403` pour un autre rôle.
 
 ## Messagerie
 

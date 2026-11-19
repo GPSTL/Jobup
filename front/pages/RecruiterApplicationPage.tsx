@@ -3,22 +3,26 @@ import { Link, Navigate, useParams } from "react-router-dom";
 
 import { CandidateAvatar, EducationLine } from "../components/CandidateIdentity";
 import ApplicationStatusChip from "../components/ApplicationStatusChip";
-import { depositContract } from "../services/school";
+import ContractDocument from "../components/ContractDocument";
+import ContractUploadForm from "../components/ContractUploadForm";
 import { decideApplication, getRecruiterApplication, type RecruiterApplication, type OfferResult } from "../services/recruiterOffers";
 import { formatDate, STATUS } from "../utils/applications";
+import { canReplaceContract } from "../utils/contracts";
 import { fullName } from "../utils/candidates";
 import { focus } from "../utils/searchPageStyles";
 import { offerPanel, OfferRequestState, RecruiterOffersLayout } from "./RecruiterOffersPage";
 
-export function RecruiterApplicationContent({ application, onDecision, onDeposit, saving, error }: {
+export function RecruiterApplicationContent({ application, onDecision, onContract, saving, error }: {
 	application: RecruiterApplication;
 	onDecision: (status: typeof STATUS.ACCEPTED | typeof STATUS.REFUSED, message: string) => void;
-	/** Dépose le contrat d'une candidature acceptée */
-	onDeposit: () => void;
+	/** Candidature à jour après le dépôt ou le remplacement du contrat (JOB-045) */
+	onContract: (application: RecruiterApplication) => void;
 	saving: boolean;
 	error: string;
 }) {
 	const [message, setMessage] = useState("");
+	const [replacing, setReplacing] = useState(false);
+	const { contract } = application;
 	const { offer, candidate, status } = application;
 	const pending = status === STATUS.READ || status === STATUS.IN_REVIEW;
 	return (
@@ -51,13 +55,30 @@ export function RecruiterApplicationContent({ application, onDecision, onDeposit
 					<p role="status" className="text-sm sm:text-base font-semibold">Décision enregistrée : {status === STATUS.ACCEPTED ? "Acceptée" : "Refusée"}</p>
 					{application.decision_message && <div><h2 className="text-base font-semibold">Message envoyé au candidat</h2><p className="mt-1 text-sm sm:text-base whitespace-pre-line text-[#6b7280]">{application.decision_message}</p></div>}
 					{status === STATUS.ACCEPTED && (
-						application.contract ? (
-							<p role="status" className="text-sm sm:text-base">Contrat déposé le {formatDate(application.contract.deposited_at)} : l’école de l’étudiant le valide, puis il est signé.</p>
-						) : (
-							<div className="flex flex-col items-start gap-2">
-								<button type="button" onClick={onDeposit} disabled={saving} className={`rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary disabled:opacity-50 ${focus}`}>Déposer le contrat</button>
-								{error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+						contract ? (
+							<div className="flex flex-col gap-3">
+								<p role="status" className="text-sm sm:text-base">Contrat déposé le {formatDate(contract.deposited_at)} : l’école de l’étudiant le valide, puis il est signé.</p>
+								<ContractDocument contract={contract} />
+								{replacing ? (
+									<ContractUploadForm<RecruiterApplication>
+										applicationId={application.id}
+										current={contract}
+										onDeposited={(updated) => {
+											setReplacing(false);
+											onContract(updated);
+										}}
+										onCancel={() => setReplacing(false)}
+									/>
+								) : (
+									canReplaceContract(contract) && (
+										<button type="button" onClick={() => setReplacing(true)} className={`w-fit rounded-xl border border-[#d1d5db] px-5 py-2.5 text-sm font-semibold text-ink hover:bg-[#f9fafb] ${focus}`}>
+											Remplacer le contrat
+										</button>
+									)
+								)}
 							</div>
+						) : (
+							<ContractUploadForm<RecruiterApplication> applicationId={application.id} onDeposited={onContract} />
 						)
 					)}
 					{status === STATUS.ACCEPTED && application.conversation_id && <Link to={`/recruiter/messages/${application.conversation_id}`} className={`w-fit text-sm font-semibold text-primary hover:underline ${focus}`}>Ouvrir la conversation avec le candidat</Link>}
@@ -91,20 +112,10 @@ export default function RecruiterApplicationPage() {
 			setError("Cette candidature a déjà reçu une décision. Actualisez la page.");
 		} else setError("Impossible d’enregistrer la décision. Veuillez réessayer.");
 	};
-	const deposit = async () => {
-		if (!response?.ok || saving) return;
-		setSaving(true);
-		setError("");
-		const deposited = await depositContract<RecruiterApplication>(response.data.id);
-		setSaving(false);
-		if (deposited.ok) setResult({ id, response: deposited });
-		else if (deposited.reason === "conflict") setError("Le contrat ne peut pas être déposé : l’étudiant n’est rattaché à aucune école. Invitez-le à l’indiquer dans son espace.");
-		else setError("Impossible de déposer le contrat. Veuillez réessayer.");
-	};
 	return (
 		<RecruiterOffersLayout>
 			<section className={offerPanel}>
-				{response?.ok ? <RecruiterApplicationContent key={response.data.id} application={response.data} onDecision={decide} onDeposit={deposit} saving={saving} error={error} /> : <OfferRequestState result={response} retry={() => { setResult(null); setAttempt((value) => value + 1); }} />}
+				{response?.ok ? <RecruiterApplicationContent key={response.data.id} application={response.data} onDecision={decide} onContract={(data) => setResult({ id, response: { ok: true, data } })} saving={saving} error={error} /> : <OfferRequestState result={response} retry={() => { setResult(null); setAttempt((value) => value + 1); }} />}
 			</section>
 		</RecruiterOffersLayout>
 	);

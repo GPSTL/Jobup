@@ -6,6 +6,7 @@ import CvSection from "../components/CvSection";
 import NotificationSettings from "../components/NotificationSettings";
 import PhotoSection from "../components/PhotoSection";
 import SchoolSection from "../components/SchoolSection";
+import StudentContractsSection from "../components/StudentContractsSection";
 import StudentNavbar from "../components/StudentNavbar";
 import TextSection from "../components/TextSection";
 import type { User } from "../services/auth";
@@ -144,6 +145,7 @@ export default function MonEspace({ user }: MonEspaceProps) {
 						{/* JOB-019: loads its own data, so it does not wait for the profile */}
 						<CvSection userId={user.id} />
 						<SchoolSection />
+						<StudentContractsSection />
 						{/* JOB-042: notifications and e-mail preference, loaded on their own too */}
 						<div className="rounded-2xl border border-[#e5e7eb] bg-surface p-5 shadow-xs sm:p-6">
 							<NotificationSettings />

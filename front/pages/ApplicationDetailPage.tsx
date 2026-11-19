@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation } from "react-router-dom";
 import ApplicationLoader from "../components/ApplicationLoader";
 import ApplicationsLayout, { BackToApplications } from "../components/ApplicationsLayout";
 import ApplicationStatusChip from "../components/ApplicationStatusChip";
+import ContractDocument from "../components/ContractDocument";
 import type { ApplicationDetail } from "../services/applications";
 import { applicationSteps, companyInitials, sentDate, STATUS, type ApplicationStep } from "../utils/applications";
 import { contractSteps } from "../utils/school";
@@ -98,6 +99,7 @@ export function ApplicationDetailView({ application, submitted = false }: Applic
 				<section aria-labelledby="contract-tracking" className="flex flex-col gap-5">
 					<h2 id="contract-tracking" className={sectionTitle}>Suivi du contrat</h2>
 					<Steps steps={contractSteps(application.contract, application.updated_at)} />
+					{application.contract && <ContractDocument contract={application.contract} />}
 					{application.school === null ? (
 						<p className="text-sm text-[#6b7280]">Votre école n’est pas renseignée : <Link to="/student#school" className={`font-semibold text-primary hover:underline ${focus}`}>indiquez-la dans Mon espace</Link> pour que votre contrat soit suivi.</p>
 					) : !application.contract && (
