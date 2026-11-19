@@ -34,7 +34,11 @@ export type ContractProgress = {
 	file_url: string | null;
 };
 
+/** Période de l'alternance au jour de Paris (JOB-048) ; null sans dates */
+export type ContractPeriod = "upcoming" | "ongoing" | "finished";
+
 export type SchoolContract = ContractProgress & {
+	period: ContractPeriod | null;
 	student: Person;
 	company: string;
 	offer_title: string;

@@ -30,6 +30,7 @@ const progress = (stage: number): ContractProgress => ({
 });
 const contract = (stage: number): SchoolContract => ({
 	...progress(stage),
+	period: null,
 	student: { id: 7, first_name: "Lucas", last_name: "Martin", photo_url: null },
 	company: "Thales",
 	offer_title: "Développeur Java",

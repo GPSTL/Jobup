@@ -31,7 +31,7 @@ L'étudiant demande son école depuis « Mon espace » ; il n'est rattaché (`St
 
 Étapes (`stage`) : `0` candidature acceptée (implicite, pas de contrat), `1` déposé, `2` validé par l'école, `3` signé. Le contrat est déposé par le recruteur (voir `recruiter-decisions.md`) ; l'école le fait avancer, une étape à la fois, sans retour en arrière.
 
-Format d'un contrat côté école : `{ id, stage, deposited_at, validated_at, signed_at, start_date, end_date, file_name, file_url, student, company, offer_title, application_id }`. Côté étudiant (`contract` dans `GET /api/applications/<id>`) et côté recruteur : `{ id, stage, deposited_at, validated_at, signed_at, start_date, end_date, file_name, file_url }` ou `null`. `start_date`/`end_date` (`AAAA-MM-JJ`), `file_name` et `file_url` valent `null` pour un contrat déposé avant JOB-045, sans PDF.
+Format d'un contrat côté école : `{ id, stage, deposited_at, validated_at, signed_at, start_date, end_date, file_name, file_url, period, student, company, offer_title, application_id }`. `period` (JOB-048) : `upcoming` avant la date de début, `ongoing` du début à la fin comprise, `finished` ensuite, au jour de Paris ; `null` sans dates. Côté étudiant (`contract` dans `GET /api/applications/<id>`) et côté recruteur : `{ id, stage, deposited_at, validated_at, signed_at, start_date, end_date, file_name, file_url }` ou `null`. `start_date`/`end_date` (`AAAA-MM-JJ`), `file_name` et `file_url` valent `null` pour un contrat déposé avant JOB-045, sans PDF.
 
 - `GET /api/school/contracts` : contrats de l'école, les plus récents d'abord.
 - `PATCH /api/school/contracts/<id>` : `{ "stage": 2 | 3 }` → contrat à jour. `400` si l'étape est invalide, `409` si ce n'est pas l'étape suivante, `404` hors de l'école.
