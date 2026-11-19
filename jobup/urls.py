@@ -105,6 +105,7 @@ urlpatterns = [
     path("api/school", school),
     path("api/school/students", school_students),
     path("api/school/students/export", exports.school_students_export),
+    path("api/school/contracts/export", exports.school_contracts_export),
     path("api/school/students/<int:id>", school_student),
     path("api/school/requests", school_requests),
     path("api/school/requests/<int:id>", school_request),

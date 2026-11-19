@@ -1,6 +1,8 @@
 import csv
 import io
 
+from datetime import timedelta
+
 from django.utils import timezone
 
 from .models import (
@@ -423,3 +425,90 @@ class OfferExportTests(ExportTestCase):
         self.offer.save()
         self.assertEqual(self.get(self.alice.user).status_code, 404)
         self.assertEqual(self.client.get("/api/offers/9999/export").status_code, 404)
+
+
+class SchoolContractExportTests(ExportTestCase):
+    URL = "/api/school/contracts/export"
+
+    def dated(self, student, start, end, stage=ContractStage.DEPOSITED):
+        contract = self.contract(student, stage)
+        contract.start_date, contract.end_date = start, end
+        contract.save()
+        return contract
+
+    def test_only_a_school_exports_its_contracts(self):
+        for user in (self.alice.user, self.recruiter.user, self.admin):
+            self.login(user)
+            self.assertEqual(self.client.get(self.URL).status_code, 403)
+
+    def test_lists_the_contracts_of_the_attached_students(self):
+        today = timezone.localdate()
+        self.dated(
+            self.alice,
+            today - timedelta(days=30),
+            today + timedelta(days=300),
+            ContractStage.VALIDATED,
+        )
+        # Contrat d'une autre école et étudiant retiré : jamais exportés
+        self.contract(self.carol)
+        self.login(self.manager.user)
+        response = self.client.get(self.URL)
+        self.assertCsv(response, "contrats")
+        rows = table(response)
+        self.assertEqual(
+            rows[0],
+            [
+                "Prénom",
+                "Nom",
+                "Entreprise",
+                "Offre",
+                "Date de début",
+                "Date de fin",
+                "Statut",
+                "Étape",
+                "Déposé le",
+            ],
+        )
+        self.assertEqual(len(rows), 2)
+        start = (today - timedelta(days=30)).strftime("%d/%m/%Y")
+        self.assertEqual(
+            rows[1][:8],
+            [
+                "Alice",
+                "Plancher",
+                "Thales",
+                "Développeur Java",
+                start,
+                (today + timedelta(days=300)).strftime("%d/%m/%Y"),
+                "En cours",
+                "Validé par l’école",
+            ],
+        )
+        Student.objects.filter(pk=self.alice.pk).update(school=None)
+        self.assertEqual(len(table(self.client.get(self.URL))), 1)
+
+    def test_filters_by_period_and_stage(self):
+        today = timezone.localdate()
+        self.dated(self.alice, today + timedelta(days=5), today + timedelta(days=50))
+        self.dated(
+            self.alice,
+            today - timedelta(days=400),
+            today - timedelta(days=1),
+            ContractStage.SIGNED,
+        )
+        self.contract(self.alice)
+        self.login(self.manager.user)
+
+        def periods(query):
+            return self.column(self.URL, query, 6)
+
+        self.assertCountEqual(periods(""), ["À venir", "Terminé", ""])
+        self.assertEqual(periods("?period=upcoming"), ["À venir"])
+        self.assertCountEqual(
+            periods("?period=upcoming,finished"), ["À venir", "Terminé"]
+        )
+        self.assertEqual(periods("?stage=signed"), ["Terminé"])
+        self.assertEqual(periods("?period=upcoming&stage=signed"), [])
+        for query in ("?period=bientot", "?stage=3", "?autre=1"):
+            response = self.client.get(f"{self.URL}{query}")
+            self.assertEqual(response.status_code, 400)

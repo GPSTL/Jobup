@@ -20,6 +20,13 @@ Les étudiants rattachés à l'école (hors comptes suspendus), par nom.
 - Filtres : `status` (liste d'avancements `searching`, `applying`, `accepted`, `contract`, `signed`, comme `/api/school/students`), `q` (mots du prénom ou du nom).
 - Colonnes : Prénom, Nom, E-mail, Niveau d'études, Avancement, Candidatures envoyées, Dernière candidature (JOB-047), Entreprise du contrat, Étape du contrat (le contrat le plus avancé).
 
+## École, contrats — `GET /api/school/contracts/export`
+
+Les contrats de la page « Contrats » (JOB-048) : ceux des étudiants encore rattachés à l'école, du plus récent au plus ancien.
+
+- Filtres : `period` (liste de `upcoming`, `ongoing`, `finished`, voir `school.md`), `stage` (liste de `deposited`, `validated`, `signed`).
+- Colonnes : Prénom, Nom, Entreprise, Offre, Date de début, Date de fin (`JJ/MM/AAAA`), Statut (À venir, En cours, Terminé, ou vide sans dates), Étape, Déposé le.
+
 ## Recruteur — `GET /api/recruiter/offers/export`
 
 Seulement ses offres : l'identifiant d'une offre d'un autre recruteur est ignoré. Les brouillons ne sont jamais exportés.

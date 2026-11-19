@@ -4,7 +4,7 @@
 # Contrat avec le front end : docs/api/exports.md
 import csv
 from collections.abc import Iterable
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Literal, TypeVar
 
 from django.db.models import Count, F, Q
@@ -33,8 +33,13 @@ from .school import (
     ACCEPTED,
     APPLYING,
     CONTRACT,
+    FINISHED,
+    ONGOING,
     SEARCHING,
     SIGNED,
+    UPCOMING,
+    contractPeriod,
+    schoolContracts,
     schoolOrRefusal,
     schoolStudents,
     sentApplications,
@@ -148,6 +153,12 @@ class SchoolStudentFilters(Filters):
     q: str = Field(default="", max_length=100)
 
 
+class SchoolContractFilters(Filters):
+    # JOB-048 : période de l'alternance et étape du contrat
+    period: list[Literal["upcoming", "ongoing", "finished"]] = []
+    stage: list[Literal["deposited", "validated", "signed"]] = []
+
+
 class RecruiterFilters(Filters):
     # « offers » : une ligne par offre ; « candidates » : une ligne par candidature reçue
     content: Literal["offers", "candidates"] = "offers"
@@ -184,6 +195,9 @@ def cell(value: Any) -> Any:
         return ""
     if isinstance(value, datetime):
         return timezone.localtime(value).strftime("%d/%m/%Y %H:%M")
+    # Date sans heure (début et fin d'un contrat, JOB-048)
+    if isinstance(value, date):
+        return value.strftime("%d/%m/%Y")
     if isinstance(value, str) and value[:1] in ("=", "+", "-", "@", "\t", "\r"):
         # Texte saisi par un utilisateur : jamais interprété comme une formule du tableur
         return "'" + value
@@ -357,6 +371,67 @@ def school_students_export(request: Request) -> Response | HttpResponse:
 
 
 # ----- Recruteur ----- #
+
+
+# Étape du contrat sous le nom des filtres de la page « Contrats »
+STAGE_KEYS = {
+    ContractStage.DEPOSITED: "deposited",
+    ContractStage.VALIDATED: "validated",
+    ContractStage.SIGNED: "signed",
+}
+
+PERIOD_LABELS = {
+    UPCOMING: "À venir",
+    ONGOING: "En cours",
+    FINISHED: "Terminé",
+}
+
+
+@api_view(["GET"])
+def school_contracts_export(request: Request) -> Response | HttpResponse:
+    # Contrats de la page « Contrats » de l'école (JOB-048), avec ses filtres
+    school = schoolOrRefusal(request.user)
+    if isinstance(school, Response):
+        return school
+    filters = parse(SchoolContractFilters, request)
+    if filters is None:
+        return Response({"error": "Invalid filters"}, status=400)
+    rows = []
+    for contract in schoolContracts(school).order_by("-deposited_at", "-pk"):
+        period = contractPeriod(contract)
+        if filters.period and period not in filters.period:
+            continue
+        if filters.stage and STAGE_KEYS[contract.stage] not in filters.stage:
+            continue
+        student = contract.student.user
+        rows.append(
+            [
+                student.first_name,
+                student.last_name,
+                contract.company.name,
+                contract.application.offer.title if contract.application else "",
+                contract.start_date,
+                contract.end_date,
+                PERIOD_LABELS.get(period or "", ""),
+                CONTRACT_LABELS[contract.stage],
+                contract.deposited_at,
+            ]
+        )
+    return csvResponse(
+        "contrats",
+        [
+            "Prénom",
+            "Nom",
+            "Entreprise",
+            "Offre",
+            "Date de début",
+            "Date de fin",
+            "Statut",
+            "Étape",
+            "Déposé le",
+        ],
+        rows,
+    )
 
 
 @api_view(["GET"])

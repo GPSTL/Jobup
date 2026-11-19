@@ -128,10 +128,25 @@ def studentProgress(
     }
 
 
+# Période de l'alternance (JOB-048, ECO-06), au jour de Paris : à venir avant la date de
+# début, en cours jusqu'à la date de fin comprise, puis terminée. None sans dates.
+UPCOMING, ONGOING, FINISHED = "upcoming", "ongoing", "finished"
+
+
+def contractPeriod(contract: Contract) -> str | None:
+    if contract.start_date is None or contract.end_date is None:
+        return None
+    today = timezone.localdate()
+    if today < contract.start_date:
+        return UPCOMING
+    return ONGOING if today <= contract.end_date else FINISHED
+
+
 def schoolContract(contract: Contract) -> dict[str, Any]:
     application = contract.application
     return {
         **contract.to_dict(),
+        "period": contractPeriod(contract),
         "student": person(contract.student),
         "company": contract.company.name,
         "offer_title": application.offer.title if application else "",
