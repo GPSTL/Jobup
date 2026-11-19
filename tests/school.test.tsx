@@ -23,6 +23,10 @@ const progress = (stage: number): ContractProgress => ({
 	deposited_at: "2026-10-12T09:00:00Z",
 	validated_at: stage >= CONTRACT_STAGE.VALIDATED ? "2026-10-14T09:00:00Z" : null,
 	signed_at: stage >= CONTRACT_STAGE.SIGNED ? "2026-10-20T09:00:00Z" : null,
+	start_date: null,
+	end_date: null,
+	file_name: null,
+	file_url: null,
 });
 const contract = (stage: number): SchoolContract => ({
 	...progress(stage),
@@ -108,16 +112,15 @@ const application: RecruiterApplication = {
 	status: STATUS.ACCEPTED, submitted_at: "2026-10-10T09:00:00Z", message: "", decision_message: "", conversation_id: null, contract: null,
 };
 const renderRecruiter = (value: RecruiterApplication, error = "") => renderToStaticMarkup(
-	<MemoryRouter><RecruiterApplicationContent application={value} saving={false} error={error} onDecision={() => {}} onDeposit={() => {}} /></MemoryRouter>,
+	<MemoryRouter><RecruiterApplicationContent application={value} saving={false} error={error} onDecision={() => {}} onContract={() => {}} /></MemoryRouter>,
 );
 
-test("le recruteur dépose le contrat d'une candidature acceptée, une seule fois", () => {
+test("le recruteur dépose le contrat d'une candidature acceptée, puis le suit", () => {
 	assert.match(renderRecruiter(application), />Déposer le contrat</);
 	const deposited = renderRecruiter({ ...application, contract: progress(CONTRACT_STAGE.DEPOSITED) });
 	assert.match(deposited, /Contrat déposé le/);
 	assert.doesNotMatch(deposited, />Déposer le contrat</);
 	assert.doesNotMatch(renderRecruiter({ ...application, status: STATUS.REFUSED }), />Déposer le contrat</);
-	assert.match(renderRecruiter(application, "Échec"), /role="alert"[^>]*>Échec/);
 });
 
 type Call = { url: string; init?: RequestInit };

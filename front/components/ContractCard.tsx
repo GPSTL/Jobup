@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { CandidateAvatar } from "./CandidateIdentity";
+import ContractDocument from "./ContractDocument";
 import { Steps } from "../pages/ApplicationDetailPage";
 import { advanceContract, type SchoolContract } from "../services/school";
 import { fullName } from "../utils/candidates";
@@ -60,6 +61,7 @@ export default function ContractCard({ contract, onAdvance, saving, error, showS
 				)}
 			</div>
 			<Steps steps={contractSteps(contract)} />
+			<ContractDocument contract={contract} />
 			{error && <p role="alert" className="text-sm text-red-700">{error}</p>}
 		</li>
 	);
