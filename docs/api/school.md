@@ -49,4 +49,4 @@ Les conversations école ↔ étudiant utilisent les routes communes `/api/conve
 
 ## Notifications
 
-Types ajoutés : `school_request` (aux managers de l'école : nouvelle demande, lien `/school/students` ; à l'étudiant : décision, lien `/student#school`) et `contract_update` (dépôt : managers et étudiant ; validation et signature : étudiant, lien `/applications/<id>`). Un message de l'étudiant à l'école notifie le manager (lien `/school/messages/<id>`). Réglage : `school_updates` (voir `notifications.md`).
+Types ajoutés : `school_request` (aux managers de l'école : nouvelle demande, lien `/school/students` ; à l'étudiant : décision, lien `/student#school`) et `contract_update` (dépôt : managers et étudiant ; validation et signature : étudiant, lien `/applications/<id>`). Un message de l'étudiant à l'école notifie le manager (lien `/school/messages/<id>`). Réglage : `school_updates` (voir `notifications.md`). Les comptes de l'école ne sont notifiés d'un dépôt ou d'un remplacement de contrat que si l'étudiant y est encore rattaché (JOB-050). Le retrait d'un étudiant le notifie, lui (`school_request`, lien `/student#school`).

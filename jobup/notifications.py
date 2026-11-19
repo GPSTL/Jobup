@@ -341,9 +341,11 @@ def notifyContract(contract_id: int, stage: int, version: int | None = None) -> 
     replaced = stage == ContractStage.DEPOSITED and version > 1
     link = f"/applications/{contract.application.pk}"
     if stage == ContractStage.DEPOSITED:
-        for manager in SchoolManager.objects.filter(
-            school=contract.school
-        ).select_related("user"):
+        # JOB-050 : l'école n'est notifiée que si l'étudiant y est encore rattaché (JOB-049)
+        managers = SchoolManager.objects.filter(school=contract.school)
+        if contract.student.school_id != contract.school_id:
+            managers = managers.none()
+        for manager in managers.select_related("user"):
             if preferencesOf(manager.user).school_updates:
                 notify(
                     manager.user,
