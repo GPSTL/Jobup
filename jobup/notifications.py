@@ -2,6 +2,7 @@
 # e-mail) et son API, réutilisés par les recruteurs (JOB-046, REC-32) et les écoles (ECO-21).
 # Les événements sont branchés dans models.py. Contrat : docs/api/notifications.md
 import logging
+from datetime import datetime
 from typing import Any
 
 from django.conf import settings
@@ -24,9 +25,11 @@ from .models import (
     NotificationKind,
     NotificationPreference,
     Role,
+    School,
     SchoolManager,
     SchoolRequest,
     SchoolRequestStatus,
+    Student,
     User,
 )
 
@@ -292,6 +295,26 @@ def notifySchoolRequestDecision(request_id: int) -> Notification | None:
             if accepted
             else f"{request.school.name} n’a pas accepté votre demande."
         ),
+        "/student#school",
+    )
+
+
+def notifySchoolRemoval(
+    student_id: int, school_id: int, removed_at: datetime
+) -> Notification | None:
+    # Retrait par l'école (JOB-049) : l'étudiant l'apprend et peut choisir une autre école
+    student = Student.objects.select_related("user").filter(pk=student_id).first()
+    school = School.objects.filter(pk=school_id).first()
+    if student is None or school is None:
+        return None
+    if not preferencesOf(student.user).school_updates:
+        return None
+    return notify(
+        student.user,
+        NotificationKind.SCHOOL_REQUEST,
+        f"school-removal:{school.pk}:{student.pk}:{removed_at.isoformat()}",
+        "Retiré du suivi de votre école",
+        f"{school.name} ne suit plus votre recherche d’alternance. Vous pouvez demander un nouveau rattachement depuis Mon espace.",
         "/student#school",
     )
 

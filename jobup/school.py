@@ -30,6 +30,7 @@ from .models import (
 )
 from .notifications import (
     notifyContract,
+    notifySchoolRemoval,
     notifySchoolRequest,
     notifySchoolRequestDecision,
 )
@@ -128,9 +129,10 @@ def schoolContract(contract: Contract) -> dict[str, Any]:
 
 
 def schoolContracts(school: School):
-    return Contract.objects.filter(school=school).select_related(
-        "student__user", "company", "application__offer"
-    )
+    # JOB-049 : seulement les étudiants encore rattachés ; un retrait coupe l'accès
+    return Contract.objects.filter(
+        school=school, student__school=school
+    ).select_related("student__user", "company", "application__offer")
 
 
 # ----- Compte de l'école ----- #
@@ -196,9 +198,9 @@ def school(request: Request) -> Response:
                 "pending_requests": SchoolRequest.objects.filter(
                     school=manager.school, status=SchoolRequestStatus.PENDING
                 ).count(),
-                "contracts_to_validate": Contract.objects.filter(
-                    school=manager.school, stage=ContractStage.DEPOSITED
-                ).count(),
+                "contracts_to_validate": schoolContracts(manager.school)
+                .filter(stage=ContractStage.DEPOSITED)
+                .count(),
             },
         }
     )
@@ -228,11 +230,13 @@ def school_students(request: Request) -> Response:
     )
 
 
-@api_view(["GET"])
+@api_view(["GET", "DELETE"])
 def school_student(request: Request, id: int) -> Response:
     target = schoolOrRefusal(request.user)
     if isinstance(target, Response):
         return target
+    if request.method == "DELETE":
+        return removeStudent(target, id)
     # Même réponse pour un étudiant inconnu ou d'une autre école
     student = schoolStudents(target).filter(user_id=id).first()
     if student is None:
@@ -265,6 +269,30 @@ def school_student(request: Request, id: int) -> Response:
             "conversation_id": conversation.pk if conversation else None,
         }
     )
+
+
+def removeStudent(school: School, id: int) -> Response:
+    # Retrait d'un étudiant de l'effectif suivi (JOB-049, ECO-15), par exemple en fin de
+    # formation : l'école perd l'accès à son suivi et à ses contrats ; son compte, ses
+    # candidatures et ses contrats sont gardés. Il peut refaire une demande ensuite.
+    with transaction.atomic():
+        student = (
+            Student.objects.select_for_update()
+            .filter(school=school, user_id=id)
+            .first()
+        )
+        if student is None:
+            return Response({"error": "Student not found"}, status=404)
+        student.school = None
+        student.save(update_fields=["school"])
+        SchoolRequest.objects.filter(student=student).delete()
+        student_id, school_id = student.pk, school.pk
+        removed_at = timezone.now()
+        transaction.on_commit(
+            lambda: notifySchoolRemoval(student_id, school_id, removed_at),
+            robust=True,
+        )
+    return Response(status=204)
 
 
 # ----- Demandes de rattachement ----- #

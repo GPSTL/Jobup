@@ -25,6 +25,7 @@ L'étudiant demande son école depuis « Mon espace » ; il n'est rattaché (`St
 
 - `GET /api/school/students` : `[{ id, first_name, last_name, photo_url, status, application_count }]`, par nom. Les comptes suspendus n'apparaissent pas.
 - `GET /api/school/students/<id>` : le même résumé plus `applications: [{ id, offer_title, company, status, submitted_at }]`, `contracts` (format ci-dessous) et `conversation_id` (`null` si aucune). `404` pour un étudiant inconnu ou d'une autre école.
+- `DELETE /api/school/students/<id>` (JOB-049) : retire l'étudiant de l'effectif suivi, par exemple en fin de formation → `204`. L'école perd l'accès à sa fiche, à son suivi et à ses contrats (liste, validation, tableau de bord) ; son compte, ses candidatures et ses contrats sont gardés. Sa demande acceptée est effacée : il peut en refaire une. Il est notifié (`school_request`, lien `/student#school`). `404` si l'étudiant n'est pas rattaché à cette école.
 
 ## Contrats
 
