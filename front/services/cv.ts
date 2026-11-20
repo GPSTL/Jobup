@@ -53,6 +53,50 @@ export function getCv(id: number): Promise<CvResult> {
 	return send(`/api/student/${id}/resume`);
 }
 
+/** Values found in the CV (JOB-071), only those found: suggestions, nothing is saved */
+export type CvSuggestions = {
+	desiredPosition?: string;
+	education?: string;
+	studyDegree?: number;
+	skills?: string[];
+	region?: string;
+};
+
+export type SuggestionsResult =
+	// readable: false for a CV whose text cannot be read (old .doc format, scanned PDF)
+	| { ok: true; readable: boolean; suggestions: CvSuggestions }
+	| { ok: false; reason: CvError | "noCv" };
+
+type ApiSuggestions = {
+	readable: boolean;
+	suggestions: { desired_position?: string; education?: string; study_degree?: number; skills?: string[]; region?: string };
+};
+
+// GET /api/student/<id>/resume/suggestions: the current CV is read again on the server
+export async function getCvSuggestions(id: number): Promise<SuggestionsResult> {
+	let response: Response;
+	try {
+		response = await fetch(`/api/student/${id}/resume/suggestions`, { credentials: "same-origin" });
+	} catch {
+		return { ok: false, reason: "network" };
+	}
+	if (response.status === 401 || response.status === 403) return { ok: false, reason: "unauthenticated" };
+	if (response.status === 404) return { ok: false, reason: "noCv" };
+	try {
+		if (!response.ok) return { ok: false, reason: "server" };
+		const { readable, suggestions: found } = (await response.json()) as ApiSuggestions;
+		const suggestions: CvSuggestions = {};
+		if (found.desired_position) suggestions.desiredPosition = found.desired_position;
+		if (found.education) suggestions.education = found.education;
+		if (found.study_degree) suggestions.studyDegree = found.study_degree;
+		if (found.skills?.length) suggestions.skills = found.skills;
+		if (found.region) suggestions.region = found.region;
+		return { ok: true, readable, suggestions };
+	} catch {
+		return { ok: false, reason: "server" };
+	}
+}
+
 // Replaces the current CV. If the import fails, the backend keeps the previous one.
 export function uploadCv(id: number, file: File): Promise<CvResult> {
 	const body = new FormData();

@@ -9,12 +9,27 @@ const apiProfile = {
 	photo_url: "/media/photos/3f2b8c1e.png",
 	description: "Étudiante en M2 informatique.",
 	desired_position: "Développeuse web",
-	category: 99,
+	// Profil complet (JOB-071)
+	education: "Master MIAGE",
+	study_degree: 5,
+	category: 1,
+	experience_level: 14,
+	skills: ["Java", "SQL"],
+	region: "Lyon",
+	available_from: "2026-09-01",
+	rhythm: "",
 };
 const profile = {
 	photoUrl: "/media/photos/3f2b8c1e.png",
 	description: "Étudiante en M2 informatique.",
 	desiredPosition: "Développeuse web",
+	education: "Master MIAGE",
+	studyDegree: 5,
+	category: 1,
+	experienceLevel: 14,
+	skills: ["Java", "SQL"],
+	region: "Lyon",
+	availableFrom: "2026-09-01",
 };
 
 // Remplace fetch par une réponse simulée et garde la trace de la requête envoyée

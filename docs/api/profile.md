@@ -1,6 +1,6 @@
 # Student profile API
 
-Contract between the profile API (JOB-008) and the “Mon espace” page (JOB-017): reading and updating the photo, the personal description and the desired position. The CV has its own API (JOB-018): see [resume.md](resume.md).
+Contract between the profile API (JOB-008) and the “Mon espace” page (JOB-017): reading and updating the photo, the personal description, the desired position and, since JOB-071, the rest of the profile seen and filtered by the recruiters (program, study level, field, experience, skills, region, availability). The CV has its own API (JOB-018), which also suggests values of the profile from the CV (JOB-071): see [resume.md](resume.md).
 
 ## Authentication
 
@@ -16,7 +16,14 @@ All three routes respond with the same body, the profile:
 {
   "photo_url": "/media/photos/3f2b8c1e.png",
   "description": "Étudiant en M2 informatique, à la recherche d’une alternance de 12 mois.",
-  "desired_position": "Développeur web"
+  "desired_position": "Développeur web",
+  "education": "Master MIAGE",
+  "study_degree": 5,
+  "category": 1,
+  "experience_level": 14,
+  "skills": ["Java", "Spring Boot", "SQL"],
+  "region": "Île-de-France",
+  "available_from": "2026-09-01"
 }
 ```
 
@@ -25,8 +32,15 @@ All three routes respond with the same body, the profile:
 | `photo_url` | string or `null` | URL of the photo, to use as is in `src`; `null` when there is no photo. Each new photo gets a new URL. |
 | `description` | string | Personal description, 500 characters max; empty string if not written yet. |
 | `desired_position` | string | Desired position as free text, 100 characters max; empty string if not filled in. |
+| `education` | string | Program followed (“Master MIAGE”), 100 characters max; empty string if not filled in. Shown on the candidate cards of the recruiters (`education` of `/api/recruiter/candidates`). |
+| `study_degree` | integer or `null` | `StudyDegree`: `1` to `5` for Bac + 1 to Bac + 5. |
+| `category` | integer or `null` | `JobCategory`, the field of the search: the values of the sectors of the companies (`SECTORS` in `front/utils/companies.ts`), `99` for “Autre”. |
+| `experience_level` | integer | Professional experience in months, internships and apprenticeships included, `0` to `600`. The “Expérience” filter of the recruiters reads it. |
+| `skills` | array of strings | Skills, 20 max, 40 characters max each, without commas, once each whatever the case. Stored comma separated, 256 characters max in all. The “Logiciels maîtrisés” filter reads them. |
+| `region` | string | Where the student looks for an apprenticeship, free text (a region, a city, “Télétravail”), 64 characters max. `Île-de-France` for a new profile. |
+| `available_from` | string or `null` | Date from which the student is available, `AAAA-MM-JJ`. |
 
-No field is required: the profile can be incomplete. The body is the student sheet (`Student.to_dict()`), so it also contains other student fields (`uid`, `category`, `experience_level`…), which are not part of this contract. Since the body is the same for the three routes, the front end can replace its copy of the profile with the response to a `PATCH` or a `POST`.
+No field is required: the profile can be incomplete. The body is the student sheet (`Student.to_dict()`), so it also contains other student fields (`uid`, `subscription`, `rhythm`, `available_to`, `school`), which are not part of this contract. Since the body is the same for the three routes, the front end can replace its copy of the profile with the response to a `PATCH` or a `POST`.
 
 ## Routes
 
@@ -36,15 +50,15 @@ Returns the profile. Available to the student themselves and to administrators.
 
 ### `PATCH /api/student/<id>`
 
-Updates the description, the desired position, or both. Restricted to the student themselves.
+Updates one or more fields of the profile. Restricted to the student themselves.
 
-The JSON body contains one or more of the `description` and `desired_position` fields; fields left out do not change:
+The JSON body contains one or more of the fields of the table above, except `photo_url`; fields left out do not change:
 
 ```json
-{ "desired_position": "Développeur web" }
+{ "desired_position": "Développeur web", "skills": ["Java", "SQL"], "study_degree": 5 }
 ```
 
-Leading and trailing spaces are removed, and an empty string clears the field. Any other field (`role`, `email`, `photo_url`…) is refused: this route changes neither the role nor the rights of the account.
+Leading and trailing spaces are removed, and an empty string clears a text field. `null` clears `study_degree`, `category` and `available_from`, and `[]` clears the skills. Numbers are numbers: `true` or `"5"` are refused. When one value is refused, nothing is saved. Any other field (`role`, `email`, `photo_url`…) is refused: this route changes neither the role nor the rights of the account.
 
 ### `POST /api/student/<id>/photo`
 
@@ -77,7 +91,14 @@ The messages in `errors` are in French, like the interface, and are displayed as
 | --- | --- | --- |
 | `description` | More than 500 characters | La présentation ne doit pas dépasser 500 caractères. |
 | `desired_position` | More than 100 characters | Le poste recherché ne doit pas dépasser 100 caractères. |
-| `description` or `desired_position` | Value that is not a string | Ce champ doit être un texte. |
+| `education` | More than 100 characters | La formation ne doit pas dépasser 100 caractères. |
+| `region` | More than 64 characters | La région ne doit pas dépasser 64 caractères. |
+| `description`, `desired_position`, `education` or `region` | Value that is not a string | Ce champ doit être un texte. |
+| `study_degree` | Not `1` to `5` or `null` | Choisissez un niveau d’études de la liste. |
+| `category` | Not a value of `JobCategory` or `null` | Choisissez un domaine de la liste. |
+| `experience_level` | Not an integer from `0` to `600` | L’expérience est un nombre de mois, de 0 à 600. |
+| `skills` | Not an array of strings, more than 20, more than 40 characters, a comma, more than 256 characters in all | Indiquez au plus 20 compétences, de 40 caractères au plus chacune et sans virgule. |
+| `available_from` | Not a date `AAAA-MM-JJ` or `null` | Indiquez une date valide. |
 | Any other `PATCH` field | Field that cannot be changed | Ce champ ne peut pas être modifié. |
 | `photo` | No file sent | Aucune photo reçue. |
 | `photo` | Neither JPG nor PNG | La photo doit être au format JPG ou PNG. |

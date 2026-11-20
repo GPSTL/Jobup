@@ -12,10 +12,14 @@ const formatDate = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { 
 type CvSectionProps = {
 	/** Account id of the logged-in student, given by RequireStudent through "Mon espace" */
 	userId: number;
+	/** Whether the student has a CV, once loaded and after each import (completeness of the profile) */
+	onCvChange?: (hasCv: boolean) => void;
+	/** "Pré-remplir mon profil" (JOB-071), also opened right after an import */
+	onPrefill?: () => void;
 };
 
 // CV block of "Mon espace" (JOB-019). Loads its own data, so it does not depend on the profile.
-export default function CvSection({ userId }: CvSectionProps) {
+export default function CvSection({ userId, onCvChange, onPrefill }: CvSectionProps) {
 	// null when the student has not imported a CV yet
 	const [cv, setCv] = useState<Cv | null>(null);
 	const [loading, setLoading] = useState(true);
@@ -33,12 +37,16 @@ export default function CvSection({ userId }: CvSectionProps) {
 		getCv(userId).then((result) => {
 			if (ignore) return;
 			setLoading(false);
-			if (result.ok) setCv(result.cv);
-			else setLoadError(result.reason === "invalid" ? "server" : result.reason);
+			if (result.ok) {
+				setCv(result.cv);
+				onCvChange?.(result.cv !== null);
+			} else setLoadError(result.reason === "invalid" ? "server" : result.reason);
 		});
 		return () => {
 			ignore = true;
 		};
+		// onCvChange: a new function at each render of the page, the CV is not loaded again for it
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [userId, attempt]);
 
 	const retry = () => {
@@ -57,6 +65,9 @@ export default function CvSection({ userId }: CvSectionProps) {
 		if (!result.ok) return result.reason === "invalid" ? result.message : REQUEST_ERRORS[result.reason];
 		setCv(result.cv);
 		setSaved(true);
+		onCvChange?.(true);
+		// The new CV may complete the profile: its values are offered at once
+		onPrefill?.();
 		return "";
 	};
 
@@ -96,6 +107,13 @@ export default function CvSection({ userId }: CvSectionProps) {
 						<p className="mt-1 text-sm text-[#6c7386]">
 							Mis à jour le {formatDate(cv.updatedAt)} • visible dans vos candidatures et votre profil public
 						</p>
+						{onPrefill && (
+							<div className="mt-3">
+								<Button variant="outline" onClick={onPrefill}>
+									Pré-remplir mon profil depuis ce CV
+								</Button>
+							</div>
+						)}
 					</>
 				)}
 				{ready && !cv && (
