@@ -33,6 +33,7 @@ from jobup.recruiter_offers import (
     recruiter_application,
     recruiter_offers,
 )
+from jobup.cv_suggestions import student_resume_suggestions
 from jobup.resume import student_resume
 from jobup.school import (
     school,
@@ -71,6 +72,7 @@ urlpatterns = [
     path("api/student/<int:id>", student),
     path("api/student/<int:id>/photo", student_photo),
     path("api/student/<int:id>/resume", student_resume),
+    path("api/student/<int:id>/resume/suggestions", student_resume_suggestions),
     path("api/student/conversations", student_conversations),
     path("api/student/school", student_school),
     path("api/student/school-request", student_school_request),

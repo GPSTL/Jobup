@@ -55,8 +55,8 @@ def candidateCard(student: Student) -> dict[str, Any]:
         "first_name": user.first_name,
         "last_name": user.last_name,
         "photo_url": student.photo.url if student.photo else None,
-        # Not stored: no screen asks the student for their program yet
-        "education": None,
+        # Program entered by the student in "Mon espace" (JOB-071), None until then
+        "education": student.education or None,
         "school": student.school.name if student.school else None,
         "description": student.description,
         # Never the URL of the file itself: the download checks the rights
