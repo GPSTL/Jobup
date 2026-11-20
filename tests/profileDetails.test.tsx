@@ -7,7 +7,7 @@ import ProfileCompletion from "../front/components/ProfileCompletion";
 import { ProfileDetailsForm, ProfileDetailsSummary } from "../front/components/ProfileDetailsSection";
 import { getCvSuggestions } from "../front/services/cv";
 import { updateProfile, type Profile } from "../front/services/profile";
-import { addSkill, chosenChanges, completion, dayLabel, experienceLabel, suggestionChoices, withSkills } from "../front/utils/profileDetails";
+import { addSkill, chosenChanges, completion, experienceLabel, suggestionChoices, withSkills } from "../front/utils/profileDetails";
 
 const realFetch = globalThis.fetch;
 
@@ -52,12 +52,11 @@ const full: Profile = {
 	availableFrom: "2026-09-01",
 };
 
-test("affichage : expérience en années et mois, date de disponibilité", () => {
+test("affichage : expérience en années et mois", () => {
 	assert.equal(experienceLabel(0), "Aucune");
 	assert.equal(experienceLabel(8), "8 mois");
 	assert.equal(experienceLabel(12), "1 an");
 	assert.equal(experienceLabel(27), "2 ans et 3 mois");
-	assert.equal(dayLabel("2026-09-01"), "1 septembre 2026");
 });
 
 test("compétences : nettoyées, une seule fois, dans les limites de l'API", () => {
@@ -73,14 +72,16 @@ test("compétences : nettoyées, une seule fois, dans les limites de l'API", () 
 	assert.deepEqual(withSkills(["Java"], ["SQL", "java", "Docker"]), ["Java", "SQL", "Docker"]);
 });
 
-test("complétude : la part remplie et ce qu'il manque, CV compris", () => {
+test("complétude : la part remplie et ce qu'il manque, CV compris, sans le domaine", () => {
 	assert.deepEqual(completion(full, true), { percent: 100, missing: [] });
-	assert.deepEqual(completion(full, false), { percent: 90, missing: ["CV"] });
+	assert.deepEqual(completion(full, false), { percent: 89, missing: ["CV"] });
+	// Le domaine n'est lu nulle part côté recruteur : il ne compte pas
+	assert.deepEqual(completion({ ...full, category: null }, true), { percent: 100, missing: [] });
 	assert.equal(completion(empty, false).percent, 0);
 	assert.equal(completion(empty, false).missing[0], "photo");
 	const html = renderToStaticMarkup(<ProfileCompletion profile={{ ...full, skills: [] }} hasCv={null} />);
-	assert.match(html, /Profil complété à 80 %/);
-	assert.match(html, /role="progressbar"[^>]*aria-valuenow="80"/);
+	assert.match(html, /Profil complété à 78 %/);
+	assert.match(html, /role="progressbar"[^>]*aria-valuenow="78"/);
 	assert.match(html, /À compléter : compétences, CV\./);
 });
 
@@ -134,28 +135,36 @@ test("API : suggestions du CV, CV absent, session expirée et réseau", async ()
 	assert.deepEqual(await getCvSuggestions(7), { ok: false, reason: "network" });
 });
 
-test("résumé du profil : valeurs, ou « Non renseigné »", () => {
+test("résumé du profil : les mots du profil vu par les recruteurs, ou « Non renseigné »", () => {
 	const html = renderToStaticMarkup(<ProfileDetailsSummary profile={full} />);
 	assert.match(html, /<dt[^>]*>Formation<\/dt><dd[^>]*>Master MIAGE<\/dd>/);
 	assert.match(html, /Bac \+ 5/);
-	assert.match(html, /<dd[^>]*>Informatique<\/dd>/);
 	assert.match(html, /1 an et 2 mois/);
-	assert.match(html, /À partir du 1 septembre 2026/);
-	assert.match(html, /<li[^>]*>Java<\/li><li[^>]*>SQL<\/li>/);
+	// Le mois seulement, comme les recruteurs ; une date passée : disponible tout de suite
+	assert.match(html, /<dd[^>]*>Disponible immédiatement<\/dd>/);
+	assert.match(renderToStaticMarkup(<ProfileDetailsSummary profile={{ ...full, availableFrom: "2099-09-01" }} />), /<dd[^>]*>Disponible en septembre 2099<\/dd>/);
+	// Les pastilles grises du profil vu par les recruteurs
+	assert.match(html, /<li class="[^"]*bg-\[#f3f4f6\][^"]*text-\[#4b5563\][^"]*">Java<\/li><li[^>]*>SQL<\/li>/);
+	// Le domaine n'est pas montré, l'expérience est dite absente du profil vu par les recruteurs
+	assert.doesNotMatch(html, /Domaine|Informatique/);
+	assert.match(html, /sauf l’expérience : elle sert seulement à leurs filtres/);
 	const blank = renderToStaticMarkup(<ProfileDetailsSummary profile={empty} />);
-	assert.equal((blank.match(/Non renseigné/g) ?? []).length, 5);
+	assert.equal((blank.match(/Non renseigné/g) ?? []).length, 4);
 	assert.match(blank, /Aucune compétence indiquée\./);
 });
 
 test("formulaire du profil : chaque champ étiqueté, valeurs actuelles, compétences retirables", () => {
 	const html = renderToStaticMarkup(<ProfileDetailsForm profile={full} onSave={async () => ({ ok: true, profile: full })} onDone={() => {}} />);
-	for (const label of ["Formation", "Niveau d’études", "Domaine", "Expérience professionnelle (en mois)", "Disponible à partir du", "Région recherchée"]) {
+	for (const label of ["Formation", "Niveau d’études", "Expérience professionnelle (en mois)", "Disponible à partir du", "Région recherchée"]) {
 		assert.match(html, new RegExp(`<label for="[^"]+"[^>]*>${label.replace(/[()]/g, "\\$&")}</label>`), label);
 	}
 	assert.match(html, /value="Master MIAGE"/);
 	assert.match(html, /<option value="5" selected="">Bac \+ 5<\/option>/);
-	assert.match(html, /<option value="1" selected="">Informatique<\/option>/);
+	assert.doesNotMatch(html, /Domaine|Informatique/);
 	assert.match(html, /type="date"[^>]*value="2026-09-01"/);
+	// Ce que les recruteurs verront de la date, relié au champ
+	assert.match(html, /aria-describedby="([^"]+-availableFrom-hint)"[^>]*\/>.*<p id="\1"[^>]*>Les recruteurs voient : « Disponible immédiatement »\.<\/p>/);
+	assert.match(renderToStaticMarkup(<ProfileDetailsForm profile={empty} onSave={async () => ({ ok: true, profile: empty })} onDone={() => {}} />), /Les recruteurs voient le mois, pas le jour\./);
 	assert.match(html, /aria-label="Retirer Java"/);
 	assert.match(html, /2\/20 compétences/);
 	assert.match(html, /<datalist[^>]*><option value="Île-de-France">/);

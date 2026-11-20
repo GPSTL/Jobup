@@ -1,6 +1,6 @@
 # Student profile API
 
-Contract between the profile API (JOB-008) and the “Mon espace” page (JOB-017): reading and updating the photo, the personal description, the desired position and, since JOB-071, the rest of the profile seen and filtered by the recruiters (program, study level, field, experience, skills, region, availability). The CV has its own API (JOB-018), which also suggests values of the profile from the CV (JOB-071): see [resume.md](resume.md).
+Contract between the profile API (JOB-008) and the “Mon espace” page (JOB-017): reading and updating the photo, the personal description, the desired position and, since JOB-071, the rest of the profile seen and filtered by the recruiters (program, study level, experience, skills, region, availability). The CV has its own API (JOB-018), which also suggests values of the profile from the CV (JOB-071): see [resume.md](resume.md).
 
 ## Authentication
 
@@ -34,11 +34,11 @@ All three routes respond with the same body, the profile:
 | `desired_position` | string | Desired position as free text, 100 characters max; empty string if not filled in. |
 | `education` | string | Program followed (“Master MIAGE”), 100 characters max; empty string if not filled in. Shown on the candidate cards of the recruiters (`education` of `/api/recruiter/candidates`). |
 | `study_degree` | integer or `null` | `StudyDegree`: `1` to `5` for Bac + 1 to Bac + 5. |
-| `category` | integer or `null` | `JobCategory`, the field of the search: the values of the sectors of the companies (`SECTORS` in `front/utils/companies.ts`), `99` for “Autre”. |
-| `experience_level` | integer | Professional experience in months, internships and apprenticeships included, `0` to `600`. The “Expérience” filter of the recruiters reads it. |
+| `category` | integer or `null` | `JobCategory`, the field of the search: the values of the sectors of the companies (`SECTORS` in `front/utils/companies.ts`), `99` for “Autre”. Neither the profile seen by the recruiters nor their filters read it, so “Mon espace” does not ask for it. |
+| `experience_level` | integer | Professional experience in months, internships and apprenticeships included, `0` to `600`. The “Expérience” filter of the recruiters reads it; their candidate profile does not show it. |
 | `skills` | array of strings | Skills, 20 max, 40 characters max each, without commas, once each whatever the case. Stored comma separated, 256 characters max in all. The “Logiciels maîtrisés” filter reads them. |
 | `region` | string | Where the student looks for an apprenticeship, free text (a region, a city, “Télétravail”), 64 characters max. `Île-de-France` for a new profile. |
-| `available_from` | string or `null` | Date from which the student is available, `AAAA-MM-JJ`. |
+| `available_from` | string or `null` | Date from which the student is available, `AAAA-MM-JJ`. The recruiters see the month only (“Disponible en septembre 2026”, then “Disponible immédiatement”), and “Mon espace” shows it the same way. |
 
 No field is required: the profile can be incomplete. The body is the student sheet (`Student.to_dict()`), so it also contains other student fields (`uid`, `subscription`, `rhythm`, `available_to`, `school`), which are not part of this contract. Since the body is the same for the three routes, the front end can replace its copy of the profile with the response to a `PATCH` or a `POST`.
 

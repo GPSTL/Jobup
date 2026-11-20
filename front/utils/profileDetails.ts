@@ -4,7 +4,6 @@
 import type { CvSuggestions } from "../services/cv";
 import type { Profile, ProfileChanges } from "../services/profile";
 import { degreeLabel } from "./candidates";
-import { SECTOR_OPTIONS, sectorLabel } from "./companies";
 
 // Les limites de l'API (jobup/profile.py)
 export const PROFILE_LIMITS = {
@@ -18,8 +17,6 @@ export const PROFILE_LIMITS = {
 } as const;
 
 export const STUDY_DEGREE_OPTIONS = [1, 2, 3, 4, 5].map((value) => ({ value, label: degreeLabel(value) }));
-// Les secteurs des entreprises (JobCategory) : le domaine de la recherche
-export const CATEGORY_OPTIONS = SECTOR_OPTIONS;
 // Proposées pour le champ « Région », qui reste libre : une ville convient aussi aux filtres des recruteurs
 export const REGION_SUGGESTIONS = [
 	"Île-de-France",
@@ -47,14 +44,6 @@ export function experienceLabel(months: number) {
 	return parts.join(" et ");
 }
 
-// « 1 septembre 2026 » ; la date n'a pas d'heure : découpée plutôt que lue, le fuseau ne change pas le jour
-export function dayLabel(date: string) {
-	const [year, month, day] = date.split("-").map(Number);
-	return new Date(year, month - 1, day).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
-}
-
-export const categoryLabel = (category: number | null) => sectorLabel(category);
-
 const same = (a: string, b: string) => a.trim().localeCompare(b.trim(), "fr", { sensitivity: "base" }) === 0;
 
 // Ajoute une compétence saisie : nettoyée, une seule fois, dans les limites de l'API. Message sinon.
@@ -72,14 +61,14 @@ export function addSkill(skills: string[], typed: string): { skills: string[]; e
 // Les compétences ajoutées une à une, tant que la liste reste acceptée par l'API
 export const withSkills = (skills: string[], added: string[]) => added.reduce((list, skill) => addSkill(list, skill).skills, skills);
 
-// Éléments du profil comptés dans la complétude, dans l'ordre de la page
+// Éléments du profil comptés dans la complétude, dans l'ordre de la page. Pas le domaine (category) :
+// ni le profil vu par les recruteurs ni leurs filtres ne le lisent, la page ne le demande pas.
 const PROFILE_ITEMS: { label: string; filled: (profile: Profile, hasCv: boolean) => boolean }[] = [
 	{ label: "photo", filled: (profile) => profile.photoUrl !== null },
 	{ label: "poste recherché", filled: (profile) => profile.desiredPosition !== "" },
 	{ label: "présentation", filled: (profile) => profile.description !== "" },
 	{ label: "formation", filled: (profile) => profile.education !== "" },
 	{ label: "niveau d’études", filled: (profile) => profile.studyDegree !== null },
-	{ label: "domaine", filled: (profile) => profile.category !== null },
 	{ label: "compétences", filled: (profile) => profile.skills.length > 0 },
 	{ label: "région", filled: (profile) => profile.region !== "" },
 	{ label: "disponibilité", filled: (profile) => profile.availableFrom !== null },

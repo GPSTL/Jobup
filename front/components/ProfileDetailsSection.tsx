@@ -4,36 +4,31 @@ import { flushSync } from "react-dom";
 import Button from "./Button";
 import SectionCard from "./SectionCard";
 import type { Profile, ProfileChanges, ProfileResult } from "../services/profile";
-import {
-	addSkill,
-	CATEGORY_OPTIONS,
-	categoryLabel,
-	dayLabel,
-	experienceLabel,
-	PROFILE_LIMITS,
-	REGION_SUGGESTIONS,
-	STUDY_DEGREE_OPTIONS,
-} from "../utils/profileDetails";
-import { degreeLabel } from "../utils/candidates";
+import { addSkill, experienceLabel, PROFILE_LIMITS, REGION_SUGGESTIONS, STUDY_DEGREE_OPTIONS } from "../utils/profileDetails";
+import { availability, degreeLabel } from "../utils/candidates";
 import { MESSAGES, REQUEST_ERRORS } from "../utils/validation";
 
-type Field = keyof ProfileChanges;
+// Le domaine (category) n'est pas demandé : rien ne le lit côté recruteur
+type Draft = Required<Omit<ProfileChanges, "category">>;
+type Field = keyof Draft;
 type Errors = Partial<Record<keyof Profile, string>>;
 
 const box = "w-full rounded-[10px] border-[1.5px] bg-surface px-3 py-2 text-ink outline-none transition-colors duration-150";
 const label = "text-sm font-semibold text-ink";
 const hint = "text-sm text-[#6c7386]";
+// Les pastilles des compétences du profil vu par les recruteurs (CandidateProfilePage)
+const chip = "rounded-full bg-[#f3f4f6] text-[#4b5563] font-medium";
 
-// Résumé du profil, ce que voient les recruteurs (JOB-071)
+// Résumé du profil, avec les mots du profil vu par les recruteurs (JOB-071)
 export function ProfileDetailsSummary({ profile }: { profile: Profile }) {
 	const empty = <span className="text-[#6c7386]">Non renseigné</span>;
 	const rows: [string, ReactNode][] = [
 		["Formation", profile.education || empty],
 		["Niveau d’études", profile.studyDegree === null ? empty : degreeLabel(profile.studyDegree)],
-		["Domaine", categoryLabel(profile.category) || empty],
 		["Expérience", experienceLabel(profile.experienceLevel)],
 		["Région", profile.region || empty],
-		["Disponibilité", profile.availableFrom ? `À partir du ${dayLabel(profile.availableFrom)}` : empty],
+		// Le mois seulement, comme les recruteurs : « Disponible en septembre 2026 », puis « Disponible immédiatement »
+		["Disponibilité", profile.availableFrom ? availability(profile.availableFrom) : empty],
 	];
 	return (
 		<div className="flex flex-col gap-4">
@@ -50,7 +45,7 @@ export function ProfileDetailsSummary({ profile }: { profile: Profile }) {
 				{profile.skills.length > 0 ? (
 					<ul className="flex flex-wrap gap-2">
 						{profile.skills.map((skill) => (
-							<li key={skill} className="rounded-full bg-[#dbeafe] px-3 py-1 text-sm font-medium text-[#1d4ed8]">
+							<li key={skill} className={`${chip} px-3 py-1 text-xs`}>
 								{skill}
 							</li>
 						))}
@@ -59,7 +54,10 @@ export function ProfileDetailsSummary({ profile }: { profile: Profile }) {
 					<p className="text-[#6c7386]">Aucune compétence indiquée.</p>
 				)}
 			</div>
-			<p className={hint}>Visibles sur votre profil : les recruteurs filtrent les candidats sur ces informations.</p>
+			<p className={hint}>
+				Les recruteurs voient ces informations sur votre profil, sauf l’expérience : elle sert seulement à leurs filtres (débutant, junior,
+				confirmé).
+			</p>
 		</div>
 	);
 }
@@ -72,7 +70,7 @@ type FormProps = {
 };
 
 // Les champs qui ont changé, seuls envoyés à l'API
-function changedFields(profile: Profile, draft: Required<ProfileChanges>): ProfileChanges {
+function changedFields(profile: Profile, draft: Draft): ProfileChanges {
 	const changes: ProfileChanges = {};
 	for (const field of Object.keys(draft) as Field[]) {
 		const before = profile[field];
@@ -85,12 +83,11 @@ function changedFields(profile: Profile, draft: Required<ProfileChanges>): Profi
 // Formulaire de « Informations du profil » : toutes les valeurs, enregistrées ensemble
 export function ProfileDetailsForm({ profile, onSave, onDone }: FormProps) {
 	const id = useId();
-	const [draft, setDraft] = useState<Required<ProfileChanges>>({
+	const [draft, setDraft] = useState<Draft>({
 		description: profile.description,
 		desiredPosition: profile.desiredPosition,
 		education: profile.education,
 		studyDegree: profile.studyDegree,
-		category: profile.category,
 		experienceLevel: profile.experienceLevel,
 		skills: profile.skills,
 		region: profile.region,
@@ -103,7 +100,7 @@ export function ProfileDetailsForm({ profile, onSave, onDone }: FormProps) {
 	const [saving, setSaving] = useState(false);
 	const savingRef = useRef(false);
 
-	const set = <K extends Field>(field: K, value: Required<ProfileChanges>[K]) => {
+	const set = <K extends Field>(field: K, value: Draft[K]) => {
 		setDraft((current) => ({ ...current, [field]: value }));
 		setErrors((current) => ({ ...current, [field]: undefined }));
 	};
@@ -198,20 +195,6 @@ export function ProfileDetailsForm({ profile, onSave, onDone }: FormProps) {
 					{errorOf("studyDegree")}
 				</div>
 				<div className="flex flex-col gap-1.5">
-					<label htmlFor={`${id}-category`} className={label}>
-						Domaine
-					</label>
-					<select value={draft.category ?? ""} onChange={(e) => set("category", e.target.value === "" ? null : Number(e.target.value))} disabled={saving} {...fieldProps("category")}>
-						<option value="">Non renseigné</option>
-						{CATEGORY_OPTIONS.map(({ value, label: text }) => (
-							<option key={value} value={value}>
-								{text}
-							</option>
-						))}
-					</select>
-					{errorOf("category")}
-				</div>
-				<div className="flex flex-col gap-1.5">
 					<label htmlFor={`${id}-experienceLevel`} className={label}>
 						Expérience professionnelle (en mois)
 					</label>
@@ -231,10 +214,19 @@ export function ProfileDetailsForm({ profile, onSave, onDone }: FormProps) {
 					<label htmlFor={`${id}-availableFrom`} className={label}>
 						Disponible à partir du
 					</label>
-					<input type="date" value={draft.availableFrom ?? ""} onChange={(e) => set("availableFrom", e.target.value || null)} {...fieldProps("availableFrom")} />
+					<input
+						type="date"
+						value={draft.availableFrom ?? ""}
+						onChange={(e) => set("availableFrom", e.target.value || null)}
+						{...fieldProps("availableFrom")}
+						aria-describedby={errors.availableFrom ? `${id}-availableFrom-hint ${id}-availableFrom-error` : `${id}-availableFrom-hint`}
+					/>
+					<p id={`${id}-availableFrom-hint`} className={hint}>
+						{draft.availableFrom ? `Les recruteurs voient : « ${availability(draft.availableFrom)} ».` : "Les recruteurs voient le mois, pas le jour."}
+					</p>
 					{errorOf("availableFrom")}
 				</div>
-				<div className="flex flex-col gap-1.5 sm:col-span-2">
+				<div className="flex flex-col gap-1.5">
 					<label htmlFor={`${id}-region`} className={label}>
 						Région recherchée
 					</label>
@@ -253,14 +245,14 @@ export function ProfileDetailsForm({ profile, onSave, onDone }: FormProps) {
 				{draft.skills.length > 0 && (
 					<ul className="flex flex-wrap gap-2">
 						{draft.skills.map((known) => (
-							<li key={known} className="flex items-center gap-1 rounded-full bg-[#dbeafe] py-1 pr-1 pl-3 text-sm font-medium text-[#1d4ed8]">
+							<li key={known} className={`${chip} flex items-center gap-1 py-1 pr-1 pl-3 text-sm`}>
 								{known}
 								<button
 									type="button"
 									disabled={saving}
 									onClick={() => set("skills", draft.skills.filter((item) => item !== known))}
 									aria-label={`Retirer ${known}`}
-									className="flex size-6 cursor-pointer items-center justify-center rounded-full hover:bg-[#bfdbfe] focus-visible:outline-2 focus-visible:outline-primary"
+									className="flex size-6 cursor-pointer items-center justify-center rounded-full hover:bg-black/10 focus-visible:outline-2 focus-visible:outline-primary"
 								>
 									<span aria-hidden="true">×</span>
 								</button>
