@@ -106,6 +106,7 @@ Once running, access the application at `http://127.0.0.1:8000/`.
 | `make run_only` | Starts the server without rebuilding the frontend. |
 | `make migrate` | Creates and applies the database migrations of the `jobup` app. |
 | `make seed` | Fills the database with a complete demo (local use, can be run again): see below. |
+| `make seed_bulk` | Adds about 400 varied accounts on top (`python manage.py seed_bulk --students 300`, add `--with-demo` to run `make seed` first): see below. |
 | `make watch_js` | Rebuilds the JS on every change. Used by `make dev`. |
 | `make watch_css` | Rebuilds the CSS on every change. Used by `make dev`. |
 
@@ -120,6 +121,23 @@ After `make migrate`, `make seed` (or `python manage.py seed_demo`) creates a re
 | School employee | `ecole@demo.jobup.fr` | `Demo1234` | `/school`: students, a pending request, contracts at different steps, the other side of Lucas's second conversation |
 
 The recruiter's message page (JOB-041) does not exist yet: the files sent by the recruiter are seen and downloaded from the student account.
+
+### Large demo data
+
+`make seed_bulk` creates about 400 accounts with the same password, `Demo1234`: 300 students (looking for a job or not, in a school, waiting for one, refused or without any, with or without a CV), 43 companies and 14 schools (validated, pending or refused, for the administration lists), about 70 recruiters (with offers or not, a few without a company), about 20 school managers (some without a school), 160 offers (a third without any candidate), about 420 applications at every step and a few suspended accounts. It also works on a deployed demo site (it does not need `DEBUG`), which must hold no real user: every account has the same known password. Running it again creates nothing new, and no e-mail is sent to the fake addresses. Short accounts to log in with:
+
+| Account | Email | To see |
+|---|---|---|
+| Administrators | `admin@demo.fr`, `admin2@demo.fr` | `/administration`: users, companies, schools |
+| Student | `etudiant@demo.fr` | searching, in a validated school, applications at every step |
+| Student | `etudiant2@demo.fr` | not searching, no school, no CV |
+| Student | `etudiant3@demo.fr` | searching, school request pending |
+| Recruiter | `recruteur@demo.fr` | validated company, 6 offers (one closed), many candidates, shortlist |
+| Recruiter | `recruteur2@demo.fr` | pending company, no offer yet |
+| Recruiter | `recruteur3@demo.fr` | validated company, 2 offers without any candidate |
+| School manager | `manager@demo.fr` | validated school with students |
+| School manager | `manager2@demo.fr` | pending school |
+| School manager | `manager3@demo.fr` | refused school |
 
 ## Signup and login forms (JOB-027)
 
