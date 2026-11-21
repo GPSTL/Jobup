@@ -11,6 +11,7 @@ import MapPinIcon from "../components/MapPinIcon";
 import SearchIcon from "../components/SearchIcon";
 import type { PublicOffer, PublicOfferFilters } from "../services/offers";
 import { SECTOR_OPTIONS } from "../utils/companies";
+import { highlightText } from "../utils/highlight";
 import { filterPublicOffers } from "../services/offers";
 import { getSavedOffers, saveOffer } from "../services/savedOffers";
 
@@ -192,9 +193,9 @@ export default function StudentOfferSwipe({ offers }: { offers: PublicOffer[] })
 							<div className="absolute inset-0 bg-gradient-to-t from-[#101b2e]/95 via-[#101b2e]/25 to-transparent" />
 							{currentRecommendation && <span className="absolute top-5 left-5 rounded-full bg-white/90 px-3 py-1.5 text-xs font-bold text-primary">✦ Pour toi</span>}
 							{Math.abs(drag) > 25 && <span aria-hidden="true" className={`pointer-events-none absolute top-5 z-10 rotate-[-8deg] rounded-lg border-4 px-3 py-1 text-xl font-black uppercase ${drag > 0 ? "left-5 border-emerald-300 text-emerald-300" : "right-5 border-rose-300 text-rose-300"}`}>{drag > 0 ? "J’aime" : "Passer"}</span>}
-							<div className="absolute right-0 bottom-0 left-0 p-6 text-white"><h2 className="text-2xl leading-tight font-extrabold sm:text-3xl">{current.title}</h2><p className="mt-2 text-sm font-medium text-white/90">{current.company?.name || "Entreprise non renseignée"}{current.company?.city && ` • ${current.company.city}`}</p></div>
+							<div className="absolute right-0 bottom-0 left-0 p-6 text-white"><h2 className="text-2xl leading-tight font-extrabold sm:text-3xl">{highlightText(current.title, filters.query)}</h2><p className="mt-2 text-sm font-medium text-white/90">{highlightText(current.company?.name || "Entreprise non renseignée", filters.query)}{current.company?.city && <> • {highlightText(current.company.city, [filters.city, filters.query])}</>}</p></div>
 						</div>
-						<div className="p-6">{currentRecommendation?.reasons.length ? <p className="mb-3 text-sm font-medium text-primary">{currentRecommendation.reasons.join(" · ")}</p> : null}<p className="text-xs font-bold tracking-widest text-gray-400 uppercase">L’opportunité</p><p className="mt-2 line-clamp-3 whitespace-pre-line text-sm leading-relaxed text-gray-600">{current.description || current.requirements || "Découvrez cette offre d’alternance et son équipe."}</p><Link to={`/offers/${current.id}`} className={`mt-3 inline-block text-sm font-bold text-primary hover:underline ${focus}`}>Plus d’informations</Link></div>
+						<div className="p-6">{currentRecommendation?.reasons.length ? <p className="mb-3 text-sm font-medium text-primary">{currentRecommendation.reasons.join(" · ")}</p> : null}<p className="text-xs font-bold tracking-widest text-gray-400 uppercase">L’opportunité</p><p className="mt-2 line-clamp-3 whitespace-pre-line text-sm leading-relaxed text-gray-600">{highlightText(current.description || current.requirements || "Découvrez cette offre d’alternance et son équipe.", filters.query)}</p><Link to={`/offers/${current.id}`} className={`mt-3 inline-block text-sm font-bold text-primary hover:underline ${focus}`}>Plus d’informations</Link></div>
 					</article>
 				</div>
 				<div className="mt-5 flex items-center justify-center gap-5">

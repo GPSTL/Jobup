@@ -4,6 +4,8 @@ import Footer from "../components/Footer";
 import PublicNavbar from "../components/PublicNavbar";
 import StudentNavbar from "../components/StudentNavbar";
 import RecruiterNavbar from "../components/RecruiterNavbar";
+import SchoolNavbar from "../components/SchoolNavbar";
+import AdminNavbar from "../components/AdminNavbar";
 import HandshakeIcon from "../components/HandshakeIcon";
 import Filter from "../components/Filter";
 import Megaphone from "../components/Megaphone";
@@ -13,6 +15,7 @@ import SearchIcon from "../components/SearchIcon";
 import MessageIcon from "../components/MessageIcon";
 import FileIcon from "../components/FileIcon";
 import { getSession, type SessionResult } from "../services/auth";
+import { accountHome } from "../utils/accountHome";
 import { ROLES } from "../utils/roles";
 import { attractToPointer, resetPointer, tiltCard, trackPointer, useLandingMotion } from "../utils/landingMotion";
 
@@ -36,6 +39,7 @@ const highlightedWords = new Set(["étudiants,", "entreprises", "écoles", "bonn
 
 const roleCards = [
 	{
+		role: 1,
 		badge: "Étudiants",
 		title: "Trouvez l’alternance qui vous correspond",
 		description: "Fini les dizaines d’onglets ouverts : swipez les offres vérifiées, sauvegardez vos coups de cœur et postulez en un clic.",
@@ -50,6 +54,7 @@ const roleCards = [
 		accent: "#2563eb",
 	},
 	{
+		role: 3,
 		badge: "Entreprises & Recruteurs",
 		title: "Recrutez vos futurs talents simplement",
 		description: "Diffusez vos offres d’alternance, parcourez des profils qualifiés et échangez sans intermédiaire avec les candidats.",
@@ -64,6 +69,7 @@ const roleCards = [
 		accent: "#3b82f6",
 	},
 	{
+		role: 2,
 		badge: "Écoles & CFA",
 		title: "Pilotez le placement de vos promotions",
 		description: "Accompagnez vos étudiants dans leur recherche et centralisez le suivi des contrats avec vos entreprises partenaires.",
@@ -138,6 +144,7 @@ export default function HomePage() {
 	}, []);
 
 	const manifestoWords = manifesto.split(" ");
+	const loggedInHome = session?.ok ? accountHome(session.user.role) : null;
 
 	return (
 		<div ref={rootRef} className="landing-page flex min-h-dvh flex-col">
@@ -145,9 +152,13 @@ export default function HomePage() {
 				<header className="landing-header px-4 pt-4 md:px-6">
 					{session.ok && session.user.role === 1 ? (
 						<StudentNavbar variant="glass" />
+					) : session.ok && session.user.role === 2 ? (
+						<SchoolNavbar variant="glass" />
 					) : session.ok && session.user.role === 3 ? (
 						<RecruiterNavbar variant="glass" />
-					) : session.ok ? null : (
+					) : session.ok && session.user.role === 127 ? (
+						<AdminNavbar />
+					) : (
 						<PublicNavbar variant="glass" />
 					)}
 				</header>
@@ -187,17 +198,19 @@ export default function HomePage() {
 							<SearchIcon width={17} height={17} className="shrink-0" />
 							Explorer les offres
 						</Link>
-						<Link to="/signup" className="landing-magnet landing-btn-ghost" onPointerMove={attractToPointer} onPointerLeave={resetPointer}>
-							Créer un compte gratuit
+						<Link to={loggedInHome ?? "/signup"} className="landing-magnet landing-btn-ghost" onPointerMove={attractToPointer} onPointerLeave={resetPointer}>
+							{loggedInHome ? "Accéder à mon espace" : "Créer un compte gratuit"}
 						</Link>
 					</div>
 
-					<div className="landing-rise mt-8 flex flex-wrap items-center justify-center gap-2 text-sm" style={delay(680)}>
-						<span className="landing-subtle mr-1">Choisissez votre espace :</span>
-						{homeRoles.map(({ homeLabel, value, homePath }) => (
-							<Link key={value} to={homePath} className="landing-chip">{homeLabel}</Link>
-						))}
-					</div>
+					{!loggedInHome && (
+						<div className="landing-rise mt-8 flex flex-wrap items-center justify-center gap-2 text-sm" style={delay(680)}>
+							<span className="landing-subtle mr-1">Choisissez votre espace :</span>
+							{homeRoles.map(({ homeLabel, value, homePath }) => (
+								<Link key={value} to={homePath} className="landing-chip">{homeLabel}</Link>
+							))}
+						</div>
+					)}
 				</div>
 
 				{/* Product preview, flattened while scrolling */}
@@ -386,34 +399,37 @@ export default function HomePage() {
 					</div>
 
 					<div className="grid gap-5 lg:grid-cols-3">
-						{roleCards.map(({ badge, title, description, points, cta, to, Icon, accent }, index) => (
-							<div key={badge} data-reveal style={delay(index * 120)}>
-								<article
-									className="landing-card landing-tilt group flex h-full flex-col gap-4"
-									style={{ "--accent": accent } as CSSProperties}
-									onPointerMove={tiltCard}
-									onPointerLeave={resetPointer}
-								>
-									<div className="flex items-center justify-between">
-										<span className="landing-role-badge">{badge}</span>
-										<span className="landing-role-icon"><Icon className="size-5" /></span>
-									</div>
-									<h3 className="text-xl font-bold">{title}</h3>
-									<p className="landing-muted text-sm leading-relaxed">{description}</p>
-									<ul className="landing-role-points flex flex-col gap-2 pt-4 text-sm">
-										{points.map((point) => (
-											<li key={point} className="flex items-start gap-2">
-												<span className="mt-0.5 text-[var(--accent)]" aria-hidden="true">✓</span>
-												<span>{point}</span>
-											</li>
-										))}
-									</ul>
-									<Link to={to} className="landing-role-link mt-auto inline-flex items-center gap-1.5 pt-3 text-sm font-semibold">
-										{cta} <span aria-hidden="true" className="transition-transform duration-300 group-hover:translate-x-1">→</span>
-									</Link>
-								</article>
-							</div>
-						))}
+						{roleCards.map(({ role, badge, title, description, points, cta, to, Icon, accent }, index) => {
+							const isCurrentRole = session?.ok && session.user.role === role;
+							return (
+								<div key={badge} data-reveal style={delay(index * 120)}>
+									<article
+										className="landing-card landing-tilt group flex h-full flex-col gap-4"
+										style={{ "--accent": accent } as CSSProperties}
+										onPointerMove={tiltCard}
+										onPointerLeave={resetPointer}
+									>
+										<div className="flex items-center justify-between">
+											<span className="landing-role-badge">{badge}</span>
+											<span className="landing-role-icon"><Icon className="size-5" /></span>
+										</div>
+										<h3 className="text-xl font-bold">{title}</h3>
+										<p className="landing-muted text-sm leading-relaxed">{description}</p>
+										<ul className="landing-role-points flex flex-col gap-2 pt-4 text-sm">
+											{points.map((point) => (
+												<li key={point} className="flex items-start gap-2">
+													<span className="mt-0.5 text-[var(--accent)]" aria-hidden="true">✓</span>
+													<span>{point}</span>
+												</li>
+											))}
+										</ul>
+										<Link to={isCurrentRole && loggedInHome ? loggedInHome : to} className="landing-role-link mt-auto inline-flex items-center gap-1.5 pt-3 text-sm font-semibold">
+											{isCurrentRole ? "Accéder à mon espace" : cta} <span aria-hidden="true" className="transition-transform duration-300 group-hover:translate-x-1">→</span>
+										</Link>
+									</article>
+								</div>
+							);
+						})}
 					</div>
 				</section>
 
@@ -468,8 +484,8 @@ export default function HomePage() {
 							Créez votre compte gratuitement ou explorez dès maintenant les offres et entreprises partenaires.
 						</p>
 						<div className="relative mt-10 flex flex-wrap justify-center gap-3">
-							<Link to="/signup" className="landing-magnet landing-btn-primary" onPointerMove={attractToPointer} onPointerLeave={resetPointer}>
-								Créer un compte gratuit
+							<Link to={loggedInHome ?? "/signup"} className="landing-magnet landing-btn-primary" onPointerMove={attractToPointer} onPointerLeave={resetPointer}>
+								{loggedInHome ? "Accéder à mon espace" : "Créer un compte gratuit"}
 							</Link>
 							<Link to="/companies" className="landing-magnet landing-btn-ghost" onPointerMove={attractToPointer} onPointerLeave={resetPointer}>
 								Voir les entreprises

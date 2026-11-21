@@ -32,6 +32,7 @@ const statePanel = `mx-auto flex max-w-[464px] flex-col items-center gap-4 round
 type CandidateDeckProps = {
 	candidates: CandidateSummary[];
 	recommended?: RecommendedCandidate[];
+	highlightTerms?: string[];
 	/** Index of the card shown */
 	index: number;
 	/** ♥ sur la carte affichée (JOB-037) */
@@ -45,7 +46,7 @@ type CandidateDeckProps = {
 // Cards shown one at a time, the next one peeking out underneath (mockup "Swipe – carte 2").
 // ♥ and 🚫 (JOB-037, JOB-038) take the card out of the deck and show the next one.
 // Swiping the card to the right does the same as ♥, to the left the same as 🚫.
-export function CandidateDeck({ candidates, index, onKeep, keeping, onExclude, excluding, recommended = [] }: CandidateDeckProps) {
+export function CandidateDeck({ candidates, index, onKeep, keeping, onExclude, excluding, recommended = [], highlightTerms = [] }: CandidateDeckProps) {
 	const candidate = candidates[index];
 	const currentRecommendation = recommended.find((item) => item.id === candidate.id);
 	const hasNext = index < candidates.length - 1;
@@ -108,7 +109,7 @@ export function CandidateDeck({ candidates, index, onKeep, keeping, onExclude, e
 							{drag > 0 ? "♥ Retenir" : "Écarter"}
 						</span>
 					)}
-					<CandidateCard recommended={currentRecommendation !== undefined} reasons={currentRecommendation?.reasons} candidate={candidate} onKeep={onKeep} keeping={keeping} onExclude={onExclude} excluding={excluding} />
+					<CandidateCard recommended={currentRecommendation !== undefined} reasons={currentRecommendation?.reasons} highlightTerms={highlightTerms} candidate={candidate} onKeep={onKeep} keeping={keeping} onExclude={onExclude} excluding={excluding} />
 				</div>
 			</div>
 			{(onKeep || onExclude) && (
@@ -327,6 +328,7 @@ export default function CandidatesPage() {
 						{result?.ok && visibleCandidates.length > 0 && (
 							<CandidateDeck
 								recommended={recommended ?? []}
+								highlightTerms={[applied.position, applied.skill, applied.region].filter(Boolean)}
 								candidates={visibleCandidates}
 								index={cardIndex(visibleCandidates, params.get("candidate"))}
 

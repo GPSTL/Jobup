@@ -5,6 +5,7 @@ import { CandidateAvatar, EducationLine } from "./CandidateIdentity";
 import HeartIcon from "./HeartIcon";
 import type { CandidateSummary } from "../services/candidates";
 import { fullName } from "../utils/candidates";
+import { highlightText } from "../utils/highlight";
 import { focus } from "../utils/searchPageStyles";
 
 const cardLink = `w-fit text-sm font-semibold text-primary hover:underline underline-offset-4 ${focus}`;
@@ -16,6 +17,7 @@ type CandidateCardProps = {
 	candidate: CandidateSummary;
 	recommended?: boolean;
 	reasons?: string[];
+	highlightTerms?: string[];
 	/** ♥ : retenir le candidat (JOB-037) ; sans cette fonction, pas de bouton */
 	onKeep?: () => void;
 	/** Présélection en cours d'envoi : le bouton est inactif mais garde le focus */
@@ -26,7 +28,7 @@ type CandidateCardProps = {
 	excluding?: boolean;
 };
 
-export default function CandidateCard({ candidate, recommended = false, reasons = [], onKeep, keeping = false, onExclude, excluding = false }: CandidateCardProps) {
+export default function CandidateCard({ candidate, recommended = false, reasons = [], highlightTerms = [], onKeep, keeping = false, onExclude, excluding = false }: CandidateCardProps) {
 	// Une seule action à la fois : pendant l'envoi de l'une, l'autre est inactive
 	const busy = keeping || excluding;
 	// Recherche en cours (critères des filtres, JOB-036), reprise par « Retour aux candidats » sur le profil
@@ -38,14 +40,14 @@ export default function CandidateCard({ candidate, recommended = false, reasons 
 				{recommended && <p className="absolute top-5 left-5 rounded-full bg-white/90 px-3 py-1.5 text-xs font-bold text-primary">✦ Recommandé pour vous</p>}
 				<CandidateAvatar candidate={candidate} className="size-36 text-4xl ring-4 ring-white/30 sm:size-40" />
 				<div className="absolute right-0 bottom-0 left-0 bg-gradient-to-t from-[#101b2e] to-transparent px-6 pt-8 pb-6 text-white">
-					<h2 className="text-2xl leading-tight font-extrabold sm:text-3xl">{fullName(candidate)}</h2>
-					<p className="mt-2 text-sm font-medium text-white/90"><EducationLine candidate={candidate} /></p>
+					<h2 className="text-2xl leading-tight font-extrabold sm:text-3xl">{highlightText(fullName(candidate), highlightTerms)}</h2>
+					<p className="mt-2 text-sm font-medium text-white/90"><EducationLine candidate={candidate} highlightTerms={highlightTerms} /></p>
 				</div>
 			</div>
 			<div className="p-6">
-				{reasons.length > 0 && <p className="mb-3 text-sm font-medium text-primary">{reasons.join(" · ")}</p>}
+				{reasons.length > 0 && <p className="mb-3 text-sm font-medium text-primary">{highlightText(reasons.join(" · "), highlightTerms)}</p>}
 				<p className="text-xs font-bold tracking-widest text-gray-400 uppercase">Présentation</p>
-				<p className={`mt-2 line-clamp-3 text-sm leading-relaxed ${candidate.description ? "text-ink" : "text-[#6b7280]"}`}>{candidate.description || "Présentation non renseignée."}</p>
+				<p className={`mt-2 line-clamp-3 text-sm leading-relaxed ${candidate.description ? "text-ink" : "text-[#6b7280]"}`}>{candidate.description ? highlightText(candidate.description, highlightTerms) : "Présentation non renseignée."}</p>
 				<div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
 					<Link to={`/recruiter/candidates/${candidate.id}`} state={{ candidatesSearch: search }} className={`${cardLink} after:absolute after:inset-0 after:rounded-[2rem]`}>Consulter le profil</Link>
 					{candidate.cv_url ? <a href={candidate.cv_url} download className={`relative z-10 ${cardLink}`}>Télécharger le CV</a> : <p className="text-sm text-[#6b7280]">CV non fourni</p>}

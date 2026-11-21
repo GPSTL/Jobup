@@ -12,12 +12,15 @@ import PublicNavbar from "../components/PublicNavbar";
 import SearchIcon from "../components/SearchIcon";
 import StudentNavbar from "../components/StudentNavbar";
 import RecruiterNavbar from "../components/RecruiterNavbar";
+import SchoolNavbar from "../components/SchoolNavbar";
+import AdminNavbar from "../components/AdminNavbar";
 import Pagination from "../components/Pagination";
 import { getSession, type SessionResult } from "../services/auth";
 import { saveDraft } from "../services/applications";
 import { isOfferSaved, removeSavedOffer, saveOffer } from "../services/savedOffers";
 import { filterPublicOffers, getOffer, getOffers, type PublicOffer, type PublicOfferFilters, type PublicOfferResult } from "../services/offers";
 export { filterPublicOffers } from "../services/offers";
+import { highlightText } from "../utils/highlight";
 import { card, field, focus, input, searchButton, select } from "../utils/searchPageStyles";
 import { companyEmblem, emblemColors, SECTOR_OPTIONS, sectorLabel } from "../utils/companies";
 import { MESSAGES, REQUEST_ERRORS } from "../utils/validation";
@@ -32,7 +35,7 @@ export function PublicOfferRequestState({ result, retry, detail = false }: { res
 	return <div role="alert" className="py-8 text-center"><p className="text-sm">{REQUEST_ERRORS[result.reason === "notFound" ? "server" : result.reason]}</p><Button className="mt-3" onClick={retry}>Réessayer</Button></div>;
 }
 
-export function PublicOfferList({ offers, page, onPageChange, emptyMessage = "Aucune offre publiée pour le moment. Revenez bientôt découvrir de nouvelles opportunités." }: { offers: PublicOffer[]; page: number; onPageChange: (page: number) => void; emptyMessage?: string }) {
+export function PublicOfferList({ offers, page, onPageChange, emptyMessage = "Aucune offre publiée pour le moment. Revenez bientôt découvrir de nouvelles opportunités.", highlightQuery = "", highlightCity = "" }: { offers: PublicOffer[]; page: number; onPageChange: (page: number) => void; emptyMessage?: string; highlightQuery?: string; highlightCity?: string }) {
 	if (offers.length === 0) return <p role="status" className={`${card} py-10 text-center text-sm text-[#6b7280]`}>{emptyMessage}</p>;
 	const totalPages = Math.ceil(offers.length / PAGE_SIZE);
 	const current = Math.max(1, Math.min(page, totalPages));
@@ -50,11 +53,11 @@ export function PublicOfferList({ offers, page, onPageChange, emptyMessage = "Au
 									{initials}
 								</span>
 								<div className="min-w-0">
-									<p className="truncate text-sm font-semibold text-ink">{companyName}</p>
+									<p className="truncate text-sm font-semibold text-ink">{highlightText(companyName, highlightQuery)}</p>
 									{company?.city && (
 										<p className="flex items-center gap-1 text-xs text-[#6b7280]">
 											<MapPinIcon width={12} height={12} className="shrink-0" />
-											{company.city}
+											{highlightText(company.city, [highlightCity, highlightQuery])}
 										</p>
 									)}
 								</div>
@@ -65,12 +68,12 @@ export function PublicOfferList({ offers, page, onPageChange, emptyMessage = "Au
 						</div>
 
 						<div className="flex flex-col gap-2 pt-1">
-							<h2 className="text-lg leading-snug font-bold text-ink">{title}</h2>
+							<h2 className="text-lg leading-snug font-bold text-ink">{highlightText(title, highlightQuery)}</h2>
 							<div className="flex flex-wrap items-center gap-1.5">
 								<span className="rounded-md bg-[#dbeafe] px-2.5 py-0.5 text-xs font-semibold text-[#1d4ed8]">Alternance</span>
 								<span className="rounded-md bg-[#f3f4f6] px-2.5 py-0.5 text-xs font-medium text-[#6b7280]">{sectorLabel(category)}</span>
 							</div>
-							{description && <p className="line-clamp-2 text-sm leading-relaxed text-[#6b7280]">{description}</p>}
+							{description && <p className="line-clamp-2 text-sm leading-relaxed text-[#6b7280]">{highlightText(description, highlightQuery)}</p>}
 						</div>
 
 						<div className="mt-auto flex items-center justify-between border-t border-[#e5e7eb] pt-3.5">
@@ -162,7 +165,9 @@ function OfferDetailRequest({ id }: { id: string }) {
 		else setActionError(draft.reason === "network" ? MESSAGES.networkError : MESSAGES.serverError);
 	};
 	const student = session?.ok && session.user.role === 1;
+	const school = session?.ok && session.user.role === 2;
 	const recruiter = session?.ok && session.user.role === 3;
+	const admin = session?.ok && session.user.role === 127;
 	const toggleSaved = async () => {
 		if (saving) return;
 		setSaving(true);
@@ -177,7 +182,7 @@ function OfferDetailRequest({ id }: { id: string }) {
 	};
 	return <div className="flex min-h-dvh flex-col bg-[#f8fafc] text-ink">
 		{session !== null && <header className="px-4 pt-4 md:px-6 md:pt-6">
-			{student ? <StudentNavbar /> : recruiter ? <RecruiterNavbar /> : session.ok ? null : <PublicNavbar />}
+			{student ? <StudentNavbar /> : school ? <SchoolNavbar /> : recruiter ? <RecruiterNavbar /> : admin ? <AdminNavbar /> : <PublicNavbar />}
 		</header>}
 		<main className="mx-auto mt-8 mb-16 flex w-full max-w-[1000px] flex-col gap-6 rounded-2xl border border-[#e5e7eb] bg-surface px-5 py-7 shadow-xs md:px-10 md:py-8">
 			{result?.ok ? <>
@@ -229,7 +234,7 @@ function OffersIndexPage() {
 		<div className="flex min-h-dvh flex-col bg-[#f8fafc] text-ink">
 			<div className={isStudent ? "" : "hero-mesh border-b border-[#e5e7eb]"}>
 				{session !== null && <header className="px-4 pt-4 md:px-6 md:pt-6">
-					{isStudent ? <StudentNavbar /> : session.ok && session.user.role === 3 ? <RecruiterNavbar /> : session.ok ? null : <PublicNavbar variant="glass" />}
+					{isStudent ? <StudentNavbar /> : session.ok && session.user.role === 2 ? <SchoolNavbar /> : session.ok && session.user.role === 3 ? <RecruiterNavbar /> : session.ok && session.user.role === 127 ? <AdminNavbar /> : <PublicNavbar variant="glass" />}
 				</header>}
 
 				{!isStudent && (
@@ -274,6 +279,8 @@ function OffersIndexPage() {
 						offers={visibleOffers}
 						page={page}
 						onPageChange={setPage}
+						highlightQuery={filters.query}
+						highlightCity={filters.city}
 						emptyMessage={filters.query || filters.city || filters.sector ? "Aucune offre ne correspond à votre recherche." : undefined}
 					/>
 				</> : <PublicOfferRequestState result={result} retry={() => { setResult(null); setPage(1); setAttempt((value) => value + 1); }} />}
