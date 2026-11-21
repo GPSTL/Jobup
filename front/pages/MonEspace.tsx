@@ -3,8 +3,11 @@ import { Link } from "react-router-dom";
 
 import Button from "../components/Button";
 import CvSection from "../components/CvSection";
+import CvSuggestionsPanel from "../components/CvSuggestionsPanel";
 import NotificationSettings from "../components/NotificationSettings";
 import PhotoSection from "../components/PhotoSection";
+import ProfileCompletion from "../components/ProfileCompletion";
+import ProfileDetailsSection from "../components/ProfileDetailsSection";
 import SchoolSection from "../components/SchoolSection";
 import StudentContractsSection from "../components/StudentContractsSection";
 import StudentNavbar from "../components/StudentNavbar";
@@ -28,6 +31,10 @@ export default function MonEspace({ user }: MonEspaceProps) {
 	const [loadError, setLoadError] = useState<ProfileError | null>(null);
 	// Incremented by "Réessayer" to load the profile again
 	const [attempt, setAttempt] = useState(0);
+	// Known once CvSection has loaded the CV
+	const [hasCv, setHasCv] = useState<boolean | null>(null);
+	// "Pré-remplir mon profil" (JOB-071): each opening reads the CV again
+	const [prefill, setPrefill] = useState(0);
 
 	useEffect(() => {
 		// Ignores the answer if the page was left in the meantime
@@ -83,6 +90,11 @@ export default function MonEspace({ user }: MonEspaceProps) {
 							<p className="mt-1 text-sm text-[#6b7280]">
 								Gérez votre profil, votre CV et vos préférences pour postuler en un clic.
 							</p>
+							{profile && (
+								<div className="mt-3 max-w-md">
+									<ProfileCompletion profile={profile} hasCv={hasCv} />
+								</div>
+							)}
 						</div>
 					</div>
 					<div className="flex flex-wrap gap-2.5">
@@ -117,6 +129,16 @@ export default function MonEspace({ user }: MonEspaceProps) {
 
 						{profile && (
 							<>
+								{prefill > 0 && (
+									<CvSuggestionsPanel
+										key={prefill}
+										userId={user.id}
+										profile={profile}
+										onSave={(changes) => updateProfile(user.id, changes)}
+										onSaved={setProfile}
+										onClose={() => setPrefill(0)}
+									/>
+								)}
 								<PhotoSection photoUrl={profile.photoUrl} onUpload={async (file) => applyResult(await updatePhoto(user.id, file))} />
 								<TextSection
 									title="Poste recherché"
@@ -137,13 +159,15 @@ export default function MonEspace({ user }: MonEspaceProps) {
 									multiline
 									onSave={async (description) => applyResult(await updateProfile(user.id, { description }))}
 								/>
+								{/* JOB-071: what the recruiters see and filter on */}
+								<ProfileDetailsSection profile={profile} onSave={(changes) => updateProfile(user.id, changes)} onSaved={setProfile} />
 							</>
 						)}
 					</div>
 
 					<div className="flex flex-col gap-6">
 						{/* JOB-019: loads its own data, so it does not wait for the profile */}
-						<CvSection userId={user.id} />
+						<CvSection userId={user.id} onCvChange={setHasCv} onPrefill={() => setPrefill((count) => count + 1)} />
 						<SchoolSection />
 						<StudentContractsSection />
 						{/* JOB-042: notifications and e-mail preference, loaded on their own too */}

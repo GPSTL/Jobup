@@ -1,11 +1,27 @@
-// Calls to the student profile API (JOB-008). Contract: docs/api/profile.md
+// Calls to the student profile API (JOB-008, complete profile JOB-071). Contract: docs/api/profile.md
 // <id> is the id of the account, given by RequireStudent.
 
 export type Profile = {
 	photoUrl: string | null;
 	description: string;
 	desiredPosition: string;
+	/** Program followed, e.g. "Master MIAGE"; "" when not filled in */
+	education: string;
+	/** StudyDegree of jobup/models.py: 1 to 5 for Bac + 1 to Bac + 5 */
+	studyDegree: number | null;
+	/** JobCategory of jobup/models.py: the field of the search (SECTORS in utils/companies.ts) */
+	category: number | null;
+	/** Professional experience in months, internships and apprenticeships included */
+	experienceLevel: number;
+	skills: string[];
+	/** Where the student looks for an apprenticeship, free text ("Lyon", "Île-de-France", "Télétravail") */
+	region: string;
+	/** "AAAA-MM-JJ" */
+	availableFrom: string | null;
 };
+
+/** Fields changed by PATCH /api/student/<id>: the photo has its own route */
+export type ProfileChanges = Partial<Omit<Profile, "photoUrl">>;
 
 export type ProfileError = "unauthenticated" | "server" | "network";
 
@@ -20,19 +36,46 @@ type ApiProfile = {
 	photo_url: string | null;
 	description: string;
 	desired_position: string;
+	// JOB-071: absent from a server older than this ticket
+	education?: string;
+	study_degree?: number | null;
+	category?: number | null;
+	experience_level?: number;
+	skills?: string[];
+	region?: string;
+	available_from?: string | null;
 };
 
 const toProfile = (data: ApiProfile): Profile => ({
 	photoUrl: data.photo_url,
 	description: data.description,
 	desiredPosition: data.desired_position,
+	education: data.education ?? "",
+	studyDegree: data.study_degree ?? null,
+	category: data.category ?? null,
+	experienceLevel: data.experience_level ?? 0,
+	skills: Array.isArray(data.skills) ? data.skills : [],
+	region: data.region ?? "",
+	availableFrom: data.available_from ?? null,
 });
+
+// Field of Profile → field of the API
+const API_FIELDS: Record<keyof ProfileChanges, string> = {
+	description: "description",
+	desiredPosition: "desired_position",
+	education: "education",
+	studyDegree: "study_degree",
+	category: "category",
+	experienceLevel: "experience_level",
+	skills: "skills",
+	region: "region",
+	availableFrom: "available_from",
+};
 
 // Field of the API → field of Profile, for the validation errors
 const ERROR_FIELDS: Record<string, keyof Profile> = {
 	photo: "photoUrl",
-	description: "description",
-	desired_position: "desiredPosition",
+	...Object.fromEntries(Object.entries(API_FIELDS).map(([field, name]) => [name, field as keyof Profile])),
 };
 
 function fieldErrors(errors: Record<string, string>) {
@@ -79,8 +122,14 @@ export function updateProfile(id: number, changes: Partial<Omit<Profile, "photoU
 	return send(`/api/student/${id}`, {
 		method: "PATCH",
 		headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken() },
-		// JSON.stringify leaves out the undefined fields, so they are not changed
-		body: JSON.stringify({ description: changes.description, desired_position: changes.desiredPosition }),
+		// Only the fields given: the undefined ones are left out and not changed, null clears a field
+		body: JSON.stringify(
+			Object.fromEntries(
+				Object.entries(changes)
+					.filter(([, value]) => value !== undefined)
+					.map(([field, value]) => [API_FIELDS[field as keyof ProfileChanges], value]),
+			),
+		),
 	});
 }
 

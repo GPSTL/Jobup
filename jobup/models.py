@@ -232,6 +232,8 @@ class Student(models.Model):
     photo = models.ImageField(upload_to="photos", blank=True)
     desired_position = models.CharField(max_length=100, blank=True)
     description = models.CharField(max_length=500, blank=True)
+    # Formation suivie, ex. « Master MIAGE » (JOB-071) : la ligne de formation des cartes candidats
+    education = models.CharField(max_length=100, blank=True)
     category = models.SmallIntegerField(
         choices=JobCategory.choices, null=True, blank=True
     )
@@ -257,15 +259,22 @@ class Student(models.Model):
             "photo_url": self.photo.url if self.photo else None,
             "description": self.description,
             "desired_position": self.desired_position,
+            # Profil complet (JOB-071), modifiable par PATCH /api/student/<id>
+            "education": self.education,
+            "study_degree": self.study_degree,
             "category": self.category,
             "experience_level": self.experience_level,
-            "skills": self.skills,
+            "skills": self.skill_list(),
             "region": self.region,
             "rhythm": self.rhythm,
             "available_from": self.available_from,
             "available_to": self.available_to,
             "school": self.school.id if self.school else -1,
         }
+
+    def skill_list(self) -> list[str]:
+        # Stockées séparées par des virgules
+        return [skill.strip() for skill in self.skills.split(",") if skill.strip()]
 
 
 class Recruiter(models.Model):

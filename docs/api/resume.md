@@ -52,6 +52,38 @@ The format is checked on the content of the file, not on its extension nor on th
 
 The current CV is replaced only once the new one is saved: when the import fails, because the file is refused or cannot be stored, the current CV stays in place, unchanged. After a successful import, the file of the previous CV is deleted. This does not affect the applications already sent: since JOB-033, an application keeps its own copy of the CV, made when it is sent.
 
+### `GET /api/student/<id>/resume/suggestions`
+
+Pre-fill of the profile from the CV (JOB-071). Restricted to the student themselves: their CV is only read for them. The current CV is read again on the server, and values of the profile are taken from its text. **Nothing is saved**: the page shows them, the student ticks those they keep, then saves them with `PATCH /api/student/<id>` ([profile.md](profile.md)).
+
+```json
+{
+  "readable": true,
+  "suggestions": {
+    "desired_position": "Développeur web",
+    "education": "Master 2 MIAGE — Université Paris Nanterre",
+    "study_degree": 5,
+    "skills": ["Java", "Spring Boot", "SQL"],
+    "region": "Île-de-France"
+  }
+}
+```
+
+- Only the values found are in `suggestions`: an absent field gave nothing. `{}` when nothing was found.
+- `readable` is `false` when the text of the CV cannot be read: old Word format (`.doc`), scanned or protected PDF, damaged file. `suggestions` is then `{}`.
+- Read: the text of the PDF (first 5 pages, with `pypdf`) or of the DOCX (`word/document.xml`, read without an XML parser, so that its entities are never expanded), 40,000 characters at most.
+- `desired_position`: a label (“Poste recherché : …”, “Objectif : …”), a sentence (“je recherche une alternance en tant que …”), or else the title of the CV (“Développeur Full Stack en alternance”).
+- `education` and `study_degree`: the line of the highest degree (Master 2 → Bac + 5, M1 → Bac + 4, Licence or BUT or Bachelor → Bac + 3, BTS or DUT → Bac + 2…), without its dates.
+- `skills`: the known skills cited by the CV, in its order, 20 at most: a list of common software, languages and tools, and the skills already entered by the students, whose spelling (that of the filters of the recruiters) wins. Whole names only: “Java” is not found in “JavaScript”.
+- `region`: the first region or large city cited, usually the address at the top of the CV, as a region (“Lyon” gives “Auvergne-Rhône-Alpes”).
+
+| Case | Code | Body |
+| --- | --- | --- |
+| Values read | `200` | As above |
+| `<id>` of another account, no session | `403` | `{"error": "Forbidden"}` or the DRF body |
+| No student profile for this `<id>` | `404` | `{"error": "Student not found"}` |
+| No CV | `404` | `{"error": "Resume not found"}` |
+
 ## Storage
 
 The CV is stored in the media folder (`MEDIA_ROOT`), as `CVs/<random identifier>/<name>`. Each import gets a new folder, so the file keeps its name, which is also the name of the copy made for an application (JOB-033).
