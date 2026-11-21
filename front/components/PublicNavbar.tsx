@@ -18,7 +18,7 @@ export default function PublicNavbar({ variant = "solid", signupTo = "/signup" }
 				<Button to="/login">Connexion</Button>
 			</div>
 			<details className="public-menu relative ml-auto shrink-0 xl:hidden sm:ml-0">
-				<summary aria-label="Ouvrir le menu" className="flex cursor-pointer list-none items-center justify-center rounded-xl p-2 hover:bg-[#f3f4f6] focus-visible:outline-2 focus-visible:outline-primary">
+				<summary aria-label="Ouvrir le menu" className="flex cursor-pointer list-none items-center justify-center rounded-xl p-2 hover:bg-(--navbar-interaction-bg) focus-visible:bg-(--navbar-interaction-bg) focus-visible:outline-2 focus-visible:outline-primary">
 					<MenuIcon open={false} />
 				</summary>
 				<div className="absolute right-0 top-full z-30 mt-3 flex w-64 flex-col gap-2 rounded-2xl border border-[#e5e7eb] bg-surface p-4 shadow-xl">
