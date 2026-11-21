@@ -41,6 +41,11 @@ import RequireAdmin from "./components/RequireAdmin";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminUserDetailPage from "./pages/AdminUserDetailPage";
+import AdminCompaniesPage from "./pages/AdminCompaniesPage";
+import AdminSchoolsPage from "./pages/AdminSchoolsPage";
+import AdminAccountPage from "./pages/AdminAccountPage";
+import AdminReportsPage from "./pages/AdminReportsPage";
+import AdminClaimsPage from "./pages/AdminClaimsPage";
 
 function App() {
 	return (
@@ -49,6 +54,11 @@ function App() {
 				<Route path="/administration" element={<AdminLoginPage />} />
 				<Route path="/administration/users" element={<RequireAdmin><AdminUsersPage /></RequireAdmin>} />
 				<Route path="/administration/users/:id" element={<RequireAdmin><AdminUserDetailPage /></RequireAdmin>} />
+				<Route path="/administration/companies" element={<RequireAdmin><AdminCompaniesPage /></RequireAdmin>} />
+				<Route path="/administration/schools" element={<RequireAdmin><AdminSchoolsPage /></RequireAdmin>} />
+				<Route path="/administration/account" element={<RequireAdmin><AdminAccountPage /></RequireAdmin>} />
+				<Route path="/administration/reports" element={<RequireAdmin><AdminReportsPage /></RequireAdmin>} />
+				<Route path="/administration/claims" element={<RequireAdmin><AdminClaimsPage /></RequireAdmin>} />
 				<Route path="/" element={<HomePage />} />
 				<Route path="/students" element={<StudentPage />} />
 				<Route path="/schools" element={<SchoolPage />} />

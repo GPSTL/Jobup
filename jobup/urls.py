@@ -5,18 +5,23 @@ from django.contrib.staticfiles.views import serve
 from django.urls import path, re_path
 
 from jobup import api, candidates, exclusions, exports, notifications, shortlist
-from jobup.contracts import contract_file, student_contracts
 from jobup.administration import (
     admin_login,
     admin_login_page,
     admin_page,
     user_cv,
     user_detail,
-    user_filters,
     user_list,
     user_suspension,
 )
+from jobup.administration_organizations import (
+    company_list,
+    company_status,
+    school_list,
+    school_status,
+)
 from jobup.companies import cities, companies, company
+from jobup.contracts import contract_file, student_contracts
 from jobup.conversations import (
     conversation_messages,
     message_attachment,
@@ -24,6 +29,7 @@ from jobup.conversations import (
     recruiter_conversations,
     student_conversations,
 )
+from jobup.cv_suggestions import student_resume_suggestions
 from jobup.offers import offer, offers, savedOffers
 from jobup.profile import student, student_photo
 from jobup.recruiter_company import recruiter_company
@@ -33,7 +39,6 @@ from jobup.recruiter_offers import (
     recruiter_application,
     recruiter_offers,
 )
-from jobup.cv_suggestions import student_resume_suggestions
 from jobup.resume import student_resume
 from jobup.school import (
     school,
@@ -52,11 +57,14 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/administration/login", admin_login),
     path("api/administration/users", user_list),
-    path("api/administration/users/filters", user_filters),
     path("api/administration/users/export", exports.users_export),
     path("api/administration/users/<int:id>", user_detail),
     path("api/administration/users/<int:id>/cv", user_cv),
     path("api/administration/users/<int:id>/suspension", user_suspension),
+    path("api/administration/companies", company_list),
+    path("api/administration/companies/<int:id>/status", company_status),
+    path("api/administration/schools", school_list),
+    path("api/administration/schools/<int:id>/status", school_status),
     re_path(r"^administration/?$", admin_login_page),
     re_path(r"^administration/.+$", admin_page),
     path("api/csrf", api.csrf),
