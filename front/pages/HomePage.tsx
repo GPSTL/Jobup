@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
-import Button from "../components/Button";
 import Footer from "../components/Footer";
 import PublicNavbar from "../components/PublicNavbar";
 import StudentNavbar from "../components/StudentNavbar";
@@ -11,19 +10,29 @@ import Megaphone from "../components/Megaphone";
 import GraduationCapIcon from "../components/GraduationCapIcon";
 import UsersIcon from "../components/UsersIcon";
 import SearchIcon from "../components/SearchIcon";
+import MessageIcon from "../components/MessageIcon";
+import FileIcon from "../components/FileIcon";
 import { getSession, type SessionResult } from "../services/auth";
 import { ROLES } from "../utils/roles";
+import { attractToPointer, resetPointer, tiltCard, trackPointer, useLandingMotion } from "../utils/landingMotion";
 
 const homeRoles = [...ROLES].sort((a, b) => a.homeOrder - b.homeOrder);
 
-const popularSectors = [
+const sectors = [
 	"Informatique & Tech",
 	"Data & IA",
 	"Design & Produit",
 	"Marketing & Communication",
 	"Finance & Audit",
 	"Ingénierie",
+	"Commerce & Vente",
+	"Ressources humaines",
+	"Logistique",
+	"Cybersécurité",
 ];
+
+const manifesto = "JobUp réunit étudiants, entreprises et écoles sur une seule plateforme, pour que chaque alternance commence par la bonne rencontre.";
+const highlightedWords = new Set(["étudiants,", "entreprises", "écoles", "bonne", "rencontre."]);
 
 const roleCards = [
 	{
@@ -38,6 +47,7 @@ const roleCards = [
 		cta: "Découvrir l’espace étudiant",
 		to: "/students",
 		Icon: GraduationCapIcon,
+		accent: "#2563eb",
 	},
 	{
 		badge: "Entreprises & Recruteurs",
@@ -51,6 +61,7 @@ const roleCards = [
 		cta: "Créer un compte recruteur",
 		to: "/signup?role=recruiter",
 		Icon: UsersIcon,
+		accent: "#3b82f6",
 	},
 	{
 		badge: "Écoles & CFA",
@@ -64,6 +75,7 @@ const roleCards = [
 		cta: "Découvrir l’espace école",
 		to: "/schools",
 		Icon: HandshakeIcon,
+		accent: "#4f46e5",
 	},
 ];
 
@@ -73,303 +85,396 @@ const steps = [
 		title: "Créez votre profil",
 		description: "Importez votre CV ou configurez votre fiche entreprise en moins de deux minutes.",
 		Icon: Filter,
+		visual: ["Profil", "CV importé", "Compétences ajoutées"],
 	},
 	{
 		step: "02",
 		title: "Matchez & postulez",
 		description: "Explorez les opportunités par secteur et par ville, ou utilisez le swipe pour trier rapidement.",
 		Icon: Megaphone,
+		visual: ["Découverte", "Offre retenue", "Candidature envoyée"],
 	},
 	{
 		step: "03",
 		title: "Échangez & signez",
 		description: "Suivez chaque étape du recrutement et discutez directement depuis la messagerie intégrée.",
 		Icon: HandshakeIcon,
+		visual: ["Messagerie", "Entretien planifié", "Contrat signé"],
 	},
 ];
 
+const stats = [
+	{ value: 3, label: "espaces dédiés" },
+	{ value: 1, label: "clic pour postuler" },
+	{ value: 3, label: "étapes jusqu’au contrat" },
+	{ value: 0, label: "intermédiaire" },
+];
+
+const delay = (ms: number) => ({ "--d": `${ms}ms` }) as CSSProperties;
+
 export default function HomePage() {
 	const [session, setSession] = useState<SessionResult | null>(null);
+	const [activeStep, setActiveStep] = useState(0);
+	const rootRef = useRef<HTMLDivElement>(null);
+	const stepRefs = useRef<(HTMLLIElement | null)[]>([]);
+	useLandingMotion(rootRef);
+
 	useEffect(() => {
 		let ignore = false;
 		getSession().then((result) => { if (!ignore) setSession(result); });
 		return () => { ignore = true; };
 	}, []);
 
+	// The sticky illustration follows the step closest to the middle of the screen.
 	useEffect(() => {
-		if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) return;
-		const sections = document.querySelectorAll<HTMLElement>(".landing-page main > section");
-		const observer = new IntersectionObserver(entries => {
-			entries.forEach(entry => {
-				if (entry.isIntersecting) {
-					entry.target.classList.add("is-revealed");
-					observer.unobserve(entry.target);
-				}
-			});
-		}, { threshold: 0.08 });
-		sections.forEach(section => { section.classList.add("reveal-on-scroll"); observer.observe(section); });
-		return () => { observer.disconnect(); sections.forEach(section => section.classList.remove("reveal-on-scroll", "is-revealed")); };
+		if (!("IntersectionObserver" in window)) return;
+		const observer = new IntersectionObserver((entries) => {
+			for (const entry of entries) {
+				if (entry.isIntersecting) setActiveStep(Number((entry.target as HTMLElement).dataset.step));
+			}
+		}, { rootMargin: "-45% 0px -45% 0px" });
+		stepRefs.current.forEach((element) => element && observer.observe(element));
+		return () => observer.disconnect();
 	}, []);
 
+	const manifestoWords = manifesto.split(" ");
+
 	return (
-		<div className="landing-page flex min-h-dvh flex-col bg-[#f8fafc] text-ink">
-			<div className="hero-mesh border-b border-[#e5e7eb]">
-				{session !== null && (
-					<header className="px-4 pt-4 md:px-6 md:pt-6">
-						{session.ok && session.user.role === 1 ? (
-							<StudentNavbar variant="glass" />
-						) : session.ok && session.user.role === 3 ? (
-							<RecruiterNavbar variant="glass" />
-						) : session.ok ? null : (
-							<PublicNavbar variant="glass" />
-						)}
-					</header>
-				)}
+		<div ref={rootRef} className="landing-page flex min-h-dvh flex-col">
+			{session !== null && (
+				<header className="landing-header px-4 pt-4 md:px-6">
+					{session.ok && session.user.role === 1 ? (
+						<StudentNavbar variant="glass" />
+					) : session.ok && session.user.role === 3 ? (
+						<RecruiterNavbar variant="glass" />
+					) : session.ok ? null : (
+						<PublicNavbar variant="glass" />
+					)}
+				</header>
+			)}
 
-				{/* Hero section */}
-				<section aria-labelledby="home-hero-title" className="mx-auto grid max-w-[1236px] items-center gap-12 px-4 pt-10 pb-16 md:px-6 md:pt-14 md:pb-24 lg:grid-cols-[1.12fr_0.88fr] lg:gap-16">
-					<div className="flex flex-col items-start gap-6">
-						<span className="inline-flex items-center gap-2 rounded-full border border-[#d1d5db] bg-surface px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-primary shadow-2xs">
-							<span className="size-2 rounded-full bg-primary" aria-hidden="true" />
-							La plateforme d’alternance nouvelle génération
-						</span>
+			{/* Hero section */}
+			<section
+				aria-labelledby="home-hero-title"
+				className="landing-hero relative isolate px-4 pt-36 pb-10 md:px-6 md:pt-44"
+				onPointerMove={(event) => {
+					const box = event.currentTarget.getBoundingClientRect();
+					event.currentTarget.style.setProperty("--hx", `${event.clientX - box.left}px`);
+					event.currentTarget.style.setProperty("--hy", `${event.clientY - box.top}px`);
+				}}
+			>
+				<div className="landing-aurora" aria-hidden="true"><span /><span /><span /></div>
+				<div className="landing-spotlight" aria-hidden="true" />
 
-						<h1 id="home-hero-title" className="hero-title text-4xl leading-[1.08] font-extrabold tracking-tight text-ink sm:text-5xl lg:text-6xl">
-							Ton succès commence <span className="text-primary">ici</span>.
-						</h1>
+				<div className="mx-auto flex max-w-[1100px] flex-col items-center text-center">
+					<Link to="/offers" className="landing-rise landing-pill group" style={delay(0)}>
+						<span className="landing-pill-tag">Nouveau</span>
+						La plateforme d’alternance nouvelle génération
+						<span aria-hidden="true" className="transition-transform duration-300 group-hover:translate-x-0.5">→</span>
+					</Link>
 
-						<p className="max-w-xl text-base leading-relaxed text-[#6b7280] sm:text-lg">
-							Inspirée des meilleures plateformes tech, JobUp connecte étudiants, recruteurs et écoles autour d’une expérience rapide : découverte par swipe, candidature en 1 clic et suivi temps réel.
-						</p>
+					<h1 id="home-hero-title" className="hero-title landing-display mt-8 text-[clamp(3rem,9vw,7.5rem)]">
+						<span className="landing-rise block" style={delay(120)}>Ton succès commence</span>
+						<span className="landing-rise block" style={delay(260)}><span className="landing-shimmer">ici</span>.</span>
+					</h1>
 
-						{/* Quick search bar preview */}
-						<div className=" flex w-full max-w-xl flex-col gap-2 rounded-2xl border border-[#e5e7eb] bg-surface p-2 shadow-md sm:flex-row sm:items-center">
-							<div className="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2">
-								<SearchIcon width={18} height={18} className="shrink-0 text-primary" />
-								<span className="truncate text-sm text-[#6b7280]">Développeur, Designer, Data, Finance…</span>
-							</div>
-							<div className="flex items-center gap-2">
-								<Link
-									to="/offers"
-									className="inline-flex w-full items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary shadow-xs transition-all hover:bg-primary/90 sm:w-auto"
-								>
-									Explorer les offres
-								</Link>
-							</div>
-						</div>
+					<p className="landing-rise landing-muted mt-7 max-w-xl text-base leading-relaxed sm:text-xl" style={delay(420)}>
+						Découvrez des opportunités, rencontrez les bons profils et suivez votre parcours en alternance, à chaque étape.
+					</p>
 
-						{/* Role direct access buttons */}
-						<div className="flex w-full flex-col gap-2.5 pt-1">
-							<p className="text-xs font-bold tracking-wider text-[#6b7280] uppercase">Choisissez votre espace</p>
-							<div className="flex flex-wrap gap-3">
-								{homeRoles.map(({ homeLabel, value, homePath }, index) => (
-									<Button
-										key={value}
-										to={homePath}
-										variant={index === 0 ? "primary" : "outline"}
-										size="md"
-										className="min-w-[130px] flex-1 sm:flex-initial"
-									>
-										{homeLabel}
-									</Button>
-								))}
-							</div>
-						</div>
-
-						{/* Popular sector tags */}
-						<div className="flex flex-wrap items-center gap-2 pt-1">
-							<span className="text-xs font-medium text-[#6b7280]">Secteurs phares :</span>
-							{popularSectors.map((sector) => (
-								<Link
-									key={sector}
-									to="/offers"
-									className="rounded-lg border border-[#e5e7eb] bg-surface px-2.5 py-1 text-xs font-medium text-[#6b7280] transition-colors hover:border-primary hover:text-primary"
-								>
-									{sector}
-								</Link>
-							))}
-						</div>
+					<div className="landing-rise mt-10 flex flex-wrap items-center justify-center gap-3" style={delay(560)}>
+						<Link to="/offers" className="landing-magnet landing-btn-primary" onPointerMove={attractToPointer} onPointerLeave={resetPointer}>
+							<SearchIcon width={17} height={17} className="shrink-0" />
+							Explorer les offres
+						</Link>
+						<Link to="/signup" className="landing-magnet landing-btn-ghost" onPointerMove={attractToPointer} onPointerLeave={resetPointer}>
+							Créer un compte gratuit
+						</Link>
 					</div>
 
-					<div className="home-job-preview mx-auto flex w-full max-w-md flex-col gap-5 rounded-[30px] border border-[#334155] bg-[#121a28] p-5 text-white shadow-xl sm:p-6 lg:max-w-none">
-						<div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700 pb-4">
-							<div className="flex items-center gap-3">
-								<span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[#4f7fee] text-lg font-bold">HT</span>
-								<div><p className="font-bold">Horizon Tech</p><p className="text-sm text-slate-400">Paris • Hybride</p></div>
+					<div className="landing-rise mt-8 flex flex-wrap items-center justify-center gap-2 text-sm" style={delay(680)}>
+						<span className="landing-subtle mr-1">Choisissez votre espace :</span>
+						{homeRoles.map(({ homeLabel, value, homePath }) => (
+							<Link key={value} to={homePath} className="landing-chip">{homeLabel}</Link>
+						))}
+					</div>
+				</div>
+
+				{/* Product preview, flattened while scrolling */}
+				<div className="landing-rise mx-auto mt-16 max-w-[1180px] md:mt-20" style={delay(820)}>
+					<div data-progress="hero" className="landing-stage">
+						<div className="landing-canvas">
+							<div className="landing-canvas-bar flex items-center gap-2 px-4 py-3">
+								<span className="size-3 rounded-full bg-[#ff5f57]" /><span className="size-3 rounded-full bg-[#febc2e]" /><span className="size-3 rounded-full bg-[#28c840]" />
+								<span className="landing-canvas-url mx-auto hidden rounded-lg px-24 py-1 text-xs sm:block">jobup.fr/offers</span>
 							</div>
-							<span className="rounded-full bg-emerald-900 px-3 py-1 text-xs font-semibold text-emerald-200">Compatibilité 98%</span>
+							<div className="grid gap-4 p-3 sm:p-4 lg:grid-cols-[1.35fr_1fr]">
+								<div className="relative h-[300px] overflow-hidden rounded-2xl sm:h-[420px] lg:h-[480px]">
+									<img src="/static/img/auth-community.webp" alt="Des étudiants et un professionnel échangent autour d’un ordinateur" className="landing-zoom h-full w-full object-cover object-top" fetchPriority="high" />
+									<div className="absolute inset-0 bg-gradient-to-t from-[#05060a] via-[#05060a]/25 to-transparent" />
+									<div className="absolute inset-x-0 bottom-0 p-6 text-left text-white sm:p-8">
+										<p className="text-xs font-semibold tracking-[0.16em] text-blue-200 uppercase">Des rencontres qui comptent</p>
+										<p className="mt-3 max-w-sm text-2xl leading-tight font-bold sm:text-3xl">L’alternance commence par une rencontre.</p>
+										<p className="mt-3 max-w-sm text-sm leading-relaxed text-white/75">Étudiants, entreprises et écoles avancent ensemble sur JobUp.</p>
+									</div>
+								</div>
+								<div className="hidden flex-col gap-4 text-left lg:flex">
+									<div className="landing-panel flex-1">
+										<p className="landing-subtle text-xs font-semibold tracking-wider uppercase">Découverte</p>
+										<div className="landing-swipe mt-4" aria-hidden="true">
+											{["Design & Produit", "Data & IA", "Informatique & Tech"].map((sector, index) => (
+												<div key={sector} className="landing-swipe-card" style={{ "--i": index, "--dir": index % 2 ? -1 : 1 } as CSSProperties}>
+													<span className="landing-subtle text-xs">Offre d’alternance</span>
+													<span className="text-lg font-bold">{sector}</span>
+													<span className="mt-auto flex gap-2">
+														<span className="landing-swipe-btn">✕</span>
+														<span className="landing-swipe-btn landing-swipe-like">♥</span>
+													</span>
+												</div>
+											))}
+										</div>
+									</div>
+									<div className="landing-panel">
+										<p className="landing-subtle text-xs font-semibold tracking-wider uppercase">Suivi de candidature</p>
+										<div className="landing-bar mt-4"><span /></div>
+										<div className="landing-subtle mt-3 flex justify-between text-xs"><span>Envoyée</span><span>Consultée</span><span>Décision</span></div>
+									</div>
+								</div>
+							</div>
 						</div>
-						<div className="flex flex-col gap-3">
-							<span className="w-fit rounded-md bg-blue-900 px-2.5 py-1 text-xs font-semibold text-blue-200">Alternance • 12 à 24 mois</span>
-							<p className="text-lg font-bold leading-tight">Développeur Full-Stack TypeScript &amp; Python</p>
-							<p className="text-sm leading-relaxed text-slate-400">Rejoignez notre équipe produit pour concevoir des interfaces réactives et des API performantes. Rythme 3 jours / 2 jours.</p>
+						<div className="landing-float landing-float-a hidden sm:flex" aria-hidden="true">
+							<span className="landing-float-icon">✦</span>
+							<div><p className="text-sm font-bold">De nouvelles opportunités</p><p className="landing-subtle text-xs">À découvrir à votre rythme</p></div>
 						</div>
-						<div className="flex flex-wrap gap-1.5">{["React", "TypeScript", "Django", "REST API", "Git"].map(skill => <span key={skill} className="rounded-lg bg-[#202b3d] px-2.5 py-1 text-xs text-slate-300">{skill}</span>)}</div>
-						<div className="grid gap-3 border-t border-slate-700 pt-4 sm:grid-cols-2">
-							<div className="flex items-center gap-2 rounded-xl border border-slate-700 bg-[#202b3d] p-3"><span className="text-xl text-blue-400" aria-hidden="true">♥</span><div className="text-xs"><p className="font-semibold">Swipe &amp; Favoris</p><p className="text-slate-400">Tri ultra-rapide</p></div></div>
-							<div className="flex items-center gap-2 rounded-xl border border-slate-700 bg-[#202b3d] p-3"><HandshakeIcon className="size-5 shrink-0 text-emerald-300" /><div className="text-xs"><p className="font-semibold">Postulation 1-clic</p><p className="text-slate-400">CV joint d’office</p></div></div>
+						<div className="landing-float landing-float-b hidden md:flex" aria-hidden="true">
+							<span className="landing-float-icon landing-float-icon-green">✓</span>
+							<div><p className="text-sm font-bold">Candidature consultée</p><p className="landing-subtle text-xs">Notification en direct</p></div>
 						</div>
-						<div className="flex items-center gap-3 rounded-2xl bg-[#1c2b5a] p-4 text-sm"><span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#4f7fee]" aria-hidden="true">✓</span><span className="font-semibold">Candidature étudiée par le recruteur</span><span className="ml-auto shrink-0 text-xs text-blue-300">En direct</span></div>
+					</div>
+				</div>
+			</section>
+
+			<main className="flex flex-1 flex-col">
+				{/* Sector ticker */}
+				<section aria-label="Secteurs phares" className="py-14">
+					<p className="landing-subtle mb-6 text-center text-sm">Des opportunités dans tous les secteurs phares</p>
+					<div className="landing-marquee">
+						{[0, 1].map((copy) => (
+							<ul key={copy} className="landing-marquee-track" aria-hidden={copy === 1 || undefined}>
+								{sectors.map((sector) => (
+									<li key={sector}>
+										<Link to="/offers" tabIndex={copy === 1 ? -1 : undefined} className="landing-marquee-item">{sector}</Link>
+									</li>
+								))}
+							</ul>
+						))}
 					</div>
 				</section>
-			</div>
 
-			<main className="mx-auto flex w-full max-w-[1236px] flex-1 flex-col gap-20 px-4 py-16 md:gap-24 md:px-6 md:py-20">
+				{/* Scroll-driven manifesto */}
+				<section aria-label="Notre mission" className="mx-auto w-full max-w-[1000px] px-4 py-24 md:px-6 md:py-36">
+					<p data-progress="scroll" className="landing-words section-display text-[clamp(1.75rem,4.4vw,3.5rem)] leading-[1.12] font-bold tracking-[-0.035em]" style={{ "--n": manifestoWords.length } as CSSProperties}>
+						{manifestoWords.map((word, index) => (
+							<span key={`${word}-${index}`} style={{ "--i": index } as CSSProperties} className={highlightedWords.has(word) ? "landing-word-accent" : undefined}>{word} </span>
+						))}
+					</p>
+				</section>
+
 				{/* Bento Grid Feature Showcase */}
-				<section aria-labelledby="bento-section-title" className="flex flex-col gap-10">
-					<div className="flex flex-col gap-2 text-center">
-						<span className="mx-auto w-fit rounded-full bg-[#dbeafe] px-3 py-1 text-xs font-semibold text-[#1d4ed8]">
-							Fonctionnalités clés
-						</span>
-						<h2 id="bento-section-title" className="section-display text-2xl font-bold tracking-tight sm:text-3xl">
-							Tout ce qu’il faut pour réussir son recrutement en alternance
+				<section aria-labelledby="bento-section-title" className="mx-auto flex w-full max-w-[1236px] flex-col gap-14 px-4 py-16 md:px-6">
+					<div data-reveal className="flex flex-col items-center gap-4 text-center">
+						<span className="landing-eyebrow">Fonctionnalités clés</span>
+						<h2 id="bento-section-title" className="section-display landing-display max-w-3xl text-[clamp(2.25rem,5vw,4rem)]">
+							Tout pour réussir son recrutement en alternance
 						</h2>
-						<p className="mx-auto max-w-2xl text-sm text-[#6b7280] sm:text-base">
-							Une interface claire, rapide et cohérente sur ordinateur comme sur mobile, en mode clair ou sombre.
+						<p className="landing-muted max-w-2xl text-base sm:text-lg">
+							Une interface claire, rapide et cohérente sur ordinateur comme sur mobile.
 						</p>
 					</div>
 
-					<div className="grid gap-6 md:grid-cols-12">
-						{/* Bento 1: Swipe matching (7 cols) */}
-						<article className="flex flex-col justify-between gap-6 rounded-3xl border border-[#e5e7eb] bg-surface p-6 shadow-xs md:col-span-7 sm:p-8">
-							<div className="flex flex-col gap-2">
-								<span className="w-fit rounded-lg bg-[#dbeafe] px-2.5 py-1 text-xs font-semibold text-[#1d4ed8]">
-									Découverte intelligente
-								</span>
-								<h3 className="text-xl font-bold text-ink">Mode Swipe &amp; Moteur de recherche multicritères</h3>
-								<p className="text-sm leading-relaxed text-[#6b7280]">
+					<div className="grid gap-5 md:grid-cols-12">
+						<div data-reveal className="md:col-span-7">
+							<article className="landing-card flex h-full flex-col" onPointerMove={trackPointer}>
+								<span className="landing-eyebrow">Découverte intelligente</span>
+								<h3 className="mt-4 text-2xl font-bold">Mode Swipe &amp; recherche multicritères</h3>
+								<p className="landing-muted mt-3 max-w-lg text-sm leading-relaxed">
 									Les étudiants filtrent par secteur, poste et ville ou passent en mode cartes pour sauvegarder les meilleures offres en quelques secondes. Les recruteurs parcourent les profils candidats avec la même fluidité.
 								</p>
-							</div>
-							<div className="grid gap-3 sm:grid-cols-3">
-								<div className="rounded-2xl border border-[#e5e7eb] bg-[#f9fafb] p-4">
-									<p className="text-xs font-semibold text-[#6b7280]">Filtres instantanés</p>
-									<p className="mt-1 text-sm font-bold text-ink">Secteur, Ville, Compétences</p>
+								<div className="landing-search mt-8" aria-hidden="true">
+									<SearchIcon width={18} height={18} className="shrink-0 text-primary" />
+									<span className="landing-subtle">Rechercher</span>
+									<span className="landing-rotator">
+										<span>
+											{["Développeur", "Designer", "Data analyst", "Chargé de com", "Développeur"].map((word, index) => <b key={`${word}-${index}`}>{word}</b>)}
+										</span>
+									</span>
+									<span className="landing-search-cta ml-auto hidden rounded-full px-4 py-1.5 text-xs font-semibold sm:inline">Explorer</span>
 								</div>
-								<div className="rounded-2xl border border-[#e5e7eb] bg-[#f9fafb] p-4">
-									<p className="text-xs font-semibold text-[#6b7280]">Sélection rapide</p>
-									<p className="mt-1 text-sm font-bold text-primary">♥ Retenir / 🚫 Passer</p>
+								<div className="mt-4 flex flex-wrap gap-2" aria-hidden="true">
+									{["Paris", "Lyon", "Hybride", "Data & IA", "Design & Produit"].map((filter, index) => (
+										<span key={filter} className="landing-filter" style={delay(index * 90)}>{filter}</span>
+									))}
 								</div>
-								<div className="rounded-2xl border border-[#e5e7eb] bg-[#f9fafb] p-4">
-									<p className="text-xs font-semibold text-[#6b7280]">Sauvegarde</p>
-									<p className="mt-1 text-sm font-bold text-ink">Favoris synchronisés</p>
+								<div className="mt-auto grid gap-3 pt-6 sm:grid-cols-3">
+									{[["Filtres instantanés", "Secteur, Ville, Compétences"], ["Sélection rapide", "♥ Retenir / ✕ Passer"], ["Sauvegarde", "Favoris synchronisés"]].map(([label, value]) => (
+										<div key={label} className="landing-mini-panel rounded-2xl p-4">
+											<p className="landing-subtle text-xs font-semibold">{label}</p>
+											<p className="mt-1 text-sm font-bold">{value}</p>
+										</div>
+									))}
 								</div>
-							</div>
-						</article>
+							</article>
+						</div>
 
-						{/* Bento 2: 1-Click Application & Tracking (5 cols) */}
-						<article className="flex flex-col justify-between gap-6 rounded-3xl border border-[#e5e7eb] bg-surface p-6 shadow-xs md:col-span-5 sm:p-8">
-							<div className="flex flex-col gap-2">
-								<span className="w-fit rounded-lg bg-[#dcfce7] px-2.5 py-1 text-xs font-semibold text-[#15803d]">
-									Zéro friction
-								</span>
-								<h3 className="text-xl font-bold text-ink">Suivi transparent étape par étape</h3>
-								<p className="text-sm leading-relaxed text-[#6b7280]">
+						<div data-reveal className="md:col-span-5" style={delay(120)}>
+							<article className="landing-card h-full" onPointerMove={trackPointer}>
+								<span className="landing-eyebrow landing-eyebrow-green">Zéro friction</span>
+								<h3 className="mt-4 text-2xl font-bold">Suivi transparent étape par étape</h3>
+								<p className="landing-muted mt-3 text-sm leading-relaxed">
 									Chaque candidature affiche sa frise d’avancement : envoyée, consultée, en cours d’étude, acceptée ou refusée avec message du recruteur.
 								</p>
-							</div>
-							<div className="flex flex-col gap-2.5 rounded-2xl border border-[#e5e7eb] bg-[#f9fafb] p-4">
-								<div className="flex items-center justify-between text-xs">
-									<span className="font-semibold text-ink">1. Candidature envoyée</span>
-									<span className="rounded-full bg-[#dcfce7] px-2 py-0.5 font-semibold text-[#15803d]">Franchie</span>
+								<img src="/static/img/companies.webp" alt="" loading="lazy" className="mt-6 h-36 w-full rounded-2xl object-cover opacity-90" />
+								<ol className="landing-timeline mt-5">
+									<li><span>1. Candidature envoyée</span><span className="landing-status-green">Franchie</span></li>
+									<li><span>2. En cours d’étude</span><span className="landing-status-blue">Active</span></li>
+									<li><span>3. Décision &amp; Messagerie</span><span className="landing-subtle">Notification directe</span></li>
+								</ol>
+							</article>
+						</div>
+
+						<div data-reveal className="md:col-span-5" style={delay(60)}>
+							<article className="landing-card h-full" onPointerMove={trackPointer}>
+								<MessageIcon className="size-6 text-primary" />
+								<h3 className="mt-4 text-xl font-bold">Messagerie directe</h3>
+								<p className="landing-muted mt-2 text-sm leading-relaxed">Échangez sans intermédiaire entre candidats, recruteurs et écoles, avec indicateur de présence.</p>
+								<div className="mt-6 flex flex-col gap-2 text-sm" aria-hidden="true">
+									<span className="landing-bubble">Bonjour, votre profil nous intéresse !</span>
+									<span className="landing-bubble landing-bubble-me">Avec plaisir, quand êtes-vous disponible ?</span>
+									<span className="landing-bubble landing-typing"><i /><i /><i /></span>
 								</div>
-								<div className="flex items-center justify-between text-xs">
-									<span className="font-semibold text-ink">2. En cours d’étude</span>
-									<span className="rounded-full bg-[#dbeafe] px-2 py-0.5 font-semibold text-[#1d4ed8]">Active</span>
+							</article>
+						</div>
+
+						<div data-reveal className="md:col-span-7" style={delay(180)}>
+							<article className="landing-card h-full" onPointerMove={trackPointer}>
+								<FileIcon className="size-6 text-primary" />
+								<h3 className="mt-4 text-xl font-bold">Contrats centralisés pour les écoles</h3>
+								<p className="landing-muted mt-2 max-w-lg text-sm leading-relaxed">Écoles et CFA suivent les candidatures de leurs promotions et retrouvent contrats et conventions au même endroit.</p>
+								<div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+									{stats.map(({ value, label }) => (
+										<div key={label} className="landing-mini-panel rounded-2xl p-4">
+											<p className="landing-display text-3xl"><span data-count={value}>{value}</span></p>
+											<p className="landing-subtle mt-1 text-xs">{label}</p>
+										</div>
+									))}
 								</div>
-								<div className="flex items-center justify-between text-xs">
-									<span className="font-semibold text-ink">3. Décision &amp; Messagerie</span>
-									<span className="text-[#6b7280]">Notification directe</span>
-								</div>
-							</div>
-						</article>
+							</article>
+						</div>
 					</div>
 				</section>
 
 				{/* Role breakdown section */}
-				<section aria-labelledby="roles-section-title" className="flex flex-col gap-10">
-					<div className="flex flex-col gap-2 text-center">
-						<h2 id="roles-section-title" className="section-display text-2xl font-bold tracking-tight sm:text-3xl">
+				<section aria-labelledby="roles-section-title" className="mx-auto flex w-full max-w-[1236px] flex-col gap-14 px-4 py-24 md:px-6">
+					<div data-reveal className="flex flex-col items-center gap-4 text-center">
+						<span className="landing-eyebrow">Pour chacun</span>
+						<h2 id="roles-section-title" className="section-display landing-display max-w-3xl text-[clamp(2.25rem,5vw,4rem)]">
 							Un parcours pensé pour chaque acteur
 						</h2>
-						<p className="mx-auto max-w-2xl text-sm text-[#6b7280] sm:text-base">
+						<p className="landing-muted max-w-2xl text-base sm:text-lg">
 							Que vous cherchiez un contrat, un futur talent ou à accompagner vos promotions, JobUp adapte son interface à vos besoins.
 						</p>
 					</div>
 
-					<div className="grid gap-6 lg:grid-cols-3">
-						{roleCards.map(({ badge, title, description, points, cta, to, Icon }) => (
-							<article key={badge} className="group flex flex-col gap-4 rounded-3xl border border-[#e5e7eb] bg-surface p-6 shadow-xs motion-safe:transition-all motion-safe:duration-300 motion-safe:hover:-translate-y-1 hover:shadow-md sm:p-7">
-								<div className="flex items-center justify-between">
-									<span className="rounded-full bg-[#dbeafe] px-3 py-1 text-xs font-semibold text-[#1d4ed8]">{badge}</span>
-									<span className="flex size-11 items-center justify-center rounded-2xl bg-[#f3f4f6] text-primary motion-safe:transition-transform motion-safe:duration-300 group-hover:scale-110">
-										<Icon className="size-5" />
-									</span>
-								</div>
-								<h3 className="text-lg font-bold text-ink">{title}</h3>
-								<p className="text-sm leading-relaxed text-[#6b7280]">{description}</p>
-								<ul className="flex flex-col gap-2 border-t border-[#e5e7eb] pt-4 text-xs sm:text-sm text-[#4b5563]">
-									{points.map((point) => (
-										<li key={point} className="flex items-start gap-2">
-											<span className="mt-0.5 text-primary" aria-hidden="true">✓</span>
-											<span>{point}</span>
-										</li>
-									))}
-								</ul>
-								<Link to={to} className="mt-auto inline-flex items-center gap-1.5 pt-3 text-sm font-semibold text-primary hover:underline">
-									{cta} <span aria-hidden="true" className="motion-safe:transition-transform motion-safe:duration-200 group-hover:translate-x-1">→</span>
-								</Link>
-							</article>
+					<div className="grid gap-5 lg:grid-cols-3">
+						{roleCards.map(({ badge, title, description, points, cta, to, Icon, accent }, index) => (
+							<div key={badge} data-reveal style={delay(index * 120)}>
+								<article
+									className="landing-card landing-tilt group flex h-full flex-col gap-4"
+									style={{ "--accent": accent } as CSSProperties}
+									onPointerMove={tiltCard}
+									onPointerLeave={resetPointer}
+								>
+									<div className="flex items-center justify-between">
+										<span className="landing-role-badge">{badge}</span>
+										<span className="landing-role-icon"><Icon className="size-5" /></span>
+									</div>
+									<h3 className="text-xl font-bold">{title}</h3>
+									<p className="landing-muted text-sm leading-relaxed">{description}</p>
+									<ul className="landing-role-points flex flex-col gap-2 pt-4 text-sm">
+										{points.map((point) => (
+											<li key={point} className="flex items-start gap-2">
+												<span className="mt-0.5 text-[var(--accent)]" aria-hidden="true">✓</span>
+												<span>{point}</span>
+											</li>
+										))}
+									</ul>
+									<Link to={to} className="landing-role-link mt-auto inline-flex items-center gap-1.5 pt-3 text-sm font-semibold">
+										{cta} <span aria-hidden="true" className="transition-transform duration-300 group-hover:translate-x-1">→</span>
+									</Link>
+								</article>
+							</div>
 						))}
 					</div>
 				</section>
 
 				{/* How it works section */}
-				<section aria-labelledby="steps-section-title" className="rounded-3xl border border-[#e5e7eb] bg-surface p-6 shadow-xs sm:p-10">
-					<div className="flex flex-col gap-2 text-center">
-						<h2 id="steps-section-title" className="section-display text-2xl font-bold tracking-tight sm:text-3xl">
-							Comment fonctionne JobUp ?
-						</h2>
-						<p className="mx-auto max-w-xl text-sm text-[#6b7280] sm:text-base">
-							Trois étapes simples, de la création du profil jusqu’à la signature du contrat.
-						</p>
-					</div>
-
-					<div className="mt-8 grid gap-6 md:grid-cols-3">
-						{steps.map(({ step, title, description, Icon }) => (
-							<div key={step} className="flex flex-col gap-3 rounded-2xl border border-[#e5e7eb] bg-[#f9fafb] p-5">
-								<div className="flex items-center justify-between">
-									<span className="flex size-10 items-center justify-center rounded-xl bg-[#dbeafe] text-primary">
-										<Icon className="size-5" />
-									</span>
-									<span className="rounded-full border border-[#d1d5db] bg-surface px-2.5 py-0.5 text-xs font-bold tracking-wider text-[#6b7280] uppercase">
-										Étape {step}
-									</span>
-								</div>
-								<h3 className="text-base font-bold text-ink">{title}</h3>
-								<p className="text-sm leading-relaxed text-[#6b7280]">{description}</p>
+				<section aria-labelledby="steps-section-title" className="mx-auto w-full max-w-[1236px] px-4 py-24 md:px-6">
+					<div className="grid gap-12 lg:grid-cols-2 lg:gap-20">
+						<div>
+							<div data-reveal className="flex flex-col gap-4 lg:sticky lg:top-28 lg:pb-10">
+								<span className="landing-eyebrow w-fit">En trois étapes</span>
+								<h2 id="steps-section-title" className="section-display landing-display text-[clamp(2.25rem,5vw,4rem)]">
+									Comment fonctionne JobUp ?
+								</h2>
+								<p className="landing-muted max-w-md text-base sm:text-lg">
+									Trois étapes simples, de la création du profil jusqu’à la signature du contrat.
+								</p>
 							</div>
-						))}
+						</div>
+						<ol data-progress="scroll" className="landing-steps">
+							{steps.map(({ step, title, description, Icon, visual }, index) => (
+								<li
+									key={step}
+									ref={(element) => { stepRefs.current[index] = element; }}
+									data-step={index}
+									data-active={activeStep === index || undefined}
+									className="landing-step"
+								>
+									<div className="flex items-center gap-3">
+										<span className="landing-step-icon"><Icon className="size-5" /></span>
+										<span className="landing-subtle text-xs font-bold tracking-[0.2em] uppercase">Étape {step}</span>
+									</div>
+									<h3 className="mt-5 text-2xl font-bold sm:text-3xl">{title}</h3>
+									<p className="landing-muted mt-3 max-w-md text-base leading-relaxed">{description}</p>
+									<div className="landing-step-visual" aria-hidden="true">
+										{visual.map((item, itemIndex) => (
+											<span key={item} style={delay(itemIndex * 120)}><i>{itemIndex === visual.length - 1 ? "✓" : itemIndex + 1}</i>{item}</span>
+										))}
+									</div>
+								</li>
+							))}
+						</ol>
 					</div>
 				</section>
 
 				{/* Bottom CTA Banner */}
-				<section aria-label="Rejoindre JobUp" className="auth-mesh flex flex-col items-center justify-between gap-6 rounded-3xl px-6 py-10 text-center text-white shadow-lg sm:px-12 sm:py-12 lg:flex-row lg:text-left">
-					<div className="flex max-w-xl flex-col gap-2">
-						<h2 className="section-display text-2xl font-bold text-white sm:text-3xl">
+				<section aria-label="Rejoindre JobUp" className="px-4 pt-12 pb-28 md:px-6">
+					<div data-reveal className="landing-cta mx-auto max-w-[1236px]">
+						<div className="landing-cta-glow" aria-hidden="true" />
+						<h2 className="section-display landing-display relative max-w-3xl text-[clamp(2.25rem,5.5vw,4.5rem)]">
 							Prêt à lancer votre prochaine alternance ?
 						</h2>
-						<p className="text-sm text-white/80 sm:text-base">
+						<p className="landing-muted relative mt-5 max-w-xl text-base sm:text-lg">
 							Créez votre compte gratuitement ou explorez dès maintenant les offres et entreprises partenaires.
 						</p>
-					</div>
-					<div className="flex flex-wrap justify-center gap-3">
-						<Link to="/signup" className="rounded-xl bg-white px-6 py-3 text-sm font-semibold text-[#0f172a] shadow-xs transition-transform hover:-translate-y-0.5">
-							Créer un compte gratuit
-						</Link>
-						<Link to="/companies" className="rounded-xl border border-white/30 bg-white/10 px-6 py-3 text-sm font-semibold text-white backdrop-blur-xs transition-colors hover:bg-white/20">
-							Voir les entreprises
-						</Link>
+						<div className="relative mt-10 flex flex-wrap justify-center gap-3">
+							<Link to="/signup" className="landing-magnet landing-btn-primary" onPointerMove={attractToPointer} onPointerLeave={resetPointer}>
+								Créer un compte gratuit
+							</Link>
+							<Link to="/companies" className="landing-magnet landing-btn-ghost" onPointerMove={attractToPointer} onPointerLeave={resetPointer}>
+								Voir les entreprises
+							</Link>
+						</div>
 					</div>
 				</section>
 			</main>

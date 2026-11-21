@@ -123,3 +123,25 @@ class RecruiterOfferTests(CandidateTestCase):
         self.assertEqual(self.client.post(self.applicants(), {}).status_code, 405)
         for method in (self.client.put, self.client.patch, self.client.delete):
             self.assertEqual(method(LIST, {}).status_code, 405)
+
+    def test_offer_detail_is_owner_only_and_includes_closed_offer_fields(self):
+        offer = self.offers[0]
+        offer.is_active = False
+        offer.requirements = "Java et SQL"
+        offer.duration = "12 mois"
+        offer.location = "Paris"
+        offer.save()
+        url = f"{LIST}/{offer.pk}"
+        self.assertOnlyRecruiters(url)
+        USERS[3].login(self)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["requirements"], "Java et SQL")
+        self.assertEqual(response.json()["duration"], "12 mois")
+        self.assertEqual(response.json()["location"], "Paris")
+        self.assertFalse(response.json()["is_active"])
+        self.assertEqual(
+            self.client.get(f"{LIST}/{self.colleague_offer.pk}").status_code, 404
+        )
+        self.assertEqual(self.client.get(f"{LIST}/999999").status_code, 404)
+        self.assertEqual(self.client.post(url).status_code, 405)

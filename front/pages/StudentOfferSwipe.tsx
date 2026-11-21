@@ -1,6 +1,9 @@
+import { filterRecommendations } from "../utils/recommendations";
 import { useEffect, useMemo, useRef, useState, type FormEvent, type PointerEvent } from "react";
 import { Link } from "react-router-dom";
 
+import RecommendationSwitch from "../components/RecommendationSwitch";
+import { getRecommendations, type RecommendedOffer } from "../services/offers";
 import BanIcon from "../components/BanIcon";
 import ChevronDownIcon from "../components/ChevronDownIcon";
 import HeartIcon from "../components/HeartIcon";
@@ -88,6 +91,19 @@ function OfferFilters({
 }
 
 export default function StudentOfferSwipe({ offers }: { offers: PublicOffer[] }) {
+	const [recommended, setRecommended] = useState<RecommendedOffer[] | null>(null);
+	const [onlyRecommended, setOnlyRecommended] = useState(true);
+	const [recommendationError, setRecommendationError] = useState(false);
+	const [recommendationAttempt, setRecommendationAttempt] = useState(0);
+	useEffect(() => {
+		let ignore = false;
+		getRecommendations().then((result) => {
+			if (ignore) return;
+			if (result.ok) setRecommended(result.data);
+			else setRecommendationError(true);
+		});
+		return () => { ignore = true; };
+	}, [recommendationAttempt]);
 	const [filters, setFilters] = useState<PublicOfferFilters>({ query: "", city: "", sector: "" });
 	const [seen, setSeen] = useState<number[]>([]);
 	const [saved, setSaved] = useState<number[]>([]);
@@ -106,8 +122,10 @@ export default function StudentOfferSwipe({ offers }: { offers: PublicOffer[] })
 	const cardRef = useRef<HTMLElement>(null);
 	const busyRef = useRef(false);
 	const [drag, setDrag] = useState(0);
-	const matchingOffers = useMemo(() => filterPublicOffers(offers, filters), [offers, filters]);
+	const deckOffers = useMemo(() => filterRecommendations(offers, recommended, onlyRecommended), [offers, recommended, onlyRecommended]);
+	const matchingOffers = useMemo(() => filterPublicOffers(deckOffers, filters), [deckOffers, filters]);
 	const current = matchingOffers.find((offer) => !seen.includes(offer.id));
+	const currentRecommendation = current ? recommended?.find((offer) => offer.id === current.id) : undefined;
 	const remaining = matchingOffers.filter((offer) => !seen.includes(offer.id)).length;
 	const markSeen = async (offer: PublicOffer, like: boolean) => {
 		if (busyRef.current) return;
@@ -153,35 +171,43 @@ export default function StudentOfferSwipe({ offers }: { offers: PublicOffer[] })
 	};
 	const resetSeen = () => setSeen([]);
 
-	return <div className="mx-auto mt-8 grid max-w-[1236px] items-start gap-6 pb-12 lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-8">
-		<OfferFilters offers={offers} onApply={(next) => { setFilters(next); setSeen([]); }} />
-		<section aria-label="Découvrir les offres" aria-live="polite" className="mx-auto w-full max-w-[480px] lg:col-start-2">
+	return <main className="mx-auto mt-6 grid max-w-[1100px] items-start gap-6 pb-12 lg:mt-10 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-12">
+		<div>
+			<div className="mb-5 hidden lg:block"><p className="text-xs font-bold tracking-[0.18em] text-primary uppercase">Découvrir</p><h1 className="mt-2 text-3xl font-extrabold tracking-tight">Ton alternance, à portée de swipe.</h1><p className="mt-2 text-sm leading-relaxed text-gray-500">Explore les opportunités et garde celles qui te plaisent.</p></div>
+			<details className="group lg:hidden"><summary className="cursor-pointer rounded-2xl border border-gray-200 bg-surface px-5 py-4 font-semibold">Affiner ma recherche</summary><div className="mt-3"><OfferFilters offers={deckOffers} onApply={(next) => { setFilters(next); setSeen([]); }} /></div></details>
+			<div className="hidden lg:block"><OfferFilters offers={deckOffers} onApply={(next) => { setFilters(next); setSeen([]); }} /></div>
+		</div>
+		<section aria-label="Découvrir les offres" aria-live="polite" className="mx-auto w-full max-w-[460px] lg:col-start-2">
 			<div className="mx-auto mb-4 flex max-w-[480px] justify-end">
 				<SavedOffersButton count={saved.length} />
 			</div>
+			<div className="mb-4"><RecommendationSwitch checked={onlyRecommended} onChange={setOnlyRecommended} disabled={saving || (recommended === null && !recommendationError)} /></div>
+			{recommendationError ? <p role="alert" className="mb-4 text-sm">Impossible de charger les recommandations. <button className="text-primary underline" onClick={() => { setRecommendationError(false); setRecommendationAttempt((value) => value + 1); }}>Réessayer</button></p> : recommended === null && <p role="status" className="mb-4 text-sm">Chargement des recommandations…</p>}
 			{savedError && <p role="alert" className="mb-3 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{savedError}</p>}
-			{current ? <article ref={cardRef} key={current.id} onPointerDown={startSwipe} onPointerMove={event => { if (swipeStart.current !== null && !busyRef.current) setDrag(event.clientX - swipeStart.current); }} onPointerCancel={() => { swipeStart.current = null; setDrag(0); }} onPointerUp={finishSwipe} style={{ transform: `translateX(${drag}px) rotate(${drag / 25}deg)` }} className="student-swipe-card relative flex min-h-[560px] touch-pan-y flex-col items-center gap-4 rounded-2xl border border-[#e5e7eb] bg-surface p-6 shadow-xs sm:p-7">
-				<div className="w-full text-center">
-					<h1 className="text-xl leading-tight font-bold text-ink sm:text-2xl">{current.title}</h1>
-					<p className="mt-1.5 text-sm font-medium text-[#6b7280] sm:text-base">{current.company?.name || "Entreprise non renseignée"}{current.company?.city && ` • ${current.company.city}`}</p>
+			{current ? <div>
+				<div className="student-swipe-stack relative mx-2 pb-2 before:absolute before:inset-x-3 before:top-3 before:bottom-0 before:rounded-[2rem] before:bg-[#dce5f1] after:absolute after:inset-x-1.5 after:top-1.5 after:bottom-1 after:rounded-[2rem] after:bg-[#edf1f7]">
+					<article ref={cardRef} key={current.id} onPointerDown={startSwipe} onPointerMove={event => { if (swipeStart.current !== null && !busyRef.current) setDrag(event.clientX - swipeStart.current); }} onPointerCancel={() => { swipeStart.current = null; setDrag(0); }} onPointerUp={finishSwipe} style={{ transform: `translateX(${drag}px) rotate(${drag / 25}deg)` }} className="student-swipe-card relative z-10 flex min-h-[520px] touch-pan-y flex-col overflow-hidden rounded-[2rem] bg-surface shadow-xl sm:min-h-[560px]">
+						<div className="relative min-h-[260px] flex-1 overflow-hidden bg-[#23334d]">
+							<img draggable={false} src="/static/img/recruiter-offers/offer.webp" alt="" className="absolute inset-0 h-full w-full object-cover" />
+							<div className="absolute inset-0 bg-gradient-to-t from-[#101b2e]/95 via-[#101b2e]/25 to-transparent" />
+							{currentRecommendation && <span className="absolute top-5 left-5 rounded-full bg-white/90 px-3 py-1.5 text-xs font-bold text-primary">✦ Pour toi</span>}
+							{Math.abs(drag) > 25 && <span aria-hidden="true" className={`pointer-events-none absolute top-5 z-10 rotate-[-8deg] rounded-lg border-4 px-3 py-1 text-xl font-black uppercase ${drag > 0 ? "left-5 border-emerald-300 text-emerald-300" : "right-5 border-rose-300 text-rose-300"}`}>{drag > 0 ? "J’aime" : "Passer"}</span>}
+							<div className="absolute right-0 bottom-0 left-0 p-6 text-white"><h2 className="text-2xl leading-tight font-extrabold sm:text-3xl">{current.title}</h2><p className="mt-2 text-sm font-medium text-white/90">{current.company?.name || "Entreprise non renseignée"}{current.company?.city && ` • ${current.company.city}`}</p></div>
+						</div>
+						<div className="p-6">{currentRecommendation?.reasons.length ? <p className="mb-3 text-sm font-medium text-primary">{currentRecommendation.reasons.join(" · ")}</p> : null}<p className="text-xs font-bold tracking-widest text-gray-400 uppercase">L’opportunité</p><p className="mt-2 line-clamp-3 whitespace-pre-line text-sm leading-relaxed text-gray-600">{current.description || current.requirements || "Découvrez cette offre d’alternance et son équipe."}</p><Link to={`/offers/${current.id}`} className={`mt-3 inline-block text-sm font-bold text-primary hover:underline ${focus}`}>Plus d’informations</Link></div>
+					</article>
 				</div>
-				{Math.abs(drag) > 25 && <span aria-hidden="true" className={`pointer-events-none absolute top-4 z-10 rounded-xl border-2 bg-surface px-3 py-2 text-sm font-bold ${drag > 0 ? "right-4 border-primary text-primary" : "left-4 border-red-600 text-red-600"}`}>{drag > 0 ? "♥ Sauvegarder" : "Passer"}</span>}
-				<img draggable={false} src="/static/img/recruiter-offers/offer.webp" alt="Une équipe échange autour d’une table dans ses bureaux" className="h-56 w-full rounded-xl object-cover sm:h-64" />
-				<div className="w-full text-sm leading-relaxed text-[#4b5563] sm:text-base">
-					<p className="line-clamp-5 whitespace-pre-line">{current.description || current.requirements || "Découvrez cette offre d’alternance et son équipe."}</p>
-					<Link to={`/offers/${current.id}`} className={`mt-2.5 inline-block text-sm font-semibold text-primary hover:underline ${focus}`}>Plus d’informations</Link>
+				<div className="mt-5 flex items-center justify-center gap-5">
+					<button type="button" onClick={() => void markSeen(current, false)} aria-label={`Passer l’offre ${current.title}`} disabled={saving} className={`flex size-16 items-center justify-center rounded-full border border-rose-100 bg-white text-rose-500 shadow-md transition hover:scale-105 hover:bg-rose-50 disabled:opacity-60 ${focus}`}><BanIcon className="size-7" /></button>
+					<Link to="/student" aria-label="Modifier mon CV et mes documents" title="Modifier mon CV et mes documents" className={`flex size-11 items-center justify-center rounded-full border border-gray-200 bg-white text-primary shadow-sm transition hover:bg-blue-50 ${focus}`}><EditIcon /></Link>
+					<button type="button" onClick={() => void markSeen(current, true)} aria-label={`Sauvegarder l’offre ${current.title}`} disabled={saving} className={`flex size-16 items-center justify-center rounded-full bg-primary text-on-primary shadow-lg transition hover:scale-105 disabled:opacity-60 ${focus}`}><HeartIcon className="size-7 fill-current" /></button>
 				</div>
-				<div className="mt-auto flex w-full flex-wrap items-center justify-center gap-3 border-t border-[#e5e7eb] pt-4">
-					<button type="button" onClick={() => void markSeen(current, false)} aria-label={`Passer l’offre ${current.title}`} disabled={saving} className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#e5e7eb] px-4 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-60 ${focus}`}><BanIcon className="size-5" />Passer</button>
-					<Link to="/student" aria-label="Modifier mon CV et mes documents" title="Modifier mon CV et mes documents" className={`flex size-12 items-center justify-center rounded-full border border-[#e5e7eb] text-primary transition-colors hover:bg-[#dbeafe] ${focus}`}><EditIcon /></Link>
-					<button type="button" onClick={() => void markSeen(current, true)} aria-label={`Sauvegarder l’offre ${current.title}`} aria-disabled={saving} className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 aria-disabled:opacity-60 ${focus}`}><HeartIcon className="size-5 fill-current" />{saving ? "Enregistrement…" : "Sauvegarder"}</button>
-				</div>
-			</article> : <div className="flex min-h-[300px] flex-col items-center justify-center rounded-2xl border border-[#e5e7eb] bg-surface p-8 text-center shadow-xs">
-				<h1 className="text-xl font-semibold">{matchingOffers.length ? "Tu as vu toutes les offres !" : "Aucune offre ne correspond à tes filtres."}</h1>
-				<p className="mt-2 text-sm text-[#6b7280]">{saved.length ? `${saved.length} offre${saved.length > 1 ? "s" : ""} sauvegardée${saved.length > 1 ? "s" : ""} sur cet appareil.` : "Modifie tes filtres ou reviens découvrir les offres."}</p>
+			</div> : <div className="flex min-h-[300px] flex-col items-center justify-center rounded-2xl border border-[#e5e7eb] bg-surface p-8 text-center shadow-xs">
+				<h1 className="text-xl font-semibold">{matchingOffers.length ? "Tu as vu toutes les offres !" : onlyRecommended && recommended !== null ? "Aucune recommandation pour le moment." : "Aucune offre ne correspond à tes filtres."}</h1>
+				<p className="mt-2 text-sm text-[#6b7280]">{onlyRecommended && matchingOffers.length === 0 ? "Complète ton profil ou désactive les recommandations pour voir toutes les offres." : saved.length ? `${saved.length} offre${saved.length > 1 ? "s" : ""} sauvegardée${saved.length > 1 ? "s" : ""}.` : "Modifie tes filtres ou reviens découvrir les offres."}</p>
 				{matchingOffers.length > 0 && <button type="button" onClick={resetSeen} className={`mt-5 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary ${focus}`}>Revoir les offres</button>}
 			</div>}
 			{current && <p className="mt-3 text-center text-xs sm:text-sm text-[#6b7280]">Glisse à gauche pour passer, à droite pour sauvegarder. • {remaining} {remaining === 1 ? "offre" : "offres"} à découvrir</p>}
 		</section>
-	</div>;
+	</main>;
 }

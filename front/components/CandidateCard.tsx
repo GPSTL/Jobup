@@ -9,11 +9,13 @@ import { focus } from "../utils/searchPageStyles";
 
 const cardLink = `w-fit text-sm font-semibold text-primary hover:underline underline-offset-4 ${focus}`;
 
-// Card of a candidate, as in the mockups "Tri des candidats (cartes)" and "Swipe – carte 2".
+// Candidate swipe card and its actions.
 // A click anywhere on the card opens the profile: the "Consulter le profil" link stretches over the
 // whole card (after:absolute), and the CV link is placed above it (relative z-10).
 type CandidateCardProps = {
 	candidate: CandidateSummary;
+	recommended?: boolean;
+	reasons?: string[];
 	/** ♥ : retenir le candidat (JOB-037) ; sans cette fonction, pas de bouton */
 	onKeep?: () => void;
 	/** Présélection en cours d'envoi : le bouton est inactif mais garde le focus */
@@ -24,51 +26,42 @@ type CandidateCardProps = {
 	excluding?: boolean;
 };
 
-export default function CandidateCard({ candidate, onKeep, keeping = false, onExclude, excluding = false }: CandidateCardProps) {
+export default function CandidateCard({ candidate, recommended = false, reasons = [], onKeep, keeping = false, onExclude, excluding = false }: CandidateCardProps) {
 	// Une seule action à la fois : pendant l'envoi de l'une, l'autre est inactive
 	const busy = keeping || excluding;
 	// Recherche en cours (critères des filtres, JOB-036), reprise par « Retour aux candidats » sur le profil
 	const { search } = useLocation();
 	return (
-		<article className="animate-scale-in relative flex min-h-[520px] flex-col items-center rounded-2xl border border-[#e5e7eb] bg-surface px-6 pt-8 pb-8 shadow-xs motion-safe:transition-shadow hover:shadow-md sm:px-10">
-			<h2 className="text-center text-2xl leading-tight font-bold text-ink">{fullName(candidate)}</h2>
-			<p className="mt-1.5 text-center text-sm sm:text-base font-medium text-[#6b7280]">
-				<EducationLine candidate={candidate} />
-			</p>
-			<CandidateAvatar candidate={candidate} className="mt-5 size-36 text-4xl ring-4 ring-[#dbeafe]" />
-
-			{/* The whole presentation is on the profile */}
-			<p className={`mt-5 line-clamp-5 self-stretch text-sm sm:text-base leading-relaxed ${candidate.description ? "text-ink" : "text-[#6b7280]"}`}>
-				{candidate.description || "Présentation non renseignée."}
-			</p>
-
-			<div className="mt-4 flex flex-col gap-2.5 self-stretch">
-				<Link
-					to={`/recruiter/candidates/${candidate.id}`}
-					state={{ candidatesSearch: search }}
-					className={`${cardLink} after:absolute after:inset-0 after:rounded-2xl`}
-				>
-					Consulter le profil
-				</Link>
-				{candidate.cv_url ? (
-					<a href={candidate.cv_url} download className={`relative z-10 ${cardLink}`}>
-						Télécharger le CV
-					</a>
-				) : (
-					<p className="text-sm text-[#6b7280]">CV non fourni</p>
-				)}
+		<div>
+		<article className="relative flex min-h-[520px] flex-col overflow-hidden rounded-[2rem] bg-surface shadow-xl sm:min-h-[560px]">
+			<div className="relative flex min-h-[300px] flex-1 flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-[#263f78] via-[#23334d] to-[#101b2e] px-6 pt-8 pb-24">
+				{recommended && <p className="absolute top-5 left-5 rounded-full bg-white/90 px-3 py-1.5 text-xs font-bold text-primary">✦ Recommandé pour vous</p>}
+				<CandidateAvatar candidate={candidate} className="size-36 text-4xl ring-4 ring-white/30 sm:size-40" />
+				<div className="absolute right-0 bottom-0 left-0 bg-gradient-to-t from-[#101b2e] to-transparent px-6 pt-8 pb-6 text-white">
+					<h2 className="text-2xl leading-tight font-extrabold sm:text-3xl">{fullName(candidate)}</h2>
+					<p className="mt-2 text-sm font-medium text-white/90"><EducationLine candidate={candidate} /></p>
+				</div>
 			</div>
-
+			<div className="p-6">
+				{reasons.length > 0 && <p className="mb-3 text-sm font-medium text-primary">{reasons.join(" · ")}</p>}
+				<p className="text-xs font-bold tracking-widest text-gray-400 uppercase">Présentation</p>
+				<p className={`mt-2 line-clamp-3 text-sm leading-relaxed ${candidate.description ? "text-ink" : "text-[#6b7280]"}`}>{candidate.description || "Présentation non renseignée."}</p>
+				<div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+					<Link to={`/recruiter/candidates/${candidate.id}`} state={{ candidatesSearch: search }} className={`${cardLink} after:absolute after:inset-0 after:rounded-[2rem]`}>Consulter le profil</Link>
+					{candidate.cv_url ? <a href={candidate.cv_url} download className={`relative z-10 ${cardLink}`}>Télécharger le CV</a> : <p className="text-sm text-[#6b7280]">CV non fourni</p>}
+				</div>
+			</div>
+		</article>
 			{(onKeep || onExclude) && (
-				// Deux colonnes comme la maquette : 🚫 à gauche (JOB-038), ♥ à droite (JOB-037) ; au-dessus du lien étiré sur la carte
-				<div className="relative z-10 mt-auto grid w-full grid-cols-2 place-items-center border-t border-[#e5e7eb] pt-5">
+				// Keep the actions outside the profile link.
+				<div className="relative z-10 mt-5 flex items-center justify-center gap-8">
 					{onExclude && (
 						<button
 							type="button"
 							aria-label={`Écarter ${fullName(candidate)}`}
 							aria-disabled={busy}
 							onClick={() => !busy && onExclude()}
-							className={`col-start-1 flex size-12 cursor-pointer items-center justify-center rounded-full border border-[#e5e7eb] text-[#b91c1c] transition-colors hover:bg-[#b91c1c]/10 aria-disabled:cursor-wait aria-disabled:opacity-60 ${focus}`}
+							className={`flex size-16 cursor-pointer items-center justify-center rounded-full border border-rose-100 bg-white text-rose-500 shadow-md transition hover:scale-105 hover:bg-rose-50 aria-disabled:cursor-wait aria-disabled:opacity-60 ${focus}`}
 						>
 							<BanIcon width={28} height={28} />
 						</button>
@@ -79,13 +72,13 @@ export default function CandidateCard({ candidate, onKeep, keeping = false, onEx
 							aria-label={`Retenir ${fullName(candidate)}`}
 							aria-disabled={busy}
 							onClick={() => !busy && onKeep()}
-							className={`col-start-2 flex size-12 cursor-pointer items-center justify-center rounded-full border border-[#e5e7eb] text-primary transition-colors hover:bg-primary/10 aria-disabled:cursor-wait aria-disabled:opacity-60 ${focus}`}
+							className={`flex size-16 cursor-pointer items-center justify-center rounded-full bg-primary text-on-primary shadow-lg transition hover:scale-105 aria-disabled:cursor-wait aria-disabled:opacity-60 ${focus}`}
 						>
 							<HeartIcon width={28} height={28} fill="currentColor" />
 						</button>
 					)}
 				</div>
 			)}
-		</article>
+		</div>
 	);
 }

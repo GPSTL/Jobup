@@ -24,7 +24,7 @@ from jobup.conversations import (
     recruiter_conversations,
     student_conversations,
 )
-from jobup.offers import offer, offers, savedOffers
+from jobup.offers import offer, offers, recommendations, savedOffers
 from jobup.profile import student, student_photo
 from jobup.recruiter_company import recruiter_company
 from jobup.recruiter_offers import (
@@ -32,6 +32,7 @@ from jobup.recruiter_offers import (
     offer_applicants,
     recruiter_application,
     recruiter_offers,
+    recruiter_offer,
 )
 from jobup.resume import student_resume
 from jobup.school import (
@@ -67,6 +68,7 @@ urlpatterns = [
     path("api/offers/<int:id>", offer),
     path("api/offers/<int:id>/export", exports.offer_export),
     path("api/student/saved-offers", savedOffers),
+    path("api/student/recommendations", recommendations),
     path("api/student/saved-offers/<int:id>", savedOffers),
     path("api/student/<int:id>", student),
     path("api/student/<int:id>/photo", student_photo),
@@ -86,12 +88,16 @@ urlpatterns = [
         message_attachment,
     ),
     path("api/recruiter/candidates", candidates.candidate_list),
+    path(
+        "api/recruiter/candidates/recommendations", candidates.candidate_recommendations
+    ),
     path("api/recruiter/candidates/filters", candidates.candidate_filters),
     path("api/recruiter/candidates/<int:id>", candidates.candidate_detail),
     path("api/recruiter/candidates/<int:id>/cv", candidates.candidate_cv),
     path("api/recruiter/offers", recruiter_offers),
     path("api/recruiter/offers/export", exports.recruiter_offers_export),
     path("api/recruiter/offers/<int:id>/applicants", offer_applicants),
+    path("api/recruiter/offers/<int:id>", recruiter_offer),
     path("api/recruiter/applications/<int:id>", recruiter_application),
     path("api/recruiter/applications/<int:id>/contract", application_contract),
     path("api/contracts/<int:id>/file", contract_file),
