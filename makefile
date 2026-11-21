@@ -9,6 +9,15 @@ all:
 	npx esbuild $(FRONT_SRC) --bundle --outfile=$(FRONT_DST) --minify --loader:.tsx=tsx
 	npx @tailwindcss/cli -i $(CSS_SRC) -o $(CSS_DST) --minify
 
+deploy:
+	git pull origin main
+	.venv/bin/pip install -r requirements.txt
+	npm ci
+	$(MAKE) all
+	.venv/bin/python manage.py migrate --noinput
+	.venv/bin/python manage.py collectstatic --noinput
+	sudo systemctl restart jobup
+
 debug:
 	npx esbuild $(FRONT_SRC) --bundle --outfile=$(FRONT_DST) --loader:.tsx=tsx
 	npx @tailwindcss/cli -i $(CSS_SRC) -o $(CSS_DST)

@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.contrib.staticfiles.views import serve
+from django.views.static import serve
 from django.urls import path, re_path
 
 from jobup import api, candidates, exclusions, exports, notifications, shortlist
@@ -122,8 +122,11 @@ urlpatterns = [
     path("api/notifications/read-all", notifications.notification_read_all),
     path("api/notifications/preferences", notifications.notification_preferences),
     path("api/notifications/<int:id>/read", notifications.notification_read),
-    re_path(r"^(?!api)[^.]*$", serve, kwargs={"path": "index.html"}),
-    path("favicon.ico", serve, kwargs={"path": "favicon.ico"}),
+    re_path(
+        r"^(?!api/)[^.]*$",
+        serve,
+        kwargs={"path": "index.html", "document_root": settings.STATIC_ROOT},
+    ),
 ]
 
 # Uploaded files (photos), served by Django only in development

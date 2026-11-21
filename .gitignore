@@ -16,3 +16,4 @@ private_media
 .ruff_cache/
 htmlcov/
 coverage.xml
+staticfiles/
