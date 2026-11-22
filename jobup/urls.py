@@ -1,8 +1,9 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.contrib.staticfiles.views import serve
+from django.views.static import serve
 from django.urls import path, re_path
+from django.contrib.staticfiles.views import serve as static_serve
 
 from jobup import api, candidates, exclusions, exports, notifications, shortlist
 from jobup.contracts import contract_file, student_contracts
@@ -48,6 +49,11 @@ from jobup.school import (
     student_school,
     student_school_request,
 )
+
+if settings.DEBUG:
+    spa = (static_serve, {"path": "index.html"})
+else:
+    spa = (serve, {"path": "index.html", "document_root": settings.STATIC_ROOT})
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -128,8 +134,7 @@ urlpatterns = [
     path("api/notifications/read-all", notifications.notification_read_all),
     path("api/notifications/preferences", notifications.notification_preferences),
     path("api/notifications/<int:id>/read", notifications.notification_read),
-    re_path(r"^(?!api)[^.]*$", serve, kwargs={"path": "index.html"}),
-    path("favicon.ico", serve, kwargs={"path": "favicon.ico"}),
+    re_path(r"^(?!api/)[^.]*$", spa[0], kwargs=spa[1]),
 ]
 
 # Uploaded files (photos), served by Django only in development
