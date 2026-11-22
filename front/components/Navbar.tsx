@@ -44,7 +44,7 @@ export const navbarItemClass = [
 ].join(" ");
 
 const linkStates = {
-	idle: "text-[#4b5563] hover:bg-[#f3f4f6] hover:text-ink focus-visible:bg-[#f3f4f6]",
+	idle: "text-(color:--navbar-link-color) hover:bg-(--navbar-interaction-bg) hover:text-ink focus-visible:bg-(--navbar-interaction-bg) focus-visible:text-ink",
 	// Current page: blue pill
 	active: "bg-primary/10 font-semibold text-primary",
 };

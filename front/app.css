@@ -34,6 +34,10 @@
   --color-on-primary: #ffffff;
   --color-surface: #ffffff;
   --color-ink: #0f172a;
+  --navbar-link-color: #4b5563;
+  --navbar-interaction-bg: #f3f4f6;
+  --logout-color: #b91c1c;
+  --logout-hover-bg: #fef2f2;
   --hero-gradient: radial-gradient(circle at 15% 20%, rgb(37 99 235 / 10%), transparent 45%),
     radial-gradient(circle at 85% 15%, rgb(99 102 241 / 10%), transparent 40%),
     linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
@@ -211,6 +215,10 @@ button, a {
   --color-on-primary: #ffffff;
   --color-surface: #111827;
   --color-ink: #f8fafc;
+  --navbar-link-color: #94a3b8;
+  --navbar-interaction-bg: #1e293b;
+  --logout-color: #fca5a5;
+  --logout-hover-bg: #3f202b;
   --hero-gradient: radial-gradient(circle at 15% 20%, rgb(59 130 246 / 16%), transparent 45%),
     radial-gradient(circle at 85% 15%, rgb(99 102 241 / 14%), transparent 40%),
     linear-gradient(180deg, #0b1120 0%, #0f172a 100%);
@@ -300,6 +308,15 @@ button, a {
 
 [data-theme="dark"] :is([class~="text-[#b45309]"], [class~="text-[#92400e]"]) {
   color: #fcd34d;
+}
+
+[data-theme="dark"] .auth-brand-badge {
+  background-color: #0b1120;
+}
+
+[data-theme="dark"] .auth-brand-logo-light,
+:root:not([data-theme="dark"]) .auth-brand-logo-dark {
+  display: none;
 }
 
 [data-theme="dark"] img[src$="JobUp_logo.svg"] {
