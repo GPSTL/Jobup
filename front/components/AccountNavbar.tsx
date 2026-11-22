@@ -98,22 +98,22 @@ export default function AccountNavbar({ links, showBell = false, notifications, 
 						</li>
 					))}
 				</ul>
+				{/* Notifications of this role are not integrated yet: static icon, no fictitious unread count. */}
+				{showBell && !notifications && <span role="img" aria-label="Notifications"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" strokeLinecap="round" strokeLinejoin="round" /></svg></span>}
+				{notifications && <NotificationBell role={notifications} />}
+				<ThemeToggle />
 				<div className="relative">
 					<button ref={accountButtonRef} type="button" aria-label="Compte utilisateur" aria-expanded={accountOpen} aria-controls={accountMenuId} onClick={() => setAccountOpen((value) => !value)} className={`flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary hover:bg-primary/20 ${focus}`}>
 						<UserIcon />
 					</button>
 					<div id={accountMenuId} hidden={!accountOpen} className="absolute top-full right-0 z-20 mt-3 w-52 rounded-xl border border-[#e5e7eb] bg-surface p-1.5 shadow-[0_8px_24px_rgba(15,23,42,0.12)]">
-						<button type="button" onClick={onLogout} disabled={pending} className={`flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 disabled:cursor-wait disabled:opacity-60 ${focus}`}>
+						<button type="button" onClick={onLogout} disabled={pending} className={`flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-(color:--logout-color) transition-colors hover:bg-(--logout-hover-bg) focus-visible:bg-(--logout-hover-bg) disabled:cursor-wait disabled:opacity-60 ${focus}`}>
 							<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M9 5H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4M14 8l4 4-4 4M9 12h12" /></svg>
 							{pending ? "Déconnexion…" : "Se déconnecter"}
 						</button>
 					</div>
 				</div>
 
-				{/* Notifications of this role are not integrated yet: static icon, no fictitious unread count. */}
-				{showBell && !notifications && <span role="img" aria-label="Notifications"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" strokeLinecap="round" strokeLinejoin="round" /></svg></span>}
-				{notifications && <NotificationBell role={notifications} />}
-				<ThemeToggle />
 				{error && <span role="alert" className="sr-only">{error}</span>}
 			</div>
 		</Navbar>

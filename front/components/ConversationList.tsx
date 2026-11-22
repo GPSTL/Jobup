@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 
 import Button from "./Button";
 import SearchIcon from "./SearchIcon";
+import { highlightText } from "../utils/highlight";
 
 // Une ligne de la liste, préparée par la page : la même liste sert à l'étudiant (JOB-032)
 // et au recruteur (JOB-041), qui n'affichent pas les mêmes informations.
@@ -90,7 +91,7 @@ export default function ConversationList({ title, searchLabel, query, onQueryCha
 										</span>
 										<span className="flex min-w-0 flex-1 flex-col gap-0.5">
 											<span className="flex items-baseline justify-between gap-2">
-												<span className="truncate text-[15px] font-semibold">{item.name}</span>
+												<span className="truncate text-[15px] font-semibold">{highlightText(item.name, query)}</span>
 												<span className="shrink-0 text-[12px] text-[#6b7280]">{item.date}</span>
 											</span>
 											{item.closed ? (

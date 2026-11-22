@@ -9,6 +9,7 @@ import { decideSchoolRequest, getSchoolRequests, getSchoolStudents, type SchoolS
 import { formatDate } from "../utils/applications";
 import { fullName } from "../utils/candidates";
 import type { ExportField } from "../utils/exports";
+import { highlightText } from "../utils/highlight";
 import { nextStudentSort, sortStudents, STUDENT_STATUS, type StudentSort, type StudentSortColumn } from "../utils/school";
 import { focus } from "../utils/searchPageStyles";
 import { REQUEST_ERRORS } from "../utils/validation";
@@ -36,10 +37,11 @@ type StudentsTableProps = {
 	students: SchoolStudent[];
 	sort: StudentSort;
 	onSort: (sort: StudentSort) => void;
+	highlightQuery?: string;
 };
 
 // Tableau des étudiants (JOB-047, ECO-05), trié par colonne ; défile seul sur petit écran
-export function SchoolStudentsTable({ students, sort, onSort }: StudentsTableProps) {
+export function SchoolStudentsTable({ students, sort, onSort, highlightQuery }: StudentsTableProps) {
 	return (
 		<div role="region" aria-label="Étudiants de l’école" tabIndex={0} className={`overflow-x-auto rounded-2xl border border-[#e5e7eb] ${focus}`}>
 			<table className="w-full min-w-[720px] border-collapse text-left text-sm text-ink">
@@ -65,7 +67,7 @@ export function SchoolStudentsTable({ students, sort, onSort }: StudentsTablePro
 							<th scope="row" className={`${cell} font-medium`}>
 								<span className="flex items-center gap-3">
 									<CandidateAvatar candidate={student} className="size-9 text-sm" />
-									<span className="break-words">{fullName(student)}</span>
+									<span className="break-words">{highlightText(fullName(student), highlightQuery)}</span>
 								</span>
 							</th>
 							<td className={cell}><span className={`rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${STUDENT_STATUS[student.status].className}`}>{STUDENT_STATUS[student.status].label}</span></td>
@@ -169,7 +171,7 @@ export default function SchoolStudentsPage() {
 						{visible.length === 0 ? (
 							<p role="status" className="rounded-2xl border border-[#e5e7eb] bg-[#f9fafb] p-5 text-sm text-[#6b7280]">{all.length === 0 ? "Aucun étudiant rattaché à votre école pour le moment." : "Aucun étudiant ne correspond."}</p>
 						) : (
-							<SchoolStudentsTable students={visible} sort={sort} onSort={setSort} />
+							<SchoolStudentsTable students={visible} sort={sort} onSort={setSort} highlightQuery={query} />
 						)}
 					</>
 				)}

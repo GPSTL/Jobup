@@ -14,7 +14,8 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from .conversations import normalize
-from .models import JobApplication, Message, Role, Student, User
+from .cv_matching import position_matches, student_terms, terms
+from .models import JobApplication, Message, Offer, Recruiter, Role, Student, User
 
 # Levels of the "Expérience" list, in months of Student.experience_level:
 # value sent by the front end -> (label, first month, last month or None)
@@ -184,6 +185,53 @@ def distinct(values: Iterable[str]) -> list[str]:
             key = comparable(value)
             found[key] = min(found.get(key, value), value)
     return [found[key] for key in sorted(found)]
+
+
+@api_view(["GET"])
+def candidate_recommendations(request: Request) -> Response:
+    user: User = request.user
+    if not isRecruiter(user) or not Recruiter.objects.filter(user=user).exists():
+        return Response({"error": "Forbidden"}, status=403)
+    offers = [
+        (offer, terms(offer.requirements))
+        for offer in Offer.objects.filter(recruiter__user=user, is_active=True)
+    ]
+    if not offers:
+        return Response([])
+    ranked = []
+    for student in recruiterDeck(user):
+        best_score = 0
+        best_reasons = []
+        candidate_terms = student_terms(student)
+        for offer, req_terms in offers:
+            score = 0
+            reasons = []
+            if student.category is not None and student.category == offer.category:
+                score += 3
+                reasons.append(f"Domaine correspondant à l’offre « {offer.title} »")
+            if position_matches(student.desired_position, offer.title):
+                score += 3
+                reasons.append(
+                    f"Poste recherché correspondant à l’offre « {offer.title} »"
+                )
+            matching_terms = sorted(candidate_terms & req_terms)
+            if matching_terms:
+                score += min(len(matching_terms), 3)
+                reasons.append(
+                    f"Mots présents dans le CV et les critères de l’offre « {offer.title} » : "
+                    + ", ".join(matching_terms[:3])
+                )
+            if score > best_score:
+                best_score, best_reasons = score, reasons
+        if best_score:
+            ranked.append((best_score, student, best_reasons))
+    ranked.sort(key=lambda item: item[0], reverse=True)
+    return Response(
+        [
+            {**candidateCard(student), "reasons": reasons}
+            for _, student, reasons in ranked
+        ]
+    )
 
 
 @api_view(["GET"])

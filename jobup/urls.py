@@ -1,8 +1,9 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.contrib.staticfiles.views import serve
+from django.views.static import serve
 from django.urls import path, re_path
+from django.contrib.staticfiles.views import serve as static_serve
 
 from jobup import api, candidates, exclusions, exports, notifications, shortlist
 from jobup.administration import (
@@ -30,7 +31,7 @@ from jobup.conversations import (
     student_conversations,
 )
 from jobup.cv_suggestions import student_resume_suggestions
-from jobup.offers import offer, offers, savedOffers
+from jobup.offers import offer, offers, recommendations, savedOffers
 from jobup.profile import student, student_photo
 from jobup.recruiter_company import recruiter_company
 from jobup.recruiter_offers import (
@@ -38,6 +39,7 @@ from jobup.recruiter_offers import (
     offer_applicants,
     recruiter_application,
     recruiter_offers,
+    recruiter_offer,
 )
 from jobup.resume import student_resume
 from jobup.school import (
@@ -52,6 +54,11 @@ from jobup.school import (
     student_school,
     student_school_request,
 )
+
+if settings.DEBUG:
+    spa = (static_serve, {"path": "index.html"})
+else:
+    spa = (serve, {"path": "index.html", "document_root": settings.STATIC_ROOT})
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -76,6 +83,7 @@ urlpatterns = [
     path("api/offers/<int:id>", offer),
     path("api/offers/<int:id>/export", exports.offer_export),
     path("api/student/saved-offers", savedOffers),
+    path("api/student/recommendations", recommendations),
     path("api/student/saved-offers/<int:id>", savedOffers),
     path("api/student/<int:id>", student),
     path("api/student/<int:id>/photo", student_photo),
@@ -96,12 +104,16 @@ urlpatterns = [
         message_attachment,
     ),
     path("api/recruiter/candidates", candidates.candidate_list),
+    path(
+        "api/recruiter/candidates/recommendations", candidates.candidate_recommendations
+    ),
     path("api/recruiter/candidates/filters", candidates.candidate_filters),
     path("api/recruiter/candidates/<int:id>", candidates.candidate_detail),
     path("api/recruiter/candidates/<int:id>/cv", candidates.candidate_cv),
     path("api/recruiter/offers", recruiter_offers),
     path("api/recruiter/offers/export", exports.recruiter_offers_export),
     path("api/recruiter/offers/<int:id>/applicants", offer_applicants),
+    path("api/recruiter/offers/<int:id>", recruiter_offer),
     path("api/recruiter/applications/<int:id>", recruiter_application),
     path("api/recruiter/applications/<int:id>/contract", application_contract),
     path("api/contracts/<int:id>/file", contract_file),
@@ -130,8 +142,7 @@ urlpatterns = [
     path("api/notifications/read-all", notifications.notification_read_all),
     path("api/notifications/preferences", notifications.notification_preferences),
     path("api/notifications/<int:id>/read", notifications.notification_read),
-    re_path(r"^(?!api)[^.]*$", serve, kwargs={"path": "index.html"}),
-    path("favicon.ico", serve, kwargs={"path": "favicon.ico"}),
+    re_path(r"^(?!api/)[^.]*$", spa[0], kwargs=spa[1]),
 ]
 
 # Uploaded files (photos), served by Django only in development

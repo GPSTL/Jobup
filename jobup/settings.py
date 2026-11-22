@@ -7,6 +7,8 @@ load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "True") == "True"
@@ -18,8 +20,9 @@ DEFAULT_SECRET_KEY = (
 
 SECRET_KEY = os.getenv("SECRET_KEY", DEFAULT_SECRET_KEY)
 
-ALLOWED_HOSTS = ["127.0.0.1", "localhost"] if DEBUG else ["*"]
-
+ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+if not DEBUG:
+    ALLOWED_HOSTS += ["job-up.fr", "www.job-up.fr"]
 
 AUTH_USER_MODEL = "jobup.User"
 
@@ -33,6 +36,7 @@ REST_FRAMEWORK = {
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
     "jobup",
     "django.contrib.admin",
     "django.contrib.auth",
@@ -44,6 +48,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -71,7 +76,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "jobup.wsgi.application"
+ASGI_APPLICATION = "jobup.asgi.application"
 
 
 # Database
@@ -103,6 +108,14 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+if not DEBUG:
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
