@@ -10,7 +10,8 @@ all:
 	npx @tailwindcss/cli -i $(CSS_SRC) -o $(CSS_DST) --minify
 
 deploy:
-	git pull origin main
+	git checkout main
+	git pull --ff-only origin main
 	.venv/bin/pip install -r requirements.txt
 	npm ci
 	$(MAKE) all
