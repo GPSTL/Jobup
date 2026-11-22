@@ -149,7 +149,7 @@ export default function NotificationBell({ role = "student" }: NotificationBellP
 				aria-controls={panelId}
 				aria-label={bellLabel(count)}
 				onClick={() => setOpen(!open)}
-				className={`relative flex size-11 cursor-pointer items-center justify-center rounded-full ${open ? "bg-[#dbeafe]" : "hover:bg-[#f3f4f6]"} ${focus}`}
+				className={`relative flex size-11 cursor-pointer items-center justify-center rounded-full transition-colors hover:bg-(--navbar-interaction-bg) aria-expanded:bg-primary/20 ${focus}`}
 			>
 				<img src="/static/img/notifications/bell.svg" width={22} height={22} alt="" className="notification-bell-icon" />
 				{count > 0 && (

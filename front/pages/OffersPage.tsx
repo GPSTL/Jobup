@@ -176,9 +176,9 @@ function OfferDetailRequest({ id }: { id: string }) {
 		setSaved(!saved);
 	};
 	return <div className="flex min-h-dvh flex-col bg-[#f8fafc] text-ink">
-		{session !== null && <header className="px-4 pt-4 md:px-6 md:pt-6">
-			{student ? <StudentNavbar /> : recruiter ? <RecruiterNavbar /> : session.ok ? null : <PublicNavbar />}
-		</header>}
+		<header className="px-4 pt-4 md:px-6 md:pt-6">
+			{student ? <StudentNavbar /> : recruiter ? <RecruiterNavbar /> : <PublicNavbar />}
+		</header>
 		<main className="mx-auto mt-8 mb-16 flex w-full max-w-[1000px] flex-col gap-6 rounded-2xl border border-[#e5e7eb] bg-surface px-5 py-7 shadow-xs md:px-10 md:py-8">
 			{result?.ok ? <>
 				<PublicOfferDetail offer={result.data} />
@@ -228,9 +228,9 @@ function OffersIndexPage() {
 	return (
 		<div className="flex min-h-dvh flex-col bg-[#f8fafc] text-ink">
 			<div className={isStudent ? "" : "hero-mesh border-b border-[#e5e7eb]"}>
-				{session !== null && <header className="px-4 pt-4 md:px-6 md:pt-6">
-					{isStudent ? <StudentNavbar /> : session.ok && session.user.role === 3 ? <RecruiterNavbar /> : session.ok ? null : <PublicNavbar variant="glass" />}
-				</header>}
+				<header className="px-4 pt-4 md:px-6 md:pt-6">
+					{isStudent ? <StudentNavbar /> : session?.ok && session.user.role === 3 ? <RecruiterNavbar /> : <PublicNavbar variant="glass" />}
+				</header>
 
 				{!isStudent && (
 					<div className="mx-auto flex max-w-[1236px] flex-col gap-6 px-4 pt-8 pb-10 md:px-6 md:pt-10 md:pb-12">

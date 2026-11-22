@@ -88,9 +88,9 @@ export default function CompaniesPage() {
 	return (
 		<div className="flex min-h-dvh flex-col bg-[#f8fafc] text-ink">
 			<div className="hero-mesh border-b border-[#e5e7eb]">
-				{session !== null && <header className="px-4 pt-4 md:px-6 md:pt-6">
-					{session.ok && session.user.role === 1 ? <StudentNavbar variant="glass" /> : session.ok && session.user.role === 3 ? <RecruiterNavbar variant="glass" /> : session.ok ? null : <PublicNavbar variant="glass" />}
-				</header>}
+				<header className="px-4 pt-4 md:px-6 md:pt-6">
+					{session?.ok && session.user.role === 1 ? <StudentNavbar variant="glass" /> : session?.ok && session.user.role === 3 ? <RecruiterNavbar variant="glass" /> : <PublicNavbar variant="glass" />}
+				</header>
 
 				<div className="mx-auto flex max-w-[1236px] flex-col gap-6 px-4 pt-8 pb-10 md:px-6 md:pt-10 md:pb-12">
 					<div className="flex flex-col gap-2">

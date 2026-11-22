@@ -86,8 +86,9 @@ export default function Inscription() {
 			{/* Left showcase column on desktop */}
 			<aside aria-label="Présentation JobUp" className="auth-mesh hidden flex-col justify-between p-12 text-white lg:flex">
 				<div className="flex items-center gap-3">
-					<Link to="/" className="rounded-xl bg-white/95 px-3.5 py-2 shadow-sm">
-						<img src="/static/img/JobUp_logo.svg" alt="JobUp, accueil" className="h-6" />
+					<Link to="/" className="auth-brand-badge rounded-xl bg-white/95 px-3.5 py-2 shadow-sm">
+						<img src="/static/img/JobUp_logo.svg" alt="JobUp, accueil" className="auth-brand-logo-light h-6" />
+						<img src="/static/img/JobUp_logo_dark.svg" alt="JobUp, accueil" className="auth-brand-logo-dark h-6" />
 					</Link>
 				</div>
 
