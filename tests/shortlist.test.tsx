@@ -49,7 +49,7 @@ test("carte : bouton ♥ accessible seulement quand l'action est fournie, inacti
 });
 
 test("cartes : le ♥ porte sur la carte affichée", () => {
-	const html = render(<CandidateDeck candidates={[lucas, sarah]} index={1} onSelect={noop} onKeep={noop} />);
+	const html = render(<CandidateDeck candidates={[lucas, sarah]} index={1} onKeep={noop} />);
 	assert.match(html, /aria-label="Retenir Sarah Benali"/);
 	assert.doesNotMatch(html, /Retenir Lucas Martin/);
 });
@@ -135,14 +135,14 @@ test("cartes : le glissement à droite retient, à gauche écarte, seulement au-
 });
 
 test("cartes : l'invite à glisser n'apparaît que si une action est disponible", () => {
-	const deck = (props: { onKeep?: () => void; onExclude?: () => void }) => render(<CandidateDeck candidates={[lucas, sarah]} index={0} onSelect={noop} {...props} />);
+	const deck = (props: { onKeep?: () => void; onExclude?: () => void }) => render(<CandidateDeck candidates={[lucas, sarah]} index={0} {...props} />);
 	assert.match(deck({ onKeep: noop, onExclude: noop }), /Glissez à gauche pour écarter, à droite pour retenir\./);
 	assert.match(deck({ onKeep: noop }), /Glissez/);
 	assert.doesNotMatch(deck({}), /Glissez/);
 });
 
 test("cartes : le 🚫 porte sur la carte affichée", () => {
-	const html = render(<CandidateDeck candidates={[lucas, sarah]} index={1} onSelect={noop} onExclude={noop} />);
+	const html = render(<CandidateDeck candidates={[lucas, sarah]} index={1} onExclude={noop} />);
 	assert.match(html, /aria-label="Écarter Sarah Benali"/);
 	assert.doesNotMatch(html, /Écarter Lucas Martin/);
 });

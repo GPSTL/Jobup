@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import Logo from "../components/Logo";
+import AuthLayout from "../components/AuthLayout";
 import Field from "../components/Field";
 import Button from "../components/Button";
 import { signup } from "../services/auth";
@@ -60,7 +60,7 @@ function GenericSignupForm({ role }: { role: RoleApiName }) {
 				<input type="email" autoComplete="email" placeholder="vous@exemple.fr" {...register("email")} />
 			</Field>
 			<Field id="password" label="Mot de passe" error={errors.password?.message}>
-				<input type="password" autoComplete="new-password" {...register("password")} />
+				<input type="password" autoComplete="new-password" placeholder="••••••••" {...register("password")} />
 			</Field>
 			{errors.root && <p role="alert" className="text-sm font-medium text-[#DC2626]">{errors.root.message}</p>}
 			<Button type="submit" disabled={isSubmitting} className="mt-2 w-full py-3">
@@ -82,46 +82,10 @@ export default function Inscription() {
 	};
 
 	return (
-		<main className="grid min-h-dvh bg-[#f8fafc] lg:grid-cols-[1fr_1.1fr]">
-			{/* Left showcase column on desktop */}
-			<aside aria-label="Présentation JobUp" className="auth-mesh hidden flex-col justify-between p-12 text-white lg:flex">
-				<div className="flex items-center gap-3">
-					<Link to="/" className="auth-brand-badge rounded-xl bg-white/95 px-3.5 py-2 shadow-sm">
-						<img src="/static/img/JobUp_logo.svg" alt="JobUp, accueil" className="auth-brand-logo-light h-6" />
-						<img src="/static/img/JobUp_logo_dark.svg" alt="JobUp, accueil" className="auth-brand-logo-dark h-6" />
-					</Link>
-				</div>
-
-				<div className="flex max-w-md flex-col gap-6">
-					<span className="w-fit rounded-full border border-white/25 bg-white/10 px-3.5 py-1 text-xs font-semibold tracking-wide uppercase backdrop-blur-xs">
-						Inscription gratuite
-					</span>
-					<p className="text-3xl leading-tight font-extrabold tracking-tight">
-						Rejoignez l’écosystème qui simplifie la recherche et le recrutement en alternance.
-					</p>
-					<div className="grid gap-3 rounded-2xl border border-white/20 bg-white/10 p-5 text-sm backdrop-blur-xs">
-						<p className="font-semibold">Un compte adapté à votre profil :</p>
-						<p className="text-white/80">
-							Étudiant, Recruteur ou École : sélectionnez votre rôle et accédez immédiatement à vos outils dédiés.
-						</p>
-					</div>
-				</div>
-
-				<p className="text-xs text-white/65">© {new Date().getFullYear()} JobUp • Plateforme d’alternance</p>
-			</aside>
-
-			{/* Right form column */}
-			<div className="flex flex-col items-center justify-center px-4 py-12 sm:px-8">
-				<div className="mb-8 lg:hidden">
-					<Logo className="h-9" />
-				</div>
-
-				<div className="flex w-full max-w-md flex-col rounded-3xl border border-[#e5e7eb] bg-surface p-6 shadow-sm sm:p-9">
-					<div>
-						<h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Inscription</h1>
-						<p className="mt-1.5 text-sm text-[#6b7280]">Sélectionnez votre profil et créez votre compte en quelques secondes.</p>
-					</div>
-
+		<AuthLayout mode="signup">
+			<p className="text-xs font-bold tracking-[0.16em] text-primary uppercase">Bienvenue sur JobUp</p>
+			<h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Créez votre compte.</h1>
+			<p className="mt-3 text-sm leading-relaxed text-[#6b7280]">Choisissez votre profil pour commencer votre parcours.</p>
 					<div
 						role="radiogroup"
 						aria-label="Type de compte"
@@ -145,17 +109,7 @@ export default function Inscription() {
 					</div>
 
 					<GenericSignupForm role={getRoleApiName(role)} />
-
-					<div className="mt-6 flex items-center justify-between border-t border-[#e5e7eb] pt-4 text-sm">
-						<Link to="/" className="text-xs font-medium text-[#6b7280] hover:text-primary hover:underline">
-							← Accueil
-						</Link>
-						<Link to="/login" className="font-medium text-primary hover:underline">
-							Déjà inscrit&nbsp;? Se connecter
-						</Link>
-					</div>
-				</div>
-			</div>
-		</main>
+			<p className="mt-8 border-t border-[#e5e7eb] pt-6 text-sm text-[#6b7280]">Déjà inscrit ? <Link to="/login" className="font-semibold text-primary hover:underline">Se connecter →</Link></p>
+		</AuthLayout>
 	);
 }

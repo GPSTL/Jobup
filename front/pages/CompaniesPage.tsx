@@ -12,6 +12,8 @@ import MapPinIcon from "../components/MapPinIcon";
 import PublicNavbar from "../components/PublicNavbar";
 import StudentNavbar from "../components/StudentNavbar";
 import RecruiterNavbar from "../components/RecruiterNavbar";
+import SchoolNavbar from "../components/SchoolNavbar";
+import AdminNavbar from "../components/AdminNavbar";
 import Pagination from "../components/Pagination";
 import SearchIcon from "../components/SearchIcon";
 import SortIcon from "../components/SortIcon";
@@ -20,6 +22,7 @@ import { getSession, type SessionResult } from "../services/auth";
 import { card, field, focus, input, searchButton, select } from "../utils/searchPageStyles";
 import { getCities, getCompanies, PAGE_SIZE, type CompanyFilters, type CompanyList } from "../services/companies";
 import { companyEmblem, emblemColors, formatEmployees, SECTOR_OPTIONS, sectorLabel } from "../utils/companies";
+import { highlightText } from "../utils/highlight";
 import { MESSAGES } from "../utils/validation";
 
 // TODO: replace provisional company-size options with backend reference data.
@@ -88,9 +91,9 @@ export default function CompaniesPage() {
 	return (
 		<div className="flex min-h-dvh flex-col bg-[#f8fafc] text-ink">
 			<div className="hero-mesh border-b border-[#e5e7eb]">
-				<header className="px-4 pt-4 md:px-6 md:pt-6">
-					{session?.ok && session.user.role === 1 ? <StudentNavbar variant="glass" /> : session?.ok && session.user.role === 3 ? <RecruiterNavbar variant="glass" /> : <PublicNavbar variant="glass" />}
-				</header>
+				{session !== null && <header className="px-4 pt-4 md:px-6 md:pt-6">
+					{session.ok && session.user.role === 1 ? <StudentNavbar variant="glass" /> : session.ok && session.user.role === 2 ? <SchoolNavbar variant="glass" /> : session.ok && session.user.role === 3 ? <RecruiterNavbar variant="glass" /> : session.ok && session.user.role === 127 ? <AdminNavbar /> : <PublicNavbar variant="glass" />}
+				</header>}
 
 				<div className="mx-auto flex max-w-[1236px] flex-col gap-6 px-4 pt-8 pb-10 md:px-6 md:pt-10 md:pb-12">
 					<div className="flex flex-col gap-2">
@@ -205,11 +208,11 @@ export default function CompaniesPage() {
 									emblemClassName={emblemColors(id)}
 								/>
 								<div className="flex min-w-0 flex-1 flex-col gap-0.5">
-									<h2 className="text-lg font-bold text-ink">{name}</h2>
+									<h2 className="text-lg font-bold text-ink">{highlightText(name, filters.q)}</h2>
 									{city && (
 										<p className="flex items-center gap-1 text-xs text-[#6b7280]">
 											<MapPinIcon width={12} height={12} className="text-gray-500" />
-											{city}
+											{highlightText(city, [filters.city ?? "", filters.q ?? ""])}
 										</p>
 									)}
 								</div>
@@ -219,9 +222,9 @@ export default function CompaniesPage() {
 								</Link>
 							</div>
 							{/* Présentation complète sur la page de l'entreprise : 2 lignes sur la carte, comme la maquette */}
-							<p className="line-clamp-2 min-h-10 text-sm leading-relaxed text-[#6b7280]">{description}</p>
+							<p className="line-clamp-2 min-h-10 text-sm leading-relaxed text-[#6b7280]">{highlightText(description, filters.q)}</p>
 							{sector !== null && (
-								<span className="self-start rounded-md bg-[#f1f3f6] px-2.5 py-1 text-xs font-medium text-[#6b7280]">{sectorLabel(sector)}</span>
+								<span className="self-start rounded-md bg-[#f1f3f6] px-2.5 py-1 text-xs font-medium text-[#6b7280]">{highlightText(sectorLabel(sector), filters.q)}</span>
 							)}
 							<div className="mt-auto flex items-center justify-between border-t border-[#e5e7eb] pt-3.5">
 								<p className="flex items-center gap-1.5 text-xs text-[#6b7280]">

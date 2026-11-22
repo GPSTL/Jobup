@@ -176,6 +176,20 @@ def recruiter_offers(request: Request) -> Response:
 
 
 @api_view(["GET"])
+def recruiter_offer(request: Request, id: int) -> Response:
+    if not isRecruiter(request.user):
+        return Response({"error": "Forbidden"}, status=403)
+    offer = (
+        Offer.objects.select_related("recruiter__company")
+        .filter(pk=id, recruiter__user=request.user)
+        .first()
+    )
+    if offer is None:
+        return Response({"error": "Offer not found"}, status=404)
+    return Response(publishedOffer(offer))
+
+
+@api_view(["GET"])
 def offer_applicants(request: Request, id: int) -> Response:
     if not isRecruiter(request.user):
         return Response({"error": "Forbidden"}, status=403)

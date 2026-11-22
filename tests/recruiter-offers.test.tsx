@@ -110,3 +110,12 @@ test("API : session expirée, accès masqué, serveur invalide et réseau", asyn
 	globalThis.fetch = (async () => { throw new TypeError("offline"); }) as typeof fetch;
 	assert.deepEqual(await getOfferApplicants("12"), { ok: false, reason: "network" });
 });
+
+test("offre : détail complet et liens pour les offres publiées ou clôturées", async () => {
+	const { RecruiterOfferDetail } = await import("../front/pages/RecruiterOfferDetailPage");
+	const detail = { ...offer, is_active: false, requirements: "Java et SQL", category: 1, image_url: "", contract_type: "alternance", duration: "12 mois", start_date: null, location: "Paris", company: { id: 1, name: "JobUp" } };
+	const html = render(<RecruiterOfferDetail offer={detail} />);
+	for (const text of ["Clôturée", "Java et SQL", "12 mois", "Paris", "Informatique", "JobUp"]) assert.ok(html.includes(text), text);
+	assert.match(html, /href="\/recruiter\/offers\/12\/applicants"/);
+	assert.match(render(<RecruiterOfferList offers={[{ ...offer, applicant_count: 0 }]} />), /href="\/recruiter\/offers\/12"/);
+});

@@ -63,7 +63,7 @@ export function AdminLoginView({ onLoggedIn }: { onLoggedIn: () => void }) {
 						<input type="email" autoComplete="username" {...register("email", { onChange: () => setFormError("") })} />
 					</Field>
 					<Field id="admin-password" label="Mot de passe" error={errors.password?.message || (credentialsError ? formError : "")}>
-						<input type="password" autoComplete="current-password" {...register("password", { onChange: () => setFormError("") })} />
+						<input type="password" autoComplete="current-password" placeholder="••••••••" {...register("password", { onChange: () => setFormError("") })} />
 					</Field>
 					{formError && !credentialsError && (
 						<p role="alert" className="text-xs font-medium text-[#DC2626]">

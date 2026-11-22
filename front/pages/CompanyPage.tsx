@@ -8,7 +8,12 @@ import Footer from "../components/Footer";
 import GlobeIcon from "../components/GlobeIcon";
 import MapPinIcon from "../components/MapPinIcon";
 import PublicNavbar from "../components/PublicNavbar";
+import StudentNavbar from "../components/StudentNavbar";
+import RecruiterNavbar from "../components/RecruiterNavbar";
+import SchoolNavbar from "../components/SchoolNavbar";
+import AdminNavbar from "../components/AdminNavbar";
 import UsersIcon from "../components/UsersIcon";
+import { getSession, type SessionResult } from "../services/auth";
 import { getCompany, type Company } from "../services/companies";
 import { formatDate, formatEmployees, sectorLabel, websiteLabel } from "../utils/companies";
 import { focus } from "../utils/searchPageStyles";
@@ -25,9 +30,16 @@ const backLink = `flex items-center gap-2 self-start rounded-sm text-sm font-sem
 // Page de présentation d'une entreprise (JOB-021, maquette Page entreprise)
 export default function CompanyPage() {
 	const { id } = useParams();
+	const [session, setSession] = useState<SessionResult | null>(null);
 	const [state, setState] = useState<State>({ status: "loading" });
 	// Incrémenté par « Réessayer » pour relancer la requête
 	const [attempt, setAttempt] = useState(0);
+
+	useEffect(() => {
+		let ignore = false;
+		getSession().then((result) => { if (!ignore) setSession(result); });
+		return () => { ignore = true; };
+	}, []);
 
 	useEffect(() => {
 		// Un identifiant non numérique ne peut correspondre à aucune entreprise
@@ -52,7 +64,17 @@ export default function CompanyPage() {
 	return (
 		<div className="flex min-h-dvh flex-col bg-[#f8fafc] text-ink">
 			<header className="px-4 pt-4 md:px-6 md:pt-6">
-				<PublicNavbar />
+				{session?.ok && session.user.role === 1 ? (
+					<StudentNavbar />
+				) : session?.ok && session.user.role === 2 ? (
+					<SchoolNavbar />
+				) : session?.ok && session.user.role === 3 ? (
+					<RecruiterNavbar />
+				) : session?.ok && session.user.role === 127 ? (
+					<AdminNavbar />
+				) : (
+					<PublicNavbar />
+				)}
 			</header>
 
 			<main className="mx-auto mt-8 mb-16 flex w-full max-w-[1000px] flex-1 flex-col gap-6 px-4 md:px-6">

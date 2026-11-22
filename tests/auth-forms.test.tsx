@@ -45,6 +45,7 @@ test("an unknown role falls back to student", () => {
 
 test("landing and role pages render modern sections, navigation, footer and theme toggle", () => {
 	const home = renderToStaticMarkup(<MemoryRouter><HomePage /></MemoryRouter>);
+	assert.doesNotMatch(home, /data-theme="dark"/);
 	assert.match(home, /Ton succès commence/);
 	assert.match(home, /Un parcours pensé pour chaque acteur/);
 	assert.match(home, /Comment fonctionne JobUp \?/);

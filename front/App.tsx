@@ -24,6 +24,7 @@ import ShortlistPage from "./pages/ShortlistPage";
 import CandidateProfilePage from "./pages/CandidateProfilePage";
 import NotificationsPage from "./pages/NotificationsPage";
 import RecruiterOffersPage from "./pages/RecruiterOffersPage";
+import RecruiterOfferDetailPage from "./pages/RecruiterOfferDetailPage";
 import CreateOfferPage from "./pages/CreateOfferPage";
 import OfferApplicantsPage from "./pages/OfferApplicantsPage";
 import SavedOffersPage from "./pages/SavedOffersPage";
@@ -65,6 +66,7 @@ function App() {
 				<Route path="/recruiter/candidates/:id" element={<RequireRecruiter>{() => <CandidateProfilePage />}</RequireRecruiter>} />
 				<Route path="/recruiter/offers" element={<RequireRecruiter>{() => <RecruiterOffersPage />}</RequireRecruiter>} />
 				<Route path="/recruiter/offers/new" element={<RequireRecruiter>{() => <CreateOfferPage />}</RequireRecruiter>} />
+				<Route path="/recruiter/offers/:id" element={<RequireRecruiter>{() => <RecruiterOfferDetailPage />}</RequireRecruiter>} />
 				<Route path="/recruiter/offers/:id/applicants" element={<RequireRecruiter>{() => <OfferApplicantsPage />}</RequireRecruiter>} />
 				<Route path="/recruiter/applications/:id" element={<RequireRecruiter>{() => <RecruiterApplicationPage />}</RequireRecruiter>} />
 				<Route path="/recruiter/shortlist" element={<RequireRecruiter>{() => <ShortlistPage />}</RequireRecruiter>} />

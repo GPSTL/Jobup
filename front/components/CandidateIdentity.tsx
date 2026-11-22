@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import type { CandidateSummary } from "../services/candidates";
 import { initials } from "../utils/candidates";
+import { highlightText } from "../utils/highlight";
 
 type CandidateAvatarProps = {
 	candidate: Pick<CandidateSummary, "first_name" | "last_name" | "photo_url">;
@@ -27,11 +28,11 @@ export function CandidateAvatar({ candidate, className }: CandidateAvatarProps) 
 }
 
 // "Master MIAGE — Université Paris Nanterre". The card has to show the school (REC-01), so a missing one is stated.
-export function EducationLine({ candidate }: { candidate: Pick<CandidateSummary, "education" | "school"> }) {
+export function EducationLine({ candidate, highlightTerms }: { candidate: Pick<CandidateSummary, "education" | "school">; highlightTerms?: string | string[] }) {
 	return (
 		<>
-			{candidate.education && `${candidate.education} — `}
-			{candidate.school ?? <span className="text-[#6b7280]">École non renseignée</span>}
+			{candidate.education && <>{highlightText(candidate.education, highlightTerms)} — </>}
+			{candidate.school ? highlightText(candidate.school, highlightTerms) : <span className="text-[#6b7280]">École non renseignée</span>}
 		</>
 	);
 }
