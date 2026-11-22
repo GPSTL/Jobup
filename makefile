@@ -14,6 +14,8 @@ deploy:
 	.venv/bin/pip install -r requirements.txt
 	npm ci
 	$(MAKE) all
+	cp db.sqlite3 backups/db-$$(date +%F-%H%M).sqlite3
+	.venv/bin/python manage.py makemigrations jobup
 	.venv/bin/python manage.py migrate --noinput
 	.venv/bin/python manage.py collectstatic --noinput
 	sudo systemctl restart jobup

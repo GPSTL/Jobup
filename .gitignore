@@ -17,3 +17,4 @@ private_media
 htmlcov/
 coverage.xml
 staticfiles/
+backups/
