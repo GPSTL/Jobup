@@ -28,6 +28,7 @@ import {
 	type SortColumn,
 } from "../utils/adminUsers";
 import type { ExportField, ExportValues } from "../utils/exports";
+import { highlightText } from "../utils/highlight";
 import { field, focus, input, select } from "../utils/searchPageStyles";
 
 const COLUMNS: { column: SortColumn; label: string }[] = [
@@ -54,7 +55,7 @@ export function SortArrows({ direction }: { direction: "ascending" | "descending
 
 const checkbox = "size-4 cursor-pointer accent-primary";
 
-function AccountRow({ user, returnTo, selection }: { user: AdminUser; returnTo: string; selection?: Selection }) {
+function AccountRow({ user, returnTo, selection, highlightQuery }: { user: AdminUser; returnTo: string; selection?: Selection; highlightQuery?: string }) {
 	const name = `${user.first_name} ${user.last_name}`;
 	const checked = selection?.ids.includes(user.id) ?? false;
 	return (
@@ -64,10 +65,10 @@ function AccountRow({ user, returnTo, selection }: { user: AdminUser; returnTo: 
 					<input type="checkbox" checked={checked} onChange={(e) => selection.onChange(toggleIds(selection.ids, [user.id], e.target.checked))} aria-label={`Sélectionner ${name}`} className={checkbox} />
 				</td>
 			)}
-			<td className={cell}>{user.first_name}</td>
-			<td className={`${cell} font-medium`}>{user.last_name}</td>
-			<td className={`${cell} whitespace-nowrap`}>{user.email}</td>
-			<td className={cell}>{user.school ?? <span className="text-[#9ca3af]">Non renseignée</span>}</td>
+			<td className={cell}>{highlightText(user.first_name, highlightQuery)}</td>
+			<td className={`${cell} font-medium`}>{highlightText(user.last_name, highlightQuery)}</td>
+			<td className={`${cell} whitespace-nowrap`}>{highlightText(user.email, highlightQuery)}</td>
+			<td className={cell}>{user.school ? highlightText(user.school, highlightQuery) : <span className="text-[#9ca3af]">Non renseignée</span>}</td>
 			<td className={`${cell} whitespace-nowrap`}><time dateTime={user.date_joined}>{formatDate(user.date_joined)}</time></td>
 			<td className={`${cell} whitespace-nowrap`}>
 				{user.is_active ? (
@@ -102,6 +103,7 @@ type AdminUsersTableProps = {
 	onSort: (sort: AdminUserSort) => void;
 	/** Without it, the table has no checkboxes */
 	selection?: Selection;
+	highlightQuery?: string;
 };
 
 // Ticks or unticks the accounts of the page; half ticked when only some of them are
@@ -117,7 +119,7 @@ function SelectPage({ users, selection }: { users: AdminUser[]; selection: Selec
 
 // Wider than a phone: the table scrolls sideways inside its frame, never the page. The frame is
 // positioned so that the hidden header (sr-only, absolute) stays inside it too
-export function AdminUsersTable({ users, sort, onSort, selection }: AdminUsersTableProps) {
+export function AdminUsersTable({ users, sort, onSort, selection, highlightQuery }: AdminUsersTableProps) {
 	const location = useLocation();
 	const returnTo = location.pathname + location.search;
 	return (
@@ -146,7 +148,7 @@ export function AdminUsersTable({ users, sort, onSort, selection }: AdminUsersTa
 					</tr>
 				</thead>
 				<tbody>
-					{users.map((user) => <AccountRow key={user.id} user={user} returnTo={returnTo} selection={selection} />)}
+					{users.map((user) => <AccountRow key={user.id} user={user} returnTo={returnTo} selection={selection} highlightQuery={highlightQuery} />)}
 				</tbody>
 			</table>
 		</div>
@@ -268,7 +270,7 @@ export function AdminUsersResults({ result, loading, query, onChange, onRetry, o
 	}
 	return (
 		<div className={loading ? "opacity-60" : ""}>
-			<AdminUsersTable users={result.results} sort={query.sort} onSort={(sort) => onChange({ sort })} selection={selection} />
+			<AdminUsersTable users={result.results} sort={query.sort} onSort={(sort) => onChange({ sort })} selection={selection} highlightQuery={query.q} />
 			<div className="mt-6 flex flex-col items-center gap-4 text-xs sm:text-sm text-[#6b7280] lg:flex-row lg:justify-between">
 				<p role="status">{rangeLabel(result.count, result.page, result.page_size, result.results.length)}</p>
 				<Pagination currentPage={result.page} totalPages={result.total_pages} onPageChange={(page) => onChange({ page })} />

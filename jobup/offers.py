@@ -6,7 +6,8 @@ from rest_framework.renderers import JSONRenderer
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from .models import Offer, Role, SavedOffer, Student
+from .cv_matching import position_matches, student_terms, terms
+from .models import ApplicationStatus, JobApplication, Offer, Role, SavedOffer, Student
 
 
 def publishedOffers():
@@ -53,6 +54,64 @@ def studentFor(request: Request) -> Student | None:
     if request.user.role != Role.STUDENT:
         return None
     return Student.objects.filter(user=request.user).first()
+
+
+@api_view(["GET"])
+@renderer_classes([JSONRenderer])
+def recommendations(request: Request) -> Response:
+    student = studentFor(request)
+    if student is None:
+        return Response({"error": "Forbidden"}, status=403)
+
+    saved_entries = list(
+        SavedOffer.objects.filter(student=student).values_list(
+            "offer_id", "offer__category"
+        )
+    )
+    app_entries = list(
+        JobApplication.objects.filter(student=student).values_list(
+            "offer_id", "offer__category", "status"
+        )
+    )
+    interest_categories = {category for _, category in saved_entries} | {
+        category
+        for _, category, status in app_entries
+        if status != ApplicationStatus.DRAFT
+    }
+    excluded = {offer_id for offer_id, _ in saved_entries} | {
+        offer_id for offer_id, _, _ in app_entries
+    }
+    candidate_terms = student_terms(student)
+    ranked = []
+    for item in (
+        publishedOffers().exclude(pk__in=excluded).order_by("-created_at", "-id")
+    ):
+        reasons = []
+        score = 0
+        if student.category is not None and item.category == student.category:
+            score += 3
+            reasons.append("Correspond à votre domaine")
+        if position_matches(student.desired_position, item.title):
+            score += 3
+            reasons.append("Correspond au poste recherché")
+        if item.category in interest_categories:
+            score += 2
+            reasons.append(
+                "Dans un domaine lié à vos offres enregistrées ou candidatures"
+            )
+        matching_terms = sorted(candidate_terms & terms(item.requirements))
+        if matching_terms:
+            score += min(len(matching_terms), 3)
+            reasons.append(
+                "Mots communs à votre CV et aux critères : "
+                + ", ".join(matching_terms[:3])
+            )
+        if score:
+            ranked.append((score, item, reasons))
+    ranked.sort(key=lambda entry: entry[0], reverse=True)
+    return Response(
+        [{**publicOffer(item), "reasons": reasons} for _, item, reasons in ranked]
+    )
 
 
 @api_view(["GET", "POST", "DELETE"])

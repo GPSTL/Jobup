@@ -7,6 +7,7 @@ import HeartIcon from "../components/HeartIcon";
 import RecruiterNavbar from "../components/RecruiterNavbar";
 import { getShortlist, removeFromShortlist, type ShortlistedCandidate, type ShortlistResult } from "../services/candidates";
 import { fullName } from "../utils/candidates";
+import { highlightText } from "../utils/highlight";
 import { focus } from "../utils/searchPageStyles";
 import { REQUEST_ERRORS } from "../utils/validation";
 
@@ -18,10 +19,11 @@ type ShortlistCardProps = {
 	onRemove: () => void;
 	/** Retrait en cours d'envoi */
 	removing: boolean;
+	highlightQuery?: string;
 };
 
 // Carte d'un candidat retenu (maquette « Candidats retenus »)
-export function ShortlistCard({ candidate, onRemove, removing }: ShortlistCardProps) {
+export function ShortlistCard({ candidate, onRemove, removing, highlightQuery }: ShortlistCardProps) {
 	const name = fullName(candidate);
 	return (
 		<li className="flex flex-col gap-3 rounded-2xl border border-[#e5e7eb] bg-[#f9fafb] p-5">
@@ -31,15 +33,15 @@ export function ShortlistCard({ candidate, onRemove, removing }: ShortlistCardPr
 				<HeartIcon width={22} height={22} fill="currentColor" className="text-[#dc2626]" />
 			</div>
 			<div>
-				<h2 className="text-base sm:text-lg font-semibold">{name}</h2>
+				<h2 className="text-base sm:text-lg font-semibold">{highlightText(name, highlightQuery)}</h2>
 				<p className="text-xs sm:text-sm text-[#6b7280]">
-					<EducationLine candidate={candidate} />
+					<EducationLine candidate={candidate} highlightTerms={highlightQuery} />
 				</p>
 			</div>
 			{/* Offre pour laquelle il est retenu : pas encore renseignée (JOB-036) */}
 			{candidate.offer && (
 				<span className="w-fit rounded-full bg-[#dbeafe] px-3 py-1 text-xs font-semibold text-primary">
-					Pour : {candidate.offer.title}
+					Pour : {highlightText(candidate.offer.title, highlightQuery)}
 				</span>
 			)}
 			<div className="mt-auto flex items-center gap-2.5 pt-1">
@@ -64,23 +66,24 @@ type ShortlistViewProps = {
 	onRemove: (candidate: ShortlistedCandidate) => void;
 	/** Candidat dont le retrait est en cours */
 	removingId: number | null;
+	highlightQuery?: string;
 };
 
 // Contenu de la page une fois la liste chargée : compteur, grille ou état vide
-export function ShortlistView({ candidates, onRemove, removingId }: ShortlistViewProps) {
+export function ShortlistView({ candidates, onRemove, removingId, highlightQuery }: ShortlistViewProps) {
 	if (candidates.length === 0) {
 		return (
 			<div className="flex flex-col items-center gap-3 py-10 text-center">
-				<h2 className="text-xl font-semibold">Aucun candidat retenu pour le moment</h2>
-				<p className="text-sm text-[#6b7280]">Retenez un profil avec ♥ depuis les cartes des candidats pour le retrouver ici.</p>
-				<Button to="/recruiter/candidates">Parcourir les candidats</Button>
+				<h2 className="text-xl font-semibold">{highlightQuery?.trim() ? "Aucun candidat retenu ne correspond à votre recherche" : "Aucun candidat retenu pour le moment"}</h2>
+				<p className="text-sm text-[#6b7280]">{highlightQuery?.trim() ? "Modifiez votre recherche pour afficher les autres profils retenus." : "Retenez un profil avec ♥ depuis les cartes des candidats pour le retrouver ici."}</p>
+				{!highlightQuery?.trim() && <Button to="/recruiter/candidates">Parcourir les candidats</Button>}
 			</div>
 		);
 	}
 	return (
 		<ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
 			{candidates.map((candidate) => (
-				<ShortlistCard key={candidate.id} candidate={candidate} onRemove={() => onRemove(candidate)} removing={removingId === candidate.id} />
+				<ShortlistCard key={candidate.id} candidate={candidate} onRemove={() => onRemove(candidate)} removing={removingId === candidate.id} highlightQuery={highlightQuery} />
 			))}
 		</ul>
 	);
@@ -95,6 +98,7 @@ export default function ShortlistPage() {
 	const [removingId, setRemovingId] = useState<number | null>(null);
 	const [removeError, setRemoveError] = useState("");
 	const [removed, setRemoved] = useState("");
+	const [query, setQuery] = useState("");
 
 	useEffect(() => {
 		// Ignore la réponse si la page a été quittée entre-temps
@@ -136,6 +140,10 @@ export default function ShortlistPage() {
 	if (result?.ok === false && result.reason === "unauthenticated") return <Navigate to="/login" replace />;
 
 	const count = result?.ok ? result.candidates.length : 0;
+	const search = query.trim().toLocaleLowerCase("fr");
+	const visibleCandidates = result?.ok
+		? result.candidates.filter((candidate) => !search || `${fullName(candidate)} ${candidate.education ?? ""} ${candidate.school ?? ""} ${candidate.offer?.title ?? ""}`.toLocaleLowerCase("fr").includes(search))
+		: [];
 
 	return (
 		<div className="min-h-dvh bg-[#f8fafc] px-4 pt-4 pb-16 text-ink md:px-6 md:pt-6">
@@ -181,7 +189,14 @@ export default function ShortlistPage() {
 						</div>
 					)}
 
-					{result?.ok && <ShortlistView candidates={result.candidates} onRemove={remove} removingId={removingId} />}
+					{result?.ok && result.candidates.length > 0 && (
+						<div className="flex flex-col gap-1.5">
+							<label htmlFor="shortlist-search" className="text-sm font-medium">Rechercher un candidat retenu</label>
+							<input id="shortlist-search" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Nom, formation ou école…" className="min-h-11 w-full max-w-md rounded-xl border border-[#d1d5db] bg-surface px-3.5 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+						</div>
+					)}
+
+					{result?.ok && <ShortlistView candidates={visibleCandidates} onRemove={remove} removingId={removingId} highlightQuery={query} />}
 				</section>
 			</main>
 		</div>

@@ -1,9 +1,16 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Footer from "../components/Footer";
 import PublicNavbar from "../components/PublicNavbar";
+import StudentNavbar from "../components/StudentNavbar";
+import RecruiterNavbar from "../components/RecruiterNavbar";
+import SchoolNavbar from "../components/SchoolNavbar";
+import AdminNavbar from "../components/AdminNavbar";
 import HandshakeIcon from "../components/HandshakeIcon";
 import Filter from "../components/Filter";
 import Megaphone from "../components/Megaphone";
+import { getSession, type SessionResult } from "../services/auth";
+import { accountHome } from "../utils/accountHome";
 
 const features = [
 	{
@@ -26,11 +33,29 @@ const features = [
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
 
 export default function SchoolPage() {
+	const [session, setSession] = useState<SessionResult | null>(null);
+	useEffect(() => {
+		let ignore = false;
+		getSession().then((result) => { if (!ignore) setSession(result); });
+		return () => { ignore = true; };
+	}, []);
+	const loggedInHome = session?.ok ? accountHome(session.user.role) : null;
+
 	return (
 		<div className="flex min-h-dvh flex-col bg-[#f8fafc] font-sans text-ink">
 			<div className="hero-mesh border-b border-[#e5e7eb]">
 				<header className="px-4 pt-4 md:px-6 md:pt-6">
-					<PublicNavbar variant="glass" signupTo="/signup?role=school" />
+					{session?.ok && session.user.role === 1 ? (
+						<StudentNavbar variant="glass" />
+					) : session?.ok && session.user.role === 2 ? (
+						<SchoolNavbar variant="glass" />
+					) : session?.ok && session.user.role === 3 ? (
+						<RecruiterNavbar variant="glass" />
+					) : session?.ok && session.user.role === 127 ? (
+						<AdminNavbar />
+					) : (
+						<PublicNavbar variant="glass" signupTo="/signup?role=school" />
+					)}
 				</header>
 
 				<section aria-labelledby="school-title" className="mx-auto grid max-w-[1236px] items-center gap-10 px-4 pt-10 pb-16 md:px-6 md:py-20 lg:grid-cols-[1.08fr_0.92fr] lg:gap-14">
@@ -45,16 +70,18 @@ export default function SchoolPage() {
 							Validez vos étudiants, suivez leurs candidatures et retrouvez tous leurs contrats d’alternance au même endroit.
 						</p>
 						<div className="mt-6 flex flex-wrap gap-3">
-							<Link to="/signup?role=school" className={`rounded-xl bg-primary px-6 py-3 text-sm sm:text-base font-semibold text-on-primary shadow-xs transition-all hover:bg-primary/90 ${focus}`}>
-								Inscrire mon établissement
+							<Link to={loggedInHome ?? "/signup?role=school"} className={`rounded-xl bg-primary px-6 py-3 text-sm sm:text-base font-semibold text-on-primary shadow-xs transition-all hover:bg-primary/90 ${focus}`}>
+								{loggedInHome ? "Accéder à mon espace" : "Inscrire mon établissement"}
 							</Link>
 							<Link to="/pricing" className={`rounded-xl border border-[#d1d5db] bg-surface px-6 py-3 text-sm sm:text-base font-semibold text-ink transition-colors hover:bg-[#f9fafb] ${focus}`}>
 								Voir les tarifs
 							</Link>
 						</div>
-						<Link to="/login" className={`mt-4 inline-block text-sm font-medium text-primary hover:underline ${focus}`}>
-							Déjà inscrit ? Se connecter
-						</Link>
+						{!loggedInHome && (
+							<Link to="/login" className={`mt-4 inline-block text-sm font-medium text-primary hover:underline ${focus}`}>
+								Déjà inscrit ? Se connecter
+							</Link>
+						)}
 					</div>
 
 					{/* Interactive School Dashboard Preview */}

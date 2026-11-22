@@ -1,44 +1,40 @@
+import { filterRecommendations } from "../utils/recommendations";
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { Link, Navigate, useSearchParams } from "react-router-dom";
 
+import RecommendationSwitch from "../components/RecommendationSwitch";
 import Button from "../components/Button";
 import CandidateCard from "../components/CandidateCard";
 import CandidateFilterPanel, { NoMatchingCandidates } from "../components/CandidateFilters";
-import ChevronDownIcon from "../components/ChevronDownIcon";
 import HeartIcon from "../components/HeartIcon";
 import RecruiterNavbar from "../components/RecruiterNavbar";
 import {
 	excludeCandidate,
 	filterQuery,
 	getCandidates,
+	getCandidateRecommendations,
 	getFilterOptions,
 	keepCandidate,
 	type CandidateFilters,
 	type CandidateSummary,
 	type CandidatesResult,
 	type FilterOptions,
+	type RecommendedCandidate,
 } from "../services/candidates";
 import { filtersFromParams, hasFilters, NO_FILTERS, withCandidate, withFilters } from "../utils/candidateFilters";
 import { cardIndex, fullName, swipeAction } from "../utils/candidates";
 import { focus } from "../utils/searchPageStyles";
 import { REQUEST_ERRORS } from "../utils/validation";
 
-const arrow = [
-	"flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-primary bg-surface text-primary shadow-xs",
-	"hover:bg-primary hover:text-on-primary motion-safe:transition-colors",
-	// aria-disabled rather than disabled: on the first and last card, the button keeps the keyboard focus
-	"aria-disabled:cursor-default aria-disabled:border-[#d1d5db] aria-disabled:text-[#9ca3af] aria-disabled:hover:bg-surface",
-	focus,
-].join(" ");
-
 const shadow = "shadow-xs border border-[#e5e7eb]";
 const statePanel = `mx-auto flex max-w-[464px] flex-col items-center gap-4 rounded-2xl bg-surface p-8 text-center ${shadow}`;
 
 type CandidateDeckProps = {
 	candidates: CandidateSummary[];
+	recommended?: RecommendedCandidate[];
+	highlightTerms?: string[];
 	/** Index of the card shown */
 	index: number;
-	onSelect: (index: number) => void;
 	/** ♥ sur la carte affichée (JOB-037) */
 	onKeep?: () => void;
 	keeping?: boolean;
@@ -48,11 +44,11 @@ type CandidateDeckProps = {
 };
 
 // Cards shown one at a time, the next one peeking out underneath (mockup "Swipe – carte 2").
-// ♥ and 🚫 (JOB-037, JOB-038) take the card out of the deck and show the next one; the arrows only browse.
+// ♥ and 🚫 (JOB-037, JOB-038) take the card out of the deck and show the next one.
 // Swiping the card to the right does the same as ♥, to the left the same as 🚫.
-export function CandidateDeck({ candidates, index, onSelect, onKeep, keeping, onExclude, excluding }: CandidateDeckProps) {
+export function CandidateDeck({ candidates, index, onKeep, keeping, onExclude, excluding, recommended = [], highlightTerms = [] }: CandidateDeckProps) {
 	const candidate = candidates[index];
-	const hasPrevious = index > 0;
+	const currentRecommendation = recommended.find((item) => item.id === candidate.id);
 	const hasNext = index < candidates.length - 1;
 	const busy = keeping || excluding;
 	const swipeStart = useRef<number | null>(null);
@@ -82,33 +78,14 @@ export function CandidateDeck({ candidates, index, onSelect, onKeep, keeping, on
 	};
 
 	return (
-		// Small screens: arrows and position above the card. Large screens: arrows on each side of the card.
-		<div className="mx-auto grid max-w-[464px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 sm:max-w-none sm:grid-cols-[auto_minmax(0,464px)_auto] sm:justify-center sm:gap-x-8">
-			<button
-				type="button"
-				aria-label="Candidat précédent"
-				aria-disabled={!hasPrevious}
-				onClick={() => hasPrevious && onSelect(index - 1)}
-				className={`col-start-1 row-start-1 ${arrow}`}
-			>
-				<ChevronDownIcon className="rotate-90" />
-			</button>
-			<p role="status" className="col-start-2 row-start-1 text-center text-sm text-[#6b7280] sm:sr-only">
+		<div className="mx-auto flex max-w-[460px] flex-col gap-4">
+			<p role="status" className="sr-only">
 				Candidat {index + 1} sur {candidates.length}
-				<span className="sr-only"> : {fullName(candidate)}</span>
+				<span> : {fullName(candidate)}</span>
 			</p>
-			<button
-				type="button"
-				aria-label="Candidat suivant"
-				aria-disabled={!hasNext}
-				onClick={() => hasNext && onSelect(index + 1)}
-				className={`col-start-3 row-start-1 ${arrow}`}
-			>
-				<ChevronDownIcon className="-rotate-90" />
-			</button>
 
-			<div className={`relative isolate col-span-3 row-start-2 sm:col-span-1 sm:col-start-2 sm:row-start-1 ${hasNext ? "mb-8" : ""}`}>
-				{hasNext && <div aria-hidden="true" className={`absolute inset-x-3 top-6 -bottom-6 -z-10 rounded-2xl bg-surface ${shadow}`} />}
+			<div className={`relative isolate ${hasNext ? "student-swipe-stack" : ""}`}>
+				{hasNext && <div aria-hidden="true" className="absolute inset-x-3 top-3 bottom-20 -z-10 rounded-[2rem] bg-[#edf1f7] candidate-stack-back" />}
 				<div
 					onPointerDown={(event) => {
 						if (busy || event.button !== 0 || (event.target as HTMLElement).closest("button, [download]")) return;
@@ -132,11 +109,11 @@ export function CandidateDeck({ candidates, index, onSelect, onKeep, keeping, on
 							{drag > 0 ? "♥ Retenir" : "Écarter"}
 						</span>
 					)}
-					<CandidateCard candidate={candidate} onKeep={onKeep} keeping={keeping} onExclude={onExclude} excluding={excluding} />
+					<CandidateCard recommended={currentRecommendation !== undefined} reasons={currentRecommendation?.reasons} highlightTerms={highlightTerms} candidate={candidate} onKeep={onKeep} keeping={keeping} onExclude={onExclude} excluding={excluding} />
 				</div>
 			</div>
 			{(onKeep || onExclude) && (
-				<p className="col-span-3 row-start-3 text-center text-xs text-[#6b7280] sm:col-span-1 sm:col-start-2 sm:row-start-2 sm:text-sm">
+				<p className="text-center text-xs text-[#6b7280] sm:text-sm">
 					Glissez à gauche pour écarter, à droite pour retenir.
 				</p>
 			)}
@@ -166,6 +143,20 @@ export default function CandidatesPage() {
 	const [announcement, setAnnouncement] = useState("");
 	// Toutes les cartes ont été retenues ou écartées : un message différent de « aucun candidat »
 	const [allDone, setAllDone] = useState(false);
+	const [onlyRecommended, setOnlyRecommended] = useState(true);
+	const [recommended, setRecommended] = useState<RecommendedCandidate[] | null>(null);
+	const [recommendationError, setRecommendationError] = useState(false);
+	const [recommendationAttempt, setRecommendationAttempt] = useState(0);
+
+	useEffect(() => {
+		let ignore = false;
+		getCandidateRecommendations().then((response) => {
+			if (ignore) return;
+			if (response.ok) setRecommended(response.data);
+			else setRecommendationError(true);
+		});
+		return () => { ignore = true; };
+	}, [recommendationAttempt]);
 
 	useEffect(() => {
 		// Ignores the answer if the page was left, or the criteria changed, in the meantime
@@ -235,7 +226,8 @@ export default function CandidatesPage() {
 		}
 		// Carte suivante : celle qui prend la place de la carte retirée, ou la précédente s'il s'agissait de la dernière
 		const rest = candidates.filter((other) => other.id !== candidate.id);
-		setResult({ ok: true, candidates: rest });
+		setRecommended((current) => current?.filter((item) => item.id !== candidate.id) ?? null);
+		setResult((current) => current?.ok ? { ok: true, candidates: current.candidates.filter((other) => other.id !== candidate.id) } : current);
 		setAnnouncement(
 			kind === "keep"
 				? `${fullName(candidate)} a été ajouté à vos candidats retenus.`
@@ -244,6 +236,8 @@ export default function CandidatesPage() {
 		if (rest.length === 0) setAllDone(true);
 		else setParams(withCandidate(params, rest[Math.min(index, rest.length - 1)].id), { replace: true });
 	};
+
+	const visibleCandidates = result?.ok ? filterRecommendations(result.candidates, recommended, onlyRecommended) : [];
 
 	// Session expired in the meantime
 	if (result?.ok === false && result.reason === "unauthenticated") return <Navigate to="/login" replace />;
@@ -254,27 +248,29 @@ export default function CandidatesPage() {
 				<RecruiterNavbar />
 			</header>
 
-			<main className="mx-auto mt-8 max-w-[1236px]">
-				<h1 className="sr-only">Candidats</h1>
+			<main className="mx-auto mt-6 max-w-[1100px] lg:mt-10">
+
 				{/* Large screens: the filters on the left of the cards, as in the mockup. Small screens: above them */}
-				<div className="flex flex-col gap-8 lg:flex-row lg:items-start">
-					<CandidateFilterPanel
+				<div className="grid items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-12">
+					<div><div className="mb-5 hidden lg:block"><p className="text-xs font-bold tracking-[0.18em] text-primary uppercase">Découvrir</p><h1 className="mt-2 text-3xl font-extrabold tracking-tight">Trouvez votre prochain talent.</h1><p className="mt-2 text-sm leading-relaxed text-gray-500">Découvrez les profils et retenez ceux qui vous intéressent.</p></div><details className="lg:hidden"><summary className="cursor-pointer rounded-2xl border border-gray-200 bg-surface px-5 py-4 font-semibold">Affiner ma recherche</summary><div className="mt-3"><CandidateFilterPanel key={`mobile-${query}`} applied={applied} options={options} optionsError={optionsError} onRetryOptions={() => setOptionsAttempt(optionsAttempt + 1)} onSearch={search} count={result?.ok ? visibleCandidates.length : null} /></div></details><div className="hidden lg:block"><CandidateFilterPanel
 						key={query}
 						applied={applied}
 						options={options}
 						optionsError={optionsError}
 						onRetryOptions={() => setOptionsAttempt(optionsAttempt + 1)}
 						onSearch={search}
-						count={result?.ok ? result.candidates.length : null}
+						count={result?.ok ? visibleCandidates.length : null}
 						className="lg:w-[320px] lg:shrink-0"
-					/>
-					<div className="min-w-0 flex-1">
-						<div className="mx-auto mb-4 flex max-w-[464px] justify-end sm:max-w-[640px]">
+					/></div></div>
+					<div className="mx-auto w-full min-w-0 max-w-[460px]">
+						<div className="mx-auto mb-4 flex max-w-[480px] justify-end">
 							<Link to="/recruiter/shortlist" className={`flex items-center gap-2 rounded-sm text-sm font-semibold text-primary hover:underline ${focus}`}>
 								<HeartIcon width={18} height={18} fill="currentColor" />
 								Candidats retenus
 							</Link>
 						</div>
+						<div className="mb-4"><RecommendationSwitch checked={onlyRecommended} disabled={pending !== null || (recommended === null && !recommendationError)} onChange={(checked) => { setOnlyRecommended(checked); setAllDone(false); }} /></div>
+						{recommendationError ? <p role="alert" className="mb-4">Impossible de charger les recommandations. <button className="text-primary underline" onClick={() => { setRecommendationError(false); setRecommendationAttempt((n) => n + 1); }}>Réessayer</button></p> : recommended === null && <p role="status" className="mb-4">Chargement des recommandations…</p>}
 						{/* Succès du ♥ ou du 🚫 annoncé aux lecteurs d'écran */}
 						<p role="status" className="sr-only">
 							{announcement}
@@ -302,14 +298,14 @@ export default function CandidatesPage() {
 							</div>
 						)}
 
-						{result?.ok && result.candidates.length === 0 && !allDone && !hasFilters(applied) && (
+						{result?.ok && visibleCandidates.length === 0 && !allDone && !hasFilters(applied) && (
 							<div className={statePanel}>
-								<h2 className="text-xl font-semibold">Aucun candidat pour le moment</h2>
-								<p className="text-sm text-[#6b7280]">Les profils des étudiants apparaîtront ici.</p>
+								<h2 className="text-xl font-semibold">{onlyRecommended ? "Aucun candidat recommandé pour le moment" : "Aucun candidat pour le moment"}</h2>
+								<p className="text-sm text-[#6b7280]">{onlyRecommended ? "Publiez une offre avec ses critères ou désactivez les recommandations pour voir tous les profils." : "Les profils des étudiants apparaîtront ici."}</p>
 							</div>
 						)}
 
-						{result?.ok && result.candidates.length === 0 && !allDone && hasFilters(applied) && (
+						{result?.ok && visibleCandidates.length === 0 && !allDone && hasFilters(applied) && (
 							<NoMatchingCandidates
 								filters={applied}
 								options={options}
@@ -318,7 +314,7 @@ export default function CandidatesPage() {
 							/>
 						)}
 
-						{result?.ok && result.candidates.length === 0 && allDone && (
+						{result?.ok && visibleCandidates.length === 0 && allDone && (
 							<div className={statePanel}>
 								{/* Le bouton de la dernière carte vient de disparaître : le focus clavier se pose ici */}
 								<h2 ref={(heading) => heading?.focus()} tabIndex={-1} className="text-xl font-semibold outline-none">
@@ -329,17 +325,16 @@ export default function CandidatesPage() {
 							</div>
 						)}
 
-						{result?.ok && result.candidates.length > 0 && (
+						{result?.ok && visibleCandidates.length > 0 && (
 							<CandidateDeck
-								candidates={result.candidates}
-								index={cardIndex(result.candidates, params.get("candidate"))}
-								onSelect={(index) => {
-									setActionError("");
-									setParams(withCandidate(params, result.candidates[index].id), { replace: true });
-								}}
-								onKeep={() => dismiss("keep", result.candidates, cardIndex(result.candidates, params.get("candidate")))}
+								recommended={recommended ?? []}
+								highlightTerms={[applied.position, applied.skill, applied.region].filter(Boolean)}
+								candidates={visibleCandidates}
+								index={cardIndex(visibleCandidates, params.get("candidate"))}
+
+								onKeep={() => dismiss("keep", visibleCandidates, cardIndex(visibleCandidates, params.get("candidate")))}
 								keeping={pending === "keep"}
-								onExclude={() => dismiss("exclude", result.candidates, cardIndex(result.candidates, params.get("candidate")))}
+								onExclude={() => dismiss("exclude", visibleCandidates, cardIndex(visibleCandidates, params.get("candidate")))}
 								excluding={pending === "exclude"}
 							/>
 						)}
