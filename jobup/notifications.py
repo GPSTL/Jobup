@@ -3,7 +3,7 @@
 # Les événements sont branchés dans models.py. Contrat : docs/api/notifications.md
 import logging
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from django.conf import settings
 from django.core.mail import send_mail
@@ -19,6 +19,7 @@ from .models import (
     ApplicationStatus,
     Contract,
     ContractStage,
+    Interview,
     JobApplication,
     Message,
     Notification,
@@ -246,6 +247,96 @@ def notifyNewApplication(application: JobApplication) -> Notification | None:
         "Nouvelle candidature",
         f"{candidate.first_name} {candidate.last_name} a postulé à « {application.offer.title} ».",
         f"/recruiter/candidates/{candidate.pk}?offer={application.offer.pk}",
+    )
+
+
+DAYS = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
+MONTHS = [
+    "janvier",
+    "février",
+    "mars",
+    "avril",
+    "mai",
+    "juin",
+    "juillet",
+    "août",
+    "septembre",
+    "octobre",
+    "novembre",
+    "décembre",
+]
+
+
+def frenchDateTime(value: datetime) -> str:
+    # « mardi 1er décembre 2026 à 14:00 », à l'heure de Paris (TIME_ZONE)
+    local = timezone.localtime(value)
+    day = "1er" if local.day == 1 else str(local.day)
+    weekday, month = DAYS[local.weekday()], MONTHS[local.month - 1]
+    return f"{weekday} {day} {month} {local.year} à {local:%H:%M}"
+
+
+def notifyInterview(
+    application_id: int,
+    interview_id: int,
+    event: Literal["proposed", "confirmed", "cancelled"],
+) -> Notification | None:
+    # Entretien (jobup/interviews.py) : proposé ou annulé par le recruteur, l'étudiant est
+    # prévenu comme pour un statut de candidature ; créneau choisi par l'étudiant, seul le
+    # recruteur de l'offre est prévenu, comme pour une nouvelle candidature.
+    application = (
+        JobApplication.objects.select_related(
+            "student__user", "offer__recruiter__user", "offer__recruiter__company"
+        )
+        .filter(pk=application_id)
+        .first()
+    )
+    if application is None:
+        return None
+    title, company = application.offer.title, application.offer.recruiter.company
+    company_name = company.name if company else "Le recruteur"
+    student = application.student.user
+    if event == "cancelled":
+        if not preferencesOf(student).application_status:
+            return None
+        return notify(
+            student,
+            NotificationKind.INTERVIEW,
+            f"interview:{interview_id}:cancelled",
+            "Entretien annulé",
+            f"{company_name} a annulé l’entretien prévu pour « {title} ».",
+            f"/applications/{application.pk}",
+        )
+    interview = (
+        Interview.objects.prefetch_related("slots").filter(pk=interview_id).first()
+    )
+    if interview is None:
+        return None
+    slots = list(interview.slots.all())
+    if event == "proposed":
+        if not preferencesOf(student).application_status:
+            return None
+        count = f"{len(slots)} créneau{'x' if len(slots) > 1 else ''}"
+        return notify(
+            student,
+            NotificationKind.INTERVIEW,
+            f"interview:{interview.pk}:proposed",
+            "Entretien proposé",
+            f"{company_name} vous propose {count} d’entretien pour « {title} ». "
+            "Choisissez celui qui vous convient.",
+            f"/applications/{application.pk}",
+        )
+    chosen = next((slot for slot in slots if slot.chosen_at is not None), None)
+    recruiter = application.offer.recruiter.user
+    if chosen is None or not preferencesOf(recruiter).new_applications:
+        return None
+    return notify(
+        recruiter,
+        NotificationKind.INTERVIEW,
+        f"interview:{interview.pk}:confirmed",
+        "Entretien confirmé",
+        f"{student.first_name} {student.last_name} a choisi le créneau du "
+        f"{frenchDateTime(chosen.starts_at)} pour « {title} ».",
+        f"/recruiter/applications/{application.pk}",
     )
 
 

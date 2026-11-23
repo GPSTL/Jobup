@@ -1,6 +1,7 @@
 import os
 
 from django.contrib.auth import authenticate, login, logout
+from django.db import transaction
 from django.http import FileResponse
 from django.middleware.csrf import get_token
 from pydantic import BaseModel, ValidationError
@@ -10,6 +11,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from .email_confirmation import is_enabled, send_confirmation_email
+from .interviews import PENDING, Choice, choose, studentInterview
 from .models import (
     FINAL_STATUSES,
     DraftSerializer,
@@ -19,8 +22,6 @@ from .models import (
     Student,
     User,
 )
-
-# from .models import token_generator
 
 
 def getStudent(_id: int) -> Student | None:
@@ -64,6 +65,9 @@ def api_login(request: Request) -> Response:
         if suspended is not None and suspended.check_password(creds.password):
             return Response({"error": "Account suspended"}, status=403)
         return Response({"error": "Invalid credentials"}, status=401)
+    # Right password, but the address was never confirmed (jobup/email_confirmation.py)
+    if is_enabled() and not user.email_confirmed:
+        return Response({"error": "Email not confirmed"}, status=403)
     login(request._request, user)
     return Response(user.to_dict())
 
@@ -93,10 +97,18 @@ def applications(request: Request) -> Response:
         status__in=FINAL_STATUSES
     )  # Front ordering .order_by("-updated_at")
     completed = own.filter(status__in=FINAL_STATUSES)
+    # Candidatures en cours d'étude pour lesquelles le recruteur propose un entretien : elles
+    # restent aussi dans in_progress, la page « Candidatures » les range à part
+    interviews = []
+    for application in own.filter(status__in=PENDING, interview__isnull=False):
+        interviews.append(
+            {**application.to_dict(), "interview": studentInterview(application)}
+        )
     return Response(
         {
             "in_progress": [a.to_dict() for a in in_progress],
             "completed": [a.to_dict() for a in completed],
+            "interviews": interviews,
         }
     )
 
@@ -129,6 +141,40 @@ def application(request: Request, id: int) -> Response:
     target = getApplication(student, id)
     if target is None:
         return Response({"error": "Application not found"}, status=404)
+    return Response(target.to_detail_dict())
+
+
+# Erreurs du choix d'un créneau : la candidature ou le créneau n'existe pas (404), ou le
+# créneau ne peut plus être choisi (409)
+CHOICE_NOT_FOUND = {"Interview not found", "Slot not found"}
+
+
+@api_view(["POST"])
+def application_interview(request: Request, id: int) -> Response:
+    # L'étudiant retient un des créneaux d'entretien proposés par le recruteur
+    student = getOwnStudent(request.user)
+    if student is None:
+        return Response({"error": "Forbidden"}, status=403)
+    try:
+        choice = Choice.model_validate(request.data)
+    except ValidationError:
+        return Response({"error": "Invalid payload"}, status=400)
+    with transaction.atomic():
+        target = (
+            JobApplication.objects.select_for_update()
+            .filter(pk=id, student=student)
+            .select_related("student__school", "offer__recruiter__company")
+            .first()
+        )
+        if target is None:
+            return Response({"error": "Application not found"}, status=404)
+        if target.status not in PENDING:
+            return Response({"error": "Application closed"}, status=409)
+        error = choose(target, choice.slot)
+        if error is not None:
+            return Response(
+                {"error": error}, status=404 if error in CHOICE_NOT_FOUND else 409
+            )
     return Response(target.to_detail_dict())
 
 
@@ -186,17 +232,12 @@ def signup(request: Request):
     serializer.is_valid(raise_exception=True)
     serializer.save()
     user = serializer.instance
+    if is_enabled():
+        # Pas de connexion directe : le lien envoyé par e-mail confirme l'adresse d'abord
+        send_confirmation_email(user)
+        return Response(
+            {**user.to_dict(), "email_confirmation_required": True}, status=201
+        )
     # Connexion directe après l'inscription : la session est ouverte comme après /api/login
     login(request._request, user)
     return Response(user.to_dict(), status=201)
-
-
-# @api_view(["POST"])
-# @permission_classes([AllowAny])
-# def confirm_email(request: Request):
-#     user = getUser(request.uid)
-#     if user is None or not token_generator.check_token(user, request.token):
-#         return Response({"error": "Invalid request"}, status=400)
-#     user.email_confirmed = True
-#     user.is_active = True
-#     return Response({"message": "User email successfully confirmed"}, status=201)

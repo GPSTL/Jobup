@@ -8,7 +8,7 @@ import { AdminUsersTable, exportDefaults, exportFields } from "../front/pages/Ad
 import type { AdminUser } from "../front/services/adminUsers";
 import { downloadCsv, REVOKE_DELAY, saveFile } from "../front/services/exports";
 import { DEFAULT_QUERY, MAX_SELECTION, readSelection, saveSelection, toggleIds } from "../front/utils/adminUsers";
-import { exportQuery, initialValues, type ExportField } from "../front/utils/exports";
+import { exportQuery, initialValues, selectionFields, type ExportField } from "../front/utils/exports";
 
 const realFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = realFetch; });
@@ -172,4 +172,16 @@ test("sélection : gardée pour l'onglet, valeurs invalides ignorées, page sans
 	// Without storage (blocked, or not a browser) nothing throws
 	assert.deepEqual(readSelection(), []);
 	assert.doesNotThrow(() => saveSelection([1]));
+});
+
+test("sélection pour l'export : case « Seulement la sélection », cochée au départ", () => {
+	assert.deepEqual(selectionFields("ids", [], ["candidature", "candidatures"]), []);
+	const [one] = selectionFields("ids", [4], ["candidature", "candidatures"]);
+	assert.equal(one.label, "Seulement la sélection (1 candidature)");
+	const offers = selectionFields("offer", [4, 9], ["offre", "offres"]);
+	assert.equal(offers[0].label, "Seulement la sélection (2 offres)");
+	assert.equal(exportQuery(offers, initialValues(offers)), "offer=4%2C9");
+	const html = renderToStaticMarkup(<ExportForm url="/api/applications/export" fields={offers} />);
+	assert.match(html, /type="checkbox"[^>]*checked=""/);
+	assert.match(html, /Seulement la sélection \(2 offres\)/);
 });

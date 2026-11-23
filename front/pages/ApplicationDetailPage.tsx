@@ -4,6 +4,7 @@ import ApplicationLoader from "../components/ApplicationLoader";
 import ApplicationsLayout, { BackToApplications } from "../components/ApplicationsLayout";
 import ApplicationStatusChip from "../components/ApplicationStatusChip";
 import ContractDocument from "../components/ContractDocument";
+import StudentInterviewSection from "../components/StudentInterviewSection";
 import type { ApplicationDetail } from "../services/applications";
 import { applicationSteps, companyInitials, sentDate, STATUS, type ApplicationStep } from "../utils/applications";
 import { contractSteps } from "../utils/school";
@@ -70,6 +71,10 @@ type ApplicationDetailViewProps = {
 export function ApplicationDetailView({ application, submitted = false }: ApplicationDetailViewProps) {
 	const { resume, cover_letter: coverLetter } = application.documents;
 	const subtitle = [application.company, sentDate(application)].filter(Boolean).join(" • ");
+	// Entretien à choisir pendant l'étude de la candidature ; une fois acceptée, le créneau retenu reste affiché
+	const { interview } = application;
+	const underReview = application.status === STATUS.READ || application.status === STATUS.IN_REVIEW;
+	const showInterview = interview && (underReview || (application.status === STATUS.ACCEPTED && interview.confirmed_slot));
 
 	return (
 		<ApplicationsLayout className="max-w-[1000px] gap-5 px-5 py-7 md:px-10 md:py-8">
@@ -91,6 +96,8 @@ export function ApplicationDetailView({ application, submitted = false }: Applic
 				</div>
 				<ApplicationStatusChip status={application.status} />
 			</div>
+
+			{showInterview && <StudentInterviewSection key={interview.id} applicationId={application.id} interview={interview} readOnly={!underReview} />}
 
 			<h2 className={sectionTitle}>Suivi</h2>
 			<Steps steps={applicationSteps(application)} />

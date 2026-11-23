@@ -6,32 +6,34 @@ Un filtre vide est un filtre absent. Une liste s'écrit `a,b,c`. Un filtre incon
 
 Groupes de statuts de candidature (`status`) : `draft` (brouillon), `submitted` (postulée), `review` (lue ou en cours d'étude), `accepted`, `refused`.
 
+Sélection précise : sur chaque page, des cases permettent de cocher les éléments un par un. Le panneau d'export propose alors « Seulement la sélection (n …) », cochée par défaut, qui envoie leurs identifiants (`ids`, ou `offer` pour les offres du recruteur ; au plus 500). La sélection s'ajoute aux autres filtres : un élément coché mais exclu par un filtre n'est pas exporté, et un identifiant qui n'appartient pas au compte est ignoré.
+
 ## Étudiant — `GET /api/applications/export`
 
 Ses candidatures, brouillons compris, de la plus récente à la plus ancienne.
 
-- Filtre : `status` (liste de groupes).
+- Filtres : `status` (liste de groupes), `ids` (candidatures cochées).
 - Colonnes : Offre, Entreprise, Statut, Envoyée le, Mise à jour le, Contrat (déposé, validé par l'école, signé, ou vide).
 
 ## École — `GET /api/school/students/export`
 
 Les étudiants rattachés à l'école (hors comptes suspendus), par nom.
 
-- Filtres : `status` (liste d'avancements `searching`, `applying`, `accepted`, `contract`, `signed`, comme `/api/school/students`), `q` (mots du prénom ou du nom).
+- Filtres : `status` (liste d'avancements `searching`, `applying`, `accepted`, `contract`, `signed`, comme `/api/school/students`), `q` (mots du prénom ou du nom), `ids` (comptes des étudiants cochés).
 - Colonnes : Prénom, Nom, E-mail, Niveau d'études, Avancement, Candidatures envoyées, Dernière candidature (JOB-047), Entreprise du contrat, Étape du contrat (le contrat le plus avancé).
 
 ## École, contrats — `GET /api/school/contracts/export`
 
 Les contrats de la page « Contrats » (JOB-048) : ceux des étudiants encore rattachés à l'école, du plus récent au plus ancien.
 
-- Filtres : `period` (liste de `upcoming`, `ongoing`, `finished`, voir `school.md`), `stage` (liste de `deposited`, `validated`, `signed`).
+- Filtres : `period` (liste de `upcoming`, `ongoing`, `finished`, voir `school.md`), `stage` (liste de `deposited`, `validated`, `signed`), `ids` (contrats cochés).
 - Colonnes : Prénom, Nom, Entreprise, Offre, Date de début, Date de fin (`JJ/MM/AAAA`), Statut (À venir, En cours, Terminé, ou vide sans dates), Étape, Déposé le.
 
 ## Recruteur — `GET /api/recruiter/offers/export`
 
 Seulement ses offres : l'identifiant d'une offre d'un autre recruteur est ignoré. Les brouillons ne sont jamais exportés.
 
-- Filtres : `content` (`offers`, par défaut, ou `candidates`), `offer` (liste d'identifiants d'offres, toutes par défaut ; la page d'une offre exporte la sienne), `offer_status` (`active` ou `closed`), `status` (liste de `submitted`, `review`, `accepted`, `refused`).
+- Filtres : `content` (`offers`, par défaut, ou `candidates`), `offer` (liste d'identifiants d'offres, toutes par défaut ; la page d'une offre exporte la sienne, la page « Vos offres » les offres cochées), `offer_status` (`active` ou `closed`), `status` (liste de `submitted`, `review`, `accepted`, `refused`), `ids` (candidatures cochées dans la liste des candidats d'une offre : seules elles sont listées, ou comptées avec `content=offers`).
 - `content=offers`, une ligne par offre : Offre, Statut, Créée le, Type de contrat, Lieu, Candidatures (celles du filtre `status`), Postulées, En cours d'étude, Acceptées, Refusées.
 - `content=candidates`, une ligne par candidature reçue : Offre, Prénom, Nom, École, Niveau d'études, Expérience (mois), Compétences, Région, Statut, Envoyée le. Pas d'e-mail : le recruteur ne le voit pas ailleurs.
 

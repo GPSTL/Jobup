@@ -5,7 +5,15 @@ from django.views.static import serve
 from django.urls import path, re_path
 from django.contrib.staticfiles.views import serve as static_serve
 
-from jobup import api, candidates, exclusions, exports, notifications, shortlist
+from jobup import (
+    api,
+    candidates,
+    email_confirmation,
+    exclusions,
+    exports,
+    notifications,
+    shortlist,
+)
 from jobup.administration import (
     admin_login,
     admin_login_page,
@@ -38,6 +46,7 @@ from jobup.recruiter_offers import (
     application_contract,
     offer_applicants,
     recruiter_application,
+    recruiter_interview,
     recruiter_offers,
     recruiter_offer,
 )
@@ -76,6 +85,8 @@ urlpatterns = [
     re_path(r"^administration/.+$", admin_page),
     path("api/csrf", api.csrf),
     path("api/signup", api.signup),
+    path("api/signup/confirm", email_confirmation.confirm_email),
+    path("api/signup/resend-confirmation", email_confirmation.resend_confirmation),
     path("api/login", api.api_login),
     path("api/logout", api.api_logout),
     path("api/me", api.me),
@@ -97,6 +108,7 @@ urlpatterns = [
     path("api/applications/draft", api.application_draft),
     path("api/applications/<int:id>", api.application),
     path("api/applications/<int:id>/submit", api.application_submit),
+    path("api/applications/<int:id>/interview", api.application_interview),
     path("api/applications/<int:id>/documents/<slug:kind>", api.application_document),
     path("api/conversations/<int:id>/messages", conversation_messages),
     path(
@@ -116,6 +128,7 @@ urlpatterns = [
     path("api/recruiter/offers/<int:id>", recruiter_offer),
     path("api/recruiter/applications/<int:id>", recruiter_application),
     path("api/recruiter/applications/<int:id>/contract", application_contract),
+    path("api/recruiter/applications/<int:id>/interview", recruiter_interview),
     path("api/contracts/<int:id>/file", contract_file),
     path("api/student/contracts", student_contracts),
     path("api/recruiter/candidates/<int:id>/shortlist", shortlist.shortlist_candidate),

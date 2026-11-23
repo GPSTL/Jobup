@@ -4,11 +4,12 @@ import { Link } from "react-router-dom";
 import { CandidateAvatar } from "../components/CandidateIdentity";
 import { useAdvanceContract } from "../components/ContractCard";
 import ExportPanel from "../components/ExportPanel";
+import { SelectAllCheckbox, SelectCheckbox, SelectionSummary, type Selection } from "../components/ExportSelection";
 import { FilterChips, schoolPanel, SchoolLayout, SchoolRequestState, useSchoolData } from "../components/SchoolLayout";
 import { getSchoolContracts, type ContractPeriod, type SchoolContract } from "../services/school";
 import { fullName } from "../utils/candidates";
 import { formatDay } from "../utils/contracts";
-import type { ExportField } from "../utils/exports";
+import { selectionFields, type ExportField } from "../utils/exports";
 import { highlightText } from "../utils/highlight";
 import { CONTRACT_ACTIONS, CONTRACT_PERIOD, CONTRACT_STAGE, nextContractSort, sortContracts, STAGE_KEYS, STAGE_LABELS, type ContractSort, type ContractSortColumn } from "../utils/school";
 import { focus } from "../utils/searchPageStyles";
@@ -54,15 +55,22 @@ type ContractsTableProps = {
 	saving: number | null;
 	error: { id: number; message: string } | null;
 	highlightQuery?: string;
+	/** Contrats cochés pour l'export ; sans elle, le tableau n'a pas de cases */
+	selection?: Selection;
 };
 
 // Tableau des contrats (JOB-048, ECO-06) : étudiant, entreprise, dates, statut, PDF et action de l'école
-export function SchoolContractsTable({ contracts, sort, onSort, onAdvance, saving, error, highlightQuery }: ContractsTableProps) {
+export function SchoolContractsTable({ contracts, sort, onSort, onAdvance, saving, error, highlightQuery, selection }: ContractsTableProps) {
 	return (
 		<div role="region" aria-label="Contrats des étudiants" tabIndex={0} className={`overflow-x-auto rounded-2xl border border-[#e5e7eb] ${focus}`}>
 			<table className="w-full min-w-[960px] border-collapse text-left text-sm text-ink">
 				<thead className="bg-[#f9fafb] text-xs text-[#6b7280]">
 					<tr>
+						{selection && (
+							<th scope="col" className={`${cell} w-10`}>
+								<SelectAllCheckbox ids={contracts.map((contract) => contract.id)} selection={selection} label="Sélectionner tous les contrats affichés pour l’export" />
+							</th>
+						)}
 						{COLUMNS.map(({ column, label }) => {
 							if (column === null) return <th key={label} scope="col" className={`${cell} font-semibold whitespace-nowrap`}>{label}</th>;
 							const direction = sort === column ? "ascending" : sort === `-${column}` ? "descending" : undefined;
@@ -84,7 +92,12 @@ export function SchoolContractsTable({ contracts, sort, onSort, onAdvance, savin
 						const period = contract.period ? CONTRACT_PERIOD[contract.period] : null;
 						const failed = error?.id === contract.id ? error.message : "";
 						return (
-							<tr key={contract.id} className="border-t border-[#e5e7eb] align-top hover:bg-[#f9fafb]">
+							<tr key={contract.id} className={`border-t border-[#e5e7eb] align-top ${selection?.ids.includes(contract.id) ? "bg-[#eff6ff]" : "hover:bg-[#f9fafb]"}`}>
+								{selection && (
+									<td className={`${cell} w-10`}>
+										<SelectCheckbox id={contract.id} selection={selection} label={`Sélectionner le contrat de ${fullName(contract.student)} (${contract.offer_title}) pour l’export`} />
+									</td>
+								)}
 								<th scope="row" className={`${cell} font-medium`}>
 									<Link to={`/school/students/${contract.student.id}`} className={`flex items-center gap-3 rounded-sm hover:underline ${focus}`}>
 										<CandidateAvatar candidate={contract.student} className="size-9 text-sm" />
@@ -132,6 +145,8 @@ export default function SchoolContractsPage() {
 	const [period, setPeriod] = useState<"all" | ContractPeriod>("all");
 	const [query, setQuery] = useState("");
 	const [sort, setSort] = useState<ContractSort>("student");
+	// Contrats cochés dans le tableau, pour l'export
+	const [picked, setPicked] = useState<number[]>([]);
 	const { advance, saving, error } = useAdvanceContract((updated) => {
 		if (result?.ok) setData(result.data.map((contract) => (contract.id === updated.id ? updated : contract)));
 	});
@@ -160,11 +175,14 @@ export default function SchoolContractsPage() {
 							</div>
 						)}
 						{contracts.length > 0 && (
-							<ExportPanel
-								url="/api/school/contracts/export"
-								fields={exportFields}
-								defaults={{ period: period === "all" ? [] : [period], stage: stage === 0 ? [] : [STAGE_KEYS[stage]] }}
-							/>
+							<div className="flex flex-col gap-3">
+								<ExportPanel
+									url="/api/school/contracts/export"
+									fields={[...exportFields, ...selectionFields("ids", picked, ["contrat", "contrats"])]}
+									defaults={{ period: period === "all" ? [] : [period], stage: stage === 0 ? [] : [STAGE_KEYS[stage]] }}
+								/>
+								<SelectionSummary selection={{ ids: picked, onChange: setPicked }} noun={["contrat", "contrats"]} />
+							</div>
 						)}
 						<FilterChips
 							label="Filtrer les contrats par étape"
@@ -181,7 +199,7 @@ export default function SchoolContractsPage() {
 						{visible.length === 0 ? (
 							<p role="status" className="rounded-2xl border border-[#e5e7eb] bg-[#f9fafb] p-5 text-sm text-[#6b7280]">{contracts.length === 0 ? "Aucun contrat déposé pour le moment." : "Aucun contrat ne correspond à ces filtres."}</p>
 						) : (
-							<SchoolContractsTable contracts={visible} sort={sort} onSort={setSort} onAdvance={advance} saving={saving} error={error} highlightQuery={query} />
+							<SchoolContractsTable contracts={visible} sort={sort} onSort={setSort} onAdvance={advance} saving={saving} error={error} highlightQuery={query} selection={{ ids: picked, onChange: setPicked }} />
 						)}
 					</>
 				)}

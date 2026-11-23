@@ -7,7 +7,7 @@
 //   GET  /api/notifications/preferences      préférences de l'utilisateur
 //   PUT  /api/notifications/preferences      les modifier (seuls les champs envoyés changent)
 
-export type NotificationKind = "message" | "application_update" | "application_accepted" | "application_refused" | "new_application" | "school_request" | "contract_update";
+export type NotificationKind = "message" | "application_update" | "application_accepted" | "application_refused" | "new_application" | "school_request" | "contract_update" | "interview";
 
 export type AppNotification = {
 	id: number;

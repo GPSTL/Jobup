@@ -25,6 +25,8 @@ The layer is shared by every role: the models (`Notification`, `NotificationPref
 | Status set to “refused” | The student | “Candidature refusée”, “Acme n’a pas retenu votre candidature « … ».” |
 | Application sent (status “submitted”, JOB-046) | The recruiter who published the offer | “Nouvelle candidature”, “Lucas Martin a postulé à « Développeur Java en alternance ».” Link `/recruiter/candidates/<student>?offer=<offer>`, the profile of the candidate for this offer (as “Voir” in the applicants of an offer, JOB-040) |
 | New message of the student (JOB-046) | The recruiter of the conversation | “Nouveau message de Sarah Benali”, the start of the text or “Pièce jointe : <name>”. Link `/recruiter/messages/<conversation>` |
+| Interview proposed, replaced or cancelled by the recruiter | The student | Kind `interview`: “Entretien proposé” / “Entretien annulé”. Link `/applications/<id>`. Preference `application_status`. See `interviews.md` |
+| Interview slot chosen by the student | The recruiter who published the offer | Kind `interview`: “Entretien confirmé”, “Lucas Martin a choisi le créneau du jeudi 26 novembre 2026 à 14:00 pour « … ».” Link `/recruiter/applications/<id>`. Preference `new_applications` |
 
 - The events are connected to the models (`post_save` of `Message` and `JobApplication`, in `jobup/models.py`), so every screen and API that saves a message or a status triggers them, the recruiter decision of JOB-044 included. A status changed with `QuerySet.update()` does not go through `save()` and is not notified.
 - They run once the save is committed: a failure of the notification never cancels the message or the status.

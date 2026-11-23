@@ -3,12 +3,13 @@ import { Link, useLocation } from "react-router-dom";
 
 import { CandidateAvatar } from "../components/CandidateIdentity";
 import ExportPanel from "../components/ExportPanel";
+import { SelectAllCheckbox, SelectCheckbox, SelectionSummary, type Selection } from "../components/ExportSelection";
 import { SortArrows } from "./AdminUsersPage";
 import { FilterChips, schoolPanel, SchoolLayout, SchoolRequestState, useSchoolData } from "../components/SchoolLayout";
 import { decideSchoolRequest, getSchoolRequests, getSchoolStudents, type SchoolStudent, type StudentStatus } from "../services/school";
 import { formatDate } from "../utils/applications";
 import { fullName } from "../utils/candidates";
-import type { ExportField } from "../utils/exports";
+import { selectionFields, type ExportField } from "../utils/exports";
 import { highlightText } from "../utils/highlight";
 import { nextStudentSort, sortStudents, STUDENT_STATUS, type StudentSort, type StudentSortColumn } from "../utils/school";
 import { focus } from "../utils/searchPageStyles";
@@ -38,15 +39,22 @@ type StudentsTableProps = {
 	sort: StudentSort;
 	onSort: (sort: StudentSort) => void;
 	highlightQuery?: string;
+	/** Étudiants cochés pour l'export ; sans elle, le tableau n'a pas de cases */
+	selection?: Selection;
 };
 
 // Tableau des étudiants (JOB-047, ECO-05), trié par colonne ; défile seul sur petit écran
-export function SchoolStudentsTable({ students, sort, onSort, highlightQuery }: StudentsTableProps) {
+export function SchoolStudentsTable({ students, sort, onSort, highlightQuery, selection }: StudentsTableProps) {
 	return (
 		<div role="region" aria-label="Étudiants de l’école" tabIndex={0} className={`overflow-x-auto rounded-2xl border border-[#e5e7eb] ${focus}`}>
 			<table className="w-full min-w-[720px] border-collapse text-left text-sm text-ink">
 				<thead className="bg-[#f9fafb] text-xs text-[#6b7280]">
 					<tr>
+						{selection && (
+							<th scope="col" className={`${cell} w-10`}>
+								<SelectAllCheckbox ids={students.map((student) => student.id)} selection={selection} label="Sélectionner tous les étudiants affichés pour l’export" />
+							</th>
+						)}
 						{COLUMNS.map(({ column, label }) => {
 							const direction = sort === column ? "ascending" : sort === `-${column}` ? "descending" : undefined;
 							return (
@@ -63,7 +71,12 @@ export function SchoolStudentsTable({ students, sort, onSort, highlightQuery }: 
 				</thead>
 				<tbody>
 					{sortStudents(students, sort).map((student) => (
-						<tr key={student.id} className="border-t border-[#e5e7eb] hover:bg-[#f9fafb]">
+						<tr key={student.id} className={`border-t border-[#e5e7eb] ${selection?.ids.includes(student.id) ? "bg-[#eff6ff]" : "hover:bg-[#f9fafb]"}`}>
+							{selection && (
+								<td className={`${cell} w-10`}>
+									<SelectCheckbox id={student.id} selection={selection} label={`Sélectionner ${fullName(student)} pour l’export`} />
+								</td>
+							)}
 							<th scope="row" className={`${cell} font-medium`}>
 								<span className="flex items-center gap-3">
 									<CandidateAvatar candidate={student} className="size-9 text-sm" />
@@ -91,6 +104,8 @@ export default function SchoolStudentsPage() {
 	const [selected, setSelected] = useState<"all" | StudentStatus>("all");
 	const [query, setQuery] = useState("");
 	const [sort, setSort] = useState<StudentSort>("name");
+	// Étudiants cochés dans le tableau, pour l'export
+	const [picked, setPicked] = useState<number[]>([]);
 	// Demande en cours de décision, et message d'échec
 	const [deciding, setDeciding] = useState<number | null>(null);
 	const [error, setError] = useState("");
@@ -156,11 +171,14 @@ export default function SchoolStudentsPage() {
 							<input id="student-search" type="search" value={query} onChange={(event) => setQuery(event.target.value)} className={`min-h-11 w-full max-w-md rounded-xl border border-[#d1d5db] bg-surface px-3.5 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20`} />
 						</div>
 						{all.length > 0 && (
-							<ExportPanel
-								url="/api/school/students/export"
-								fields={exportFields(query.trim())}
-								defaults={{ status: selected === "all" ? [] : [selected] }}
-							/>
+							<div className="flex flex-col gap-3">
+								<ExportPanel
+									url="/api/school/students/export"
+									fields={[...exportFields(query.trim()), ...selectionFields("ids", picked, ["étudiant", "étudiants"])]}
+									defaults={{ status: selected === "all" ? [] : [selected] }}
+								/>
+								<SelectionSummary selection={{ ids: picked, onChange: setPicked }} noun={["étudiant", "étudiants"]} />
+							</div>
 						)}
 						<FilterChips
 							label="Filtrer les étudiants par avancement"
@@ -171,7 +189,7 @@ export default function SchoolStudentsPage() {
 						{visible.length === 0 ? (
 							<p role="status" className="rounded-2xl border border-[#e5e7eb] bg-[#f9fafb] p-5 text-sm text-[#6b7280]">{all.length === 0 ? "Aucun étudiant rattaché à votre école pour le moment." : "Aucun étudiant ne correspond."}</p>
 						) : (
-							<SchoolStudentsTable students={visible} sort={sort} onSort={setSort} highlightQuery={query} />
+							<SchoolStudentsTable students={visible} sort={sort} onSort={setSort} highlightQuery={query} selection={{ ids: picked, onChange: setPicked }} />
 						)}
 					</>
 				)}
