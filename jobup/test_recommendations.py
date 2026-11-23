@@ -10,6 +10,7 @@ class RecommendationTests(SavedOfferTests):
         matched = self.createOffer("Data engineer")
         matched.category = JobCategory.DATA_AI
         matched.save()
+        activity_only = self.createOffer("Développeur Angular")
         saved = self.createOffer("Saved")
         SavedOffer.objects.create(student=self.student, offer=saved)
         applied = self.createOffer("Applied")
@@ -21,15 +22,16 @@ class RecommendationTests(SavedOfferTests):
         self.assertEqual(response.status_code, 200)
         items = response.json()
         self.assertEqual(items[0]["id"], matched.pk)
+        self.assertEqual(items[0]["match_percentage"], 50)
+        self.assertTrue(all(item["match_percentage"] > 0 for item in items))
+        self.assertNotIn(activity_only.pk, [item["id"] for item in items])
+        public_offers = self.client.get("/api/offers").json()
+        self.assertIn(activity_only.pk, [item["id"] for item in public_offers])
         self.assertIn("Correspond à votre domaine", items[0]["reasons"])
         self.assertIn("Correspond au poste recherché", items[0]["reasons"])
         self.assertNotIn(saved.pk, [item["id"] for item in items])
         self.assertNotIn(applied.pk, [item["id"] for item in items])
         self.assertNotIn(self.inactive.pk, [item["id"] for item in items])
-        self.assertIn(
-            "Dans un domaine lié à vos offres enregistrées ou candidatures",
-            items[1]["reasons"],
-        )
 
     def test_fallback_and_permissions(self):
         url = "/api/student/recommendations"
@@ -72,6 +74,35 @@ class RecommendationTests(SavedOfferTests):
         self.assertEqual(items[0]["id"], offer.pk)
         self.assertIn("Correspond au poste recherché", items[0]["reasons"])
         self.assertIn(
-            "Mots communs à votre CV et aux critères : go, react, ts",
+            "Mots communs à votre CV ou profil et à l’offre : go, react, ts",
             items[0]["reasons"],
         )
+
+    def test_title_skill_creates_a_match_on_both_sides_without_requirements(self):
+        angular = self.createOffer("Développeur Angular")
+        java = self.createOffer("Développeur Java")
+        self.student.skills = "Angular, TypeScript"
+        self.student.save()
+
+        self.client.force_authenticate(self.student.user)
+        student_items = self.client.get("/api/student/recommendations").json()
+        self.assertEqual(
+            [(item["id"], item["match_percentage"]) for item in student_items],
+            [(angular.pk, 25)],
+        )
+        self.assertNotIn(java.pk, [item["id"] for item in student_items])
+        self.assertTrue(
+            any("angular" in reason for reason in student_items[0]["reasons"])
+        )
+
+        self.client.force_authenticate(self.recruiter.user)
+        recruiter_items = self.client.get(
+            "/api/recruiter/candidates/recommendations"
+        ).json()
+        match = next(
+            item for item in recruiter_items if item["id"] == self.student.user_id
+        )
+        self.assertEqual(
+            match["match_percentage"], student_items[0]["match_percentage"]
+        )
+        self.assertTrue(any(angular.title in reason for reason in match["reasons"]))

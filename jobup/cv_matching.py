@@ -1,14 +1,15 @@
-"""Extract bounded CV text and compare it with explicit offer requirements."""
+"""Extract bounded CV text and compare it with offer requirements or role keywords."""
 
 import io
 import re
 import zipfile
+from dataclasses import dataclass
 from xml.etree import ElementTree
 
 from pypdf import PdfReader
 
 from .conversations import normalize
-from .models import Student
+from .models import Offer, Student
 
 MAX_FILE = 5 * 1024 * 1024
 MAX_XML = 2 * 1024 * 1024
@@ -18,6 +19,11 @@ STOP_WORDS = frozenset(
     " recherche recherchee profil poste maitrise anglais francais niveau"
     " alternance stage junior confirme debutant"
     " the and for with from you your our required experience skills knowledge".split()
+)
+GENERIC_TITLE_TERMS = frozenset(
+    "developpeur developer ingenieur engineer assistant charge responsable chef"
+    " technicien consultant manager analyst analyste offre emploi recrute"
+    " cdi cdd fullstack frontend backend full stack remote".split()
 )
 SHORT_TERMS = frozenset(
     {"ai", "bi", "c#", "go", "ia", "it", "js", "qa", "rh", "ts", "ui", "ux"}
@@ -57,7 +63,7 @@ def position_matches(desired_position: str, offer_title: str) -> bool:
     title = comparable_text(offer_title)
     if not position or not title:
         return False
-    if position in title or title in position:
+    if f" {position} " in f" {title} " or f" {title} " in f" {position} ":
         return True
     pos_terms = terms(position)
     title_terms = terms(title)
@@ -78,9 +84,44 @@ def terms(text: str) -> set[str]:
     return result
 
 
+def offer_keywords(offer: Offer) -> tuple[set[str], int]:
+    requirements = terms(offer.requirements)
+    if requirements:
+        return requirements, 50
+    return terms(offer.title) - GENERIC_TITLE_TERMS, 25
+
+
 def student_terms(student: Student, resume_text: str | None = None) -> set[str]:
     extracted = cv_text(student) if resume_text is None else resume_text
     return terms(f"{student.skills} {extracted}")
+
+
+@dataclass(frozen=True)
+class OfferMatch:
+    category: bool
+    position: bool
+    keywords: list[str]
+    percentage: int
+
+
+def match_offer(
+    student: Student,
+    offer: Offer,
+    candidate_terms: set[str],
+    skill_criteria: tuple[set[str], int],
+) -> OfferMatch:
+    category = student.category is not None and student.category == offer.category
+    position = position_matches(student.desired_position, offer.title)
+    offer_terms, max_skill_points = skill_criteria
+    keywords = sorted(candidate_terms & offer_terms)
+    # Title keywords provide weaker evidence than explicit requirements.
+    skill_points = (
+        max(1, round(max_skill_points * len(keywords) / len(offer_terms)))
+        if keywords
+        else 0
+    )
+    percentage = 20 * int(category) + 30 * int(position) + skill_points
+    return OfferMatch(category, position, keywords, percentage)
 
 
 def _extract_cv_text(student: Student) -> str:

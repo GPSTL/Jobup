@@ -207,3 +207,9 @@ test("API : session expirée, profil introuvable, erreurs du serveur et du rése
 	assert.deepEqual(await getCandidates(), { ok: false, reason: "network" });
 	assert.deepEqual(await getCandidate(7), { ok: false, reason: "network" });
 });
+
+test("candidate card displays the compatibility percentage when available", () => {
+	assert.match(render(<CandidateCard candidate={candidate} matchPercentage={78} />), /<header[^>]*>.*78%<\/strong>.*de compatibilité.*<\/header>.*<h2[^>]*>Lucas Martin/);
+	assert.match(render(<CandidateCard candidate={candidate} matchPercentage={0} />), /0%<\/strong>.*de compatibilité/);
+	assert.doesNotMatch(render(<CandidateCard candidate={candidate} />), /de compatibilité/);
+});

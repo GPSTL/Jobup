@@ -79,7 +79,7 @@ export async function getCandidates(filters?: CandidateFilters): Promise<Candida
 	return { ok: false, reason: answer.reason === "notFound" ? "server" : answer.reason };
 }
 
-export type RecommendedCandidate = CandidateSummary & { reasons: string[] };
+export type RecommendedCandidate = CandidateSummary & { reasons: string[]; match_percentage: number };
 export async function getCandidateRecommendations(): Promise<Answer<RecommendedCandidate[]>> {
 	return getJson<RecommendedCandidate[]>("/api/recruiter/candidates/recommendations");
 }

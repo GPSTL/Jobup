@@ -14,7 +14,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from .conversations import normalize
-from .cv_matching import position_matches, student_terms, terms
+from .cv_matching import match_offer, offer_keywords, student_terms
 from .models import JobApplication, Message, Offer, Recruiter, Role, Student, User
 
 # Levels of the "Expérience" list, in months of Student.experience_level:
@@ -193,43 +193,43 @@ def candidate_recommendations(request: Request) -> Response:
     if not isRecruiter(user) or not Recruiter.objects.filter(user=user).exists():
         return Response({"error": "Forbidden"}, status=403)
     offers = [
-        (offer, terms(offer.requirements))
+        (offer, offer_keywords(offer))
         for offer in Offer.objects.filter(recruiter__user=user, is_active=True)
     ]
     if not offers:
         return Response([])
     ranked = []
     for student in recruiterDeck(user):
-        best_score = 0
-        best_reasons = []
         candidate_terms = student_terms(student)
-        for offer, req_terms in offers:
-            score = 0
-            reasons = []
-            if student.category is not None and student.category == offer.category:
-                score += 3
-                reasons.append(f"Domaine correspondant à l’offre « {offer.title} »")
-            if position_matches(student.desired_position, offer.title):
-                score += 3
-                reasons.append(
-                    f"Poste recherché correspondant à l’offre « {offer.title} »"
-                )
-            matching_terms = sorted(candidate_terms & req_terms)
-            if matching_terms:
-                score += min(len(matching_terms), 3)
-                reasons.append(
-                    f"Mots présents dans le CV et les critères de l’offre « {offer.title} » : "
-                    + ", ".join(matching_terms[:3])
-                )
-            if score > best_score:
-                best_score, best_reasons = score, reasons
-        if best_score:
-            ranked.append((best_score, student, best_reasons))
+        offer, match = max(
+            (
+                (offer, match_offer(student, offer, candidate_terms, keywords))
+                for offer, keywords in offers
+            ),
+            key=lambda entry: entry[1].percentage,
+        )
+        if not match.percentage:
+            continue
+        reasons = []
+        if match.category:
+            reasons.append(f"Domaine correspondant à l’offre « {offer.title} »")
+        if match.position:
+            reasons.append(f"Poste recherché correspondant à l’offre « {offer.title} »")
+        if match.keywords:
+            reasons.append(
+                f"Mots du CV ou du profil présents dans l’offre « {offer.title} » : "
+                + ", ".join(match.keywords[:3])
+            )
+        ranked.append((match.percentage, student, reasons))
     ranked.sort(key=lambda item: item[0], reverse=True)
     return Response(
         [
-            {**candidateCard(student), "reasons": reasons}
-            for _, student, reasons in ranked
+            {
+                **candidateCard(student),
+                "reasons": reasons,
+                "match_percentage": percentage,
+            }
+            for percentage, student, reasons in ranked
         ]
     )
 
