@@ -6,7 +6,7 @@ import ChevronDownIcon from "../components/ChevronDownIcon";
 import ExportPanel from "../components/ExportPanel";
 import Pagination from "../components/Pagination";
 import SearchIcon from "../components/SearchIcon";
-import { getAdminUserFilters, getAdminUsers, type AdminSchool, type AdminUser, type AdminUsersResult } from "../services/adminUsers";
+import { getAdminUsers, type AdminUser, type AdminUsersResult } from "../services/adminUsers";
 import {
 	adminLoginLink,
 	formatDate,
@@ -16,12 +16,15 @@ import {
 	PAGE_SIZES,
 	queryFromParams,
 	rangeLabel,
+	ROLE_CHOICES,
+	ROLE_LABELS,
 	readSelection,
 	saveSelection,
 	searchFromQuery,
 	sortDirection,
 	toggleIds,
 	withChanges,
+	type AdminUserRole,
 	type AdminUserSort,
 	type AdminUserStatus,
 	type AdminUsersQuery,
@@ -35,7 +38,7 @@ const COLUMNS: { column: SortColumn; label: string }[] = [
 	{ column: "first_name", label: "Prénom" },
 	{ column: "last_name", label: "Nom" },
 	{ column: "email", label: "E-mail" },
-	{ column: "school", label: "École" },
+	{ column: "role", label: "Type de compte" },
 	{ column: "date_joined", label: "Inscription" },
 ];
 
@@ -68,7 +71,7 @@ function AccountRow({ user, returnTo, selection, highlightQuery }: { user: Admin
 			<td className={cell}>{highlightText(user.first_name, highlightQuery)}</td>
 			<td className={`${cell} font-medium`}>{highlightText(user.last_name, highlightQuery)}</td>
 			<td className={`${cell} whitespace-nowrap`}>{highlightText(user.email, highlightQuery)}</td>
-			<td className={cell}>{user.school ? highlightText(user.school, highlightQuery) : <span className="text-[#9ca3af]">Non renseignée</span>}</td>
+			<td className={cell}>{highlightText(ROLE_LABELS[user.role] ?? "Inconnu", highlightQuery)}</td>
 			<td className={`${cell} whitespace-nowrap`}><time dateTime={user.date_joined}>{formatDate(user.date_joined)}</time></td>
 			<td className={`${cell} whitespace-nowrap`}>
 				{user.is_active ? (
@@ -123,7 +126,7 @@ export function AdminUsersTable({ users, sort, onSort, selection, highlightQuery
 	const location = useLocation();
 	const returnTo = location.pathname + location.search;
 	return (
-		<div role="region" aria-label="Comptes étudiants" tabIndex={0} className={`relative overflow-x-auto rounded-2xl border border-[#e1e3e8] ${focus}`}>
+		<div role="region" aria-label="Comptes utilisateurs" tabIndex={0} className={`relative overflow-x-auto rounded-2xl border border-[#e1e3e8] ${focus}`}>
 			<table className="w-full min-w-[900px] border-collapse text-left text-sm text-ink">
 				<thead className="bg-[#f9fafb] text-xs text-[#6b7280]">
 					<tr>
@@ -156,7 +159,7 @@ export function AdminUsersTable({ users, sort, onSort, selection, highlightQuery
 }
 
 // Results follow the typing (ADM-09), 300 ms after the last key
-function SearchField({ value, onSearch }: { value: string; onSearch: (q: string) => void }) {
+export function SearchField({ value, onSearch, label = "Rechercher un utilisateur par nom, e-mail, école ou entreprise", placeholder = "Rechercher par nom, e-mail, école ou entreprise…" }: { value: string; onSearch: (q: string) => void; label?: string; placeholder?: string }) {
 	const [typed, setTyped] = useState(value);
 	const [shown, setShown] = useState(value);
 	// The search changed elsewhere (« Réinitialiser », browser arrows): the field follows
@@ -175,43 +178,39 @@ function SearchField({ value, onSearch }: { value: string; onSearch: (q: string)
 	return (
 		<label className={`${field} lg:flex-1`}>
 			<SearchIcon width={20} height={20} className="text-gray-500" />
-			<span className="sr-only">Rechercher un étudiant par nom, e-mail ou école</span>
-			<input type="search" value={typed} maxLength={100} onChange={(e) => setTyped(e.target.value)} placeholder="Rechercher par nom, e-mail ou école…" className={input} />
+			<span className="sr-only">{label}</span>
+			<input type="search" value={typed} maxLength={100} onChange={(e) => setTyped(e.target.value)} placeholder={placeholder} className={input} />
 		</label>
 	);
 }
 
 type AdminUsersToolbarProps = {
 	query: AdminUsersQuery;
-	/** Values of the "École" filter: null while they load */
-	schools: AdminSchool[] | "error" | null;
 	onSearch: (q: string) => void;
 	onChange: (changes: Partial<AdminUsersQuery>) => void;
 	onReset: () => void;
 };
 
-export function AdminUsersToolbar({ query, schools, onSearch, onChange, onReset }: AdminUsersToolbarProps) {
-	const choices = Array.isArray(schools) ? schools : [];
-	// A school of the URL that is not offered (any more) stays shown: the form always matches the table
-	const unknownSchool = query.school !== "" && !choices.some((school) => String(school.id) === query.school);
+export function AdminUsersToolbar({ query, onSearch, onChange, onReset }: AdminUsersToolbarProps) {
 	return (
-		<form role="search" aria-label="Rechercher et filtrer les étudiants" onSubmit={(e) => e.preventDefault()} className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center">
+		<form role="search" aria-label="Rechercher et filtrer les utilisateurs" onSubmit={(e) => e.preventDefault()} className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center">
 			<SearchField value={query.q} onSearch={onSearch} />
+			<label className="relative lg:w-[220px]">
+				<span className="sr-only">Type de compte</span>
+				<select value={query.role} onChange={(e) => onChange({ role: e.target.value as AdminUserRole })} className={select}>
+					<option value="">Tous les types</option>
+					{ROLE_CHOICES.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+					{/* An administrator filter of the URL stays shown: the form always matches the table */}
+					{query.role === "admin" && <option value="admin">Administrateurs</option>}
+				</select>
+				<ChevronDownIcon width={20} height={20} className={chevron} />
+			</label>
 			<label className="relative lg:w-[220px]">
 				<span className="sr-only">Statut du compte</span>
 				<select value={query.status} onChange={(e) => onChange({ status: e.target.value as AdminUserStatus })} className={select}>
 					<option value="">Tous les statuts</option>
 					<option value="active">Actifs</option>
 					<option value="suspended">Suspendus</option>
-				</select>
-				<ChevronDownIcon width={20} height={20} className={chevron} />
-			</label>
-			<label className="relative lg:w-[280px]">
-				<span className="sr-only">École</span>
-				<select value={query.school} disabled={!Array.isArray(schools)} onChange={(e) => onChange({ school: e.target.value })} className={`${select} disabled:cursor-default disabled:bg-[#f9fafb] disabled:text-[#9ca3af]`}>
-					<option value="">{schools === "error" ? "Écoles indisponibles" : "Toutes les écoles"}</option>
-					{choices.map((school) => <option key={school.id} value={String(school.id)}>{school.name}</option>)}
-					{unknownSchool && <option value={query.school}>École sélectionnée</option>}
 				</select>
 				<ChevronDownIcon width={20} height={20} className={chevron} />
 			</label>
@@ -259,11 +258,11 @@ export function AdminUsersResults({ result, loading, query, onChange, onRetry, o
 		);
 	}
 	if (result.count === 0) {
-		// ADM-09: a message when no student matches
-		if (!hasCriteria(query)) return <p role="status" className="py-16 text-center text-sm text-[#6b7280]">Aucun étudiant inscrit pour le moment.</p>;
+		// ADM-09: a message when no account matches
+		if (!hasCriteria(query)) return <p role="status" className="py-16 text-center text-sm text-[#6b7280]">Aucun utilisateur inscrit pour le moment.</p>;
 		return (
 			<div className="py-16 text-center">
-				<p role="status" className="text-sm text-[#6b7280]">Aucun étudiant ne correspond à votre recherche.</p>
+				<p role="status" className="text-sm text-[#6b7280]">Aucun utilisateur ne correspond à votre recherche.</p>
 				<button type="button" onClick={onReset} className="mt-4 cursor-pointer text-sm font-semibold text-primary underline">Réinitialiser les filtres</button>
 			</div>
 		);
@@ -285,30 +284,30 @@ export function AdminUsersResults({ result, loading, query, onChange, onRetry, o
 	);
 }
 
-// Starting values of the export: the accounts of the table, students, with its current filters.
-// The other roles stay in the list, to be chosen on purpose
-export const exportDefaults = (query: AdminUsersQuery): ExportValues => ({ role: "student", status: query.status, school: query.school });
+// Role of the export for each type of account of the table (the export calls managers "school")
+const EXPORT_ROLES: Record<AdminUserRole, string> = { "": "", student: "student", manager: "school", recruiter: "recruiter", admin: "admin" };
+
+// Starting values of the export: the filters of the table
+export const exportDefaults = (query: AdminUsersQuery): ExportValues => ({ role: EXPORT_ROLES[query.role], status: query.status });
 
 // Filters of the export: the current ones of the table, and the ticked accounts
-export function exportFields(query: AdminUsersQuery, schools: AdminSchool[] | "error" | null, selected: number[]): ExportField[] {
+export function exportFields(query: AdminUsersQuery, selected: number[]): ExportField[] {
 	const fields: ExportField[] = [
-		{ kind: "select", key: "role", label: "Rôle", options: [{ value: "", label: "Tous les rôles" }, { value: "student", label: "Étudiants" }, { value: "school", label: "Écoles" }, { value: "recruiter", label: "Recruteurs" }, { value: "admin", label: "Administrateurs" }] },
+		{ kind: "select", key: "role", label: "Type de compte", options: [{ value: "", label: "Tous les types" }, { value: "student", label: "Étudiants" }, { value: "school", label: "Managers" }, { value: "recruiter", label: "Recruteurs" }, { value: "admin", label: "Administrateurs" }] },
 		{ kind: "select", key: "status", label: "Statut du compte", options: [{ value: "", label: "Tous les statuts" }, { value: "active", label: "Actifs" }, { value: "suspended", label: "Suspendus" }] },
-		{ kind: "select", key: "school", label: "École", options: [{ value: "", label: "Toutes les écoles" }, ...(Array.isArray(schools) ? schools : []).map(({ id, name }) => ({ value: String(id), label: name }))] },
 	];
 	if (selected.length > 0) fields.push({ kind: "toggle", key: "ids", label: `Seulement les ${selected.length} compte${selected.length > 1 ? "s" : ""} sélectionné${selected.length > 1 ? "s" : ""}`, value: selected.join(",") });
 	if (query.q) fields.push({ kind: "toggle", key: "q", label: `Appliquer la recherche « ${query.q} »`, value: query.q });
 	return fields;
 }
 
-// Data table of the student accounts (ADM-01): search, filters by status and school, sort by column, pagination
+// Data table of the accounts of every role (ADM-01): search, filters by account type and status, sort by column, pagination
 export default function AdminUsersPage() {
 	const [params, setParams] = useSearchParams();
 	const query = queryFromParams(params);
 	const search = searchFromQuery(query);
 	const [attempt, setAttempt] = useState(0);
 	const [loaded, setLoaded] = useState<{ search: string; attempt: number; result: AdminUsersResult } | null>(null);
-	const [schools, setSchools] = useState<AdminSchool[] | "error" | null>(null);
 	// Kept while a profile is open, so that « Retour à la liste » gives the table back as it was
 	const [selected, setSelected] = useState(readSelection);
 	useEffect(() => saveSelection(selected), [selected]);
@@ -322,21 +321,13 @@ export default function AdminUsersPage() {
 		return () => controller.abort();
 	}, [search, attempt]);
 
-	useEffect(() => {
-		const controller = new AbortController();
-		getAdminUserFilters(controller.signal).then((result) => {
-			if (!controller.signal.aborted) setSchools(result.ok ? result.schools : "error");
-		});
-		return () => controller.abort();
-	}, []);
-
 	// Each change is a step of the browser history, except the typing of the search
 	const update = useCallback(
 		(changes: Partial<AdminUsersQuery>, replace = false) => setParams((previous) => searchFromQuery(withChanges(queryFromParams(previous), changes)), { replace }),
 		[setParams],
 	);
 	const onSearch = useCallback((q: string) => update({ q }, true), [update]);
-	const onReset = () => update({ q: "", status: "", school: "" });
+	const onReset = () => update({ q: "", status: "", role: "" });
 
 	const current = loaded && loaded.search === search && loaded.attempt === attempt ? loaded.result : null;
 	// While the next answer loads, the previous table stays on screen
@@ -347,12 +338,12 @@ export default function AdminUsersPage() {
 			<header><AdminNavbar /></header>
 			<main className="mx-auto mt-8 max-w-[1236px] rounded-2xl border border-[#e5e7eb] bg-surface px-5 py-7 shadow-xs md:px-10 md:py-8" aria-busy={current === null}>
 				<div className="mb-6 flex flex-col gap-1">
-					<h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">Liste d’utilisateurs</h1>
-					<p className="text-sm text-[#6b7280]">Consultez et gérez les comptes étudiants inscrits sur la plateforme.</p>
+					<h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">Utilisateurs</h1>
+					<p className="text-sm text-[#6b7280]">Consultez et gérez les comptes inscrits sur la plateforme : étudiants, managers, recruteurs et administrateurs.</p>
 				</div>
-				<AdminUsersToolbar query={query} schools={schools} onSearch={onSearch} onChange={update} onReset={onReset} />
+				<AdminUsersToolbar query={query} onSearch={onSearch} onChange={update} onReset={onReset} />
 				<div className="mb-6 flex flex-col gap-3">
-					<ExportPanel url="/api/administration/users/export" fields={exportFields(query, schools, selected)} defaults={exportDefaults(query)} />
+					<ExportPanel url="/api/administration/users/export" fields={exportFields(query, selected)} defaults={exportDefaults(query)} />
 					{selected.length > 0 && (
 						<p role="status" className="text-sm text-[#6b7280]">
 							<strong className="text-ink">{selected.length}</strong> compte{selected.length > 1 ? "s" : ""} sélectionné{selected.length > 1 ? "s" : ""}{selected.length === MAX_SELECTION ? ` (${MAX_SELECTION} au maximum)` : ""}

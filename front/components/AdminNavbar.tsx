@@ -1,12 +1,12 @@
 import AccountNavbar from "./AccountNavbar";
 
 const links = [
-	{ label: "Mon espace" },
-	{ label: "Liste d’utilisateurs", to: "/administration/users" },
-	{ label: "Liste d’entreprises" },
-	{ label: "Liste d’écoles" },
-	{ label: "Signalements" },
-	{ label: "Réclamations" },
+	{ label: "Mon espace", to: "/administration/account" },
+	{ label: "Utilisateurs", to: "/administration/users" },
+	{ label: "Entreprises", to: "/administration/companies" },
+	{ label: "Écoles", to: "/administration/schools" },
+	{ label: "Signalements", to: "/administration/reports" },
+	{ label: "Réclamations", to: "/administration/claims" },
 ];
 
 // « Déconnexion » is in the account menu of AccountNavbar, as for the other roles; it leads

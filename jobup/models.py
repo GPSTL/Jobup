@@ -123,6 +123,14 @@ class SchoolRequestStatus(models.IntegerChoices):
     REFUSED = 2, "Refused"
 
 
+# Validation d'une école ou d'une entreprise par l'administration : en attente à la création,
+# puis validée ou refusée. Le choix reste modifiable, y compris pour revenir « en attente »
+class ReviewStatus(models.IntegerChoices):
+    PENDING = 0, "Pending"
+    VALIDATED = 1, "Validated"
+    REFUSED = 2, "Refused"
+
+
 # Type de contrat d'une offre (JOB-051) : valeurs envoyées par le formulaire « Créer une offre »
 class ContractType(models.TextChoices):
     APPRENTICESHIP = "alternance", "Alternance"
@@ -136,6 +144,9 @@ class ContractType(models.TextChoices):
 
 class School(models.Model):
     name = StrictCharField(max_length=128, unique=True)
+    status = models.SmallIntegerField(
+        choices=ReviewStatus.choices, default=ReviewStatus.PENDING
+    )
 
 
 siret_validator = RegexValidator(r"^\d{14}$", "A SIRET must be exactly 14 digits")
@@ -154,6 +165,9 @@ class Company(models.Model):
     description = models.CharField(max_length=2048, blank=True)
     # Logo modifié depuis « Mon espace » recruteur (JOB-066) : JPG ou PNG, 2 Mo maximum
     logo = models.ImageField(upload_to="logos", blank=True)
+    status = models.SmallIntegerField(
+        choices=ReviewStatus.choices, default=ReviewStatus.PENDING
+    )
 
     # Seuls ces champs sont publics : le SIRET et les recruteurs ne sont jamais exposés
     def to_dict(self) -> dict[str, Any]:

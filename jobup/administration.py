@@ -1,4 +1,4 @@
-"""Administrator login, account list and student details, separate from Django Admin.
+"""Administrator login, account list and account details, separate from Django Admin.
 
 Contract with the front end: docs/api/admin-users.md
 """
@@ -23,7 +23,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from .api import Credentials
-from .models import JobApplication, Role, School, Student, User
+from .models import JobApplication, Recruiter, Role, SchoolManager, Student, User
 
 # Login page of the administration (ADM-13), open to everyone
 LOGIN_PAGE = "/administration"
@@ -37,8 +37,16 @@ SORTS: dict[str, tuple[str, ...]] = {
     "last_name": ("last_name", "first_name"),
     "first_name": ("first_name", "last_name"),
     "email": ("email",),
-    "school": ("school",),
+    "role": ("role",),
     "date_joined": ("date_joined",),
+}
+
+# Account types of the "Type de compte" filter -> role
+ROLES: dict[str, Role] = {
+    "student": Role.STUDENT,
+    "manager": Role.MANAGER,
+    "recruiter": Role.RECRUITER,
+    "admin": Role.ADMIN,
 }
 
 # Fields of a row of the table
@@ -48,7 +56,6 @@ ROW_FIELDS = (
     "last_name",
     "email",
     "role",
-    "school",
     "date_joined",
     "is_active",
     "suspended_at",
@@ -61,7 +68,7 @@ class UserFilters(BaseModel):
 
     q: str = Field(default="", max_length=100)
     status: Literal["", "active", "suspended"] = ""
-    school: int | None = Field(default=None, ge=1)
+    role: Literal["", "student", "manager", "recruiter", "admin"] = ""
     # A column of SORTS, preceded by "-" for the descending order
     sort: str = "-date_joined"
     page: int = Field(default=1, ge=1)
@@ -87,23 +94,18 @@ def isAdmin(user: User) -> bool:
     return user.role == Role.ADMIN
 
 
-def studentAccounts() -> QuerySet[User]:
-    # Every student account, suspended ones included, with the school of its
-    # profile (None without a profile or a school)
-    return User.objects.filter(role=Role.STUDENT).annotate(
-        school=F("student__school__name")
-    )
-
-
 def matching(accounts: QuerySet[User], query: str) -> QuerySet[User]:
-    # Every word must be found in the first name, the last name, the e-mail or
-    # the school: "alice paris" finds Alice Martin of Université Paris
+    # Every word must be found in the first name, the last name, the e-mail or the
+    # school or company of the account: "alice paris" finds Alice Martin of
+    # Université Paris
     for word in query.split():
         accounts = accounts.filter(
             Q(first_name__icontains=word)
             | Q(last_name__icontains=word)
             | Q(email__icontains=word)
             | Q(student__school__name__icontains=word)
+            | Q(school_manager__school__name__icontains=word)
+            | Q(recruiter__company__name__icontains=word)
         )
     return accounts
 
@@ -111,9 +113,10 @@ def matching(accounts: QuerySet[User], query: str) -> QuerySet[User]:
 def ordering(sort: str) -> list[OrderBy]:
     descending = sort.startswith("-")
     column = sort.removeprefix("-")
-    # Names, e-mails and schools ignore the case; accounts without a school come last
+    # Names and e-mails ignore the case
     keys = [
-        F(field) if field == "date_joined" else Lower(field) for field in SORTS[column]
+        F(field) if field in ("date_joined", "role") else Lower(field)
+        for field in SORTS[column]
     ]
     keys.append(F("pk"))
     return [
@@ -185,11 +188,12 @@ def user_list(request: Request) -> Response:
     except ValidationError:
         return Response({"error": "Invalid filters"}, status=400)
 
-    accounts = matching(studentAccounts(), filters.q)
+    # Every account, administrators and suspended ones included
+    accounts = matching(User.objects.all(), filters.q)
     if filters.status:
         accounts = accounts.filter(is_active=filters.status == "active")
-    if filters.school is not None:
-        accounts = accounts.filter(student__school_id=filters.school)
+    if filters.role:
+        accounts = accounts.filter(role=ROLES[filters.role])
 
     paginator = Paginator(
         accounts.order_by(*ordering(filters.sort)).values(*ROW_FIELDS),
@@ -210,44 +214,60 @@ def user_list(request: Request) -> Response:
     )
 
 
-@api_view(["GET"])
-def user_filters(request: Request) -> Response:
-    # Values of the "École" filter: the schools of at least one student account
-    user: User = request.user
-    if not isAdmin(user):
-        return Response({"error": "Forbidden"}, status=403)
-    schools = (
-        School.objects.filter(students__user__role=Role.STUDENT)
-        .distinct()
-        .order_by(Lower("name"), "pk")
-        .values("id", "name")
+def organization(user: User) -> tuple[str | None, str | None]:
+    # (school, company) of the account: the school of a student or of a school
+    # manager, the company of a recruiter; None without a profile or an organization
+    if user.role == Role.STUDENT:
+        student = Student.objects.select_related("school").filter(user=user).first()
+        return (student.school.name if student and student.school else None), None
+    if user.role == Role.MANAGER:
+        manager = SchoolManager.objects.select_related("school").filter(user=user)
+        manager = manager.first()
+        return (manager.school.name if manager and manager.school else None), None
+    if user.role == Role.RECRUITER:
+        recruiter = Recruiter.objects.select_related("company").filter(user=user)
+        recruiter = recruiter.first()
+        return None, (
+            recruiter.company.name if recruiter and recruiter.company else None
+        )
+    return None, None
+
+
+def userProfile(user: User) -> dict[str, Any]:
+    # Profile of any account for the administrators (ADM-02, JOB-064). The photo, the
+    # CV and the applications only exist for a student, and an account without a
+    # profile is shown too: no school, company, photo, CV nor application
+    student = (
+        Student.objects.filter(user=user).first() if user.role == Role.STUDENT else None
     )
-    return Response({"schools": list(schools)})
-
-
-def studentProfile(user: User) -> dict[str, Any]:
-    # Student profile for the administrators (ADM-02, JOB-064). A student account
-    # without a profile is shown too: no school, photo, CV nor application
-    student = Student.objects.select_related("school").filter(user=user).first()
+    school, company = organization(user)
     return {
         **user.to_dict(),
         "date_joined": user.date_joined,
         "is_active": user.is_active,
         "suspended_at": user.suspended_at if not user.is_active else None,
-        "school": student.school.name if student and student.school else None,
+        "school": school,
+        "company": company,
         "photo_url": student.photo.url if student and student.photo else None,
         # Never asked: neither the signup (ETU-01) nor the profile (ETU-02) has a
         # phone number, so the profile says it is not given
         "phone": None,
-        # Sent ones only: a draft never reached a recruiter (JOB-033)
-        "applications_sent": JobApplication.objects.filter(
-            student=student, submitted_at__isnull=False
-        ).count()
-        if student
-        else 0,
+        # Sent ones only: a draft never reached a recruiter (JOB-033). None for the
+        # accounts that cannot apply
+        "applications_sent": (
+            JobApplication.objects.filter(
+                student=student, submitted_at__isnull=False
+            ).count()
+            if student
+            else 0
+        )
+        if user.role == Role.STUDENT
+        else None,
         "cv_url": f"/api/administration/users/{user.pk}/cv"
         if student and student.resume
         else None,
+        # An administrator account cannot be suspended
+        "can_suspend": user.role != Role.ADMIN,
     }
 
 
@@ -255,23 +275,26 @@ def studentProfile(user: User) -> dict[str, Any]:
 def user_detail(request, id: int):
     if not isAdmin(request.user):
         return Response({"error": "Forbidden"}, status=403)
-    user = User.objects.filter(pk=id, role=Role.STUDENT).first()
+    user = User.objects.filter(pk=id).first()
     if user is None:
-        return Response({"error": "Student not found"}, status=404)
-    return Response(studentProfile(user))
+        return Response({"error": "User not found"}, status=404)
+    return Response(userProfile(user))
 
 
 @api_view(["POST", "DELETE"])
 def user_suspension(request, id: int):
-    # POST suspends a student account (ADM-03), DELETE gives it back (ADM-04). A
-    # suspended account can no longer log in, and its open sessions end at their next
-    # request: Django refuses an inactive user. Calling twice changes nothing more
-    # (a second suspension keeps the first date). Answers the updated profile
+    # POST suspends an account (ADM-03), DELETE gives it back (ADM-04). A suspended
+    # account can no longer log in, and its open sessions end at their next request:
+    # Django refuses an inactive user. Calling twice changes nothing more (a second
+    # suspension keeps the first date). Answers the updated profile. An administrator
+    # account can never be suspended, so that the administration cannot lock itself out
     if not isAdmin(request.user):
         return Response({"error": "Forbidden"}, status=403)
-    user = User.objects.filter(pk=id, role=Role.STUDENT).first()
+    user = User.objects.filter(pk=id).first()
     if user is None:
-        return Response({"error": "Student not found"}, status=404)
+        return Response({"error": "User not found"}, status=404)
+    if user.role == Role.ADMIN:
+        return Response({"error": "An administrator cannot be suspended"}, status=403)
     if request.method == "POST" and user.is_active:
         user.is_active = False
         user.suspended_at = timezone.now()
@@ -280,7 +303,7 @@ def user_suspension(request, id: int):
         user.is_active = True
         user.suspended_at = None
         user.save(update_fields=["is_active", "suspended_at"])
-    return Response(studentProfile(user))
+    return Response(userProfile(user))
 
 
 @api_view(["GET"])

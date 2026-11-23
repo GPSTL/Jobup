@@ -3,7 +3,7 @@ FRONT_DST = jobup/static/dist/app.js
 CSS_SRC = front/app.css
 CSS_DST = jobup/static/dist/app.css
 
-.PHONY: init migrate seed all debug run_only run run_debug dev watch_js watch_css test
+.PHONY: init migrate seed seed_bulk all debug run_only run run_debug dev watch_js watch_css test
 
 all:
 	npx esbuild $(FRONT_SRC) --bundle --outfile=$(FRONT_DST) --minify --loader:.tsx=tsx
@@ -44,6 +44,9 @@ dev:
 migrate:
 	python manage.py makemigrations jobup
 	python manage.py migrate
+
+seed_bulk:
+	python manage.py seed_bulk
 
 seed:
 	python manage.py seed_demo

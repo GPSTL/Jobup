@@ -79,7 +79,7 @@ test("téléchargement : échecs traduits en raisons, sans enregistrer de fichie
 	assert.deepEqual(await downloadCsv("/api/x", save), { ok: true, filename: "export.csv" });
 });
 
-const user: AdminUser = { id: 1, first_name: "Alice", last_name: "Martin", email: "alice@example.fr", role: 1, school: "Université Paris", date_joined: "2026-10-09T12:00:00Z", is_active: true, suspended_at: null, detail_url: "/administration/users/1" };
+const user: AdminUser = { id: 1, first_name: "Alice", last_name: "Martin", email: "alice@example.fr", role: 1, date_joined: "2026-10-09T12:00:00Z", is_active: true, suspended_at: null, detail_url: "/administration/users/1" };
 const users = [user, { ...user, id: 2, first_name: "Bob" }];
 const table = (ids: number[]) => renderToStaticMarkup(<MemoryRouter><AdminUsersTable users={users} sort="-date_joined" onSort={() => {}} selection={{ ids, onChange: () => {} }} /></MemoryRouter>);
 
@@ -109,25 +109,24 @@ test("sélection : cocher ajoute sans doublon, décocher retire, jamais plus que
 });
 
 test("export admin : filtres de la liste, et sélection ou recherche seulement quand il y en a", () => {
-	const keys = (query = DEFAULT_QUERY, selected: number[] = []) => exportFields(query, [{ id: 3, name: "ISEG" }], selected).map(({ key }) => key);
-	assert.deepEqual(keys(), ["role", "status", "school"]);
-	assert.deepEqual(keys({ ...DEFAULT_QUERY, q: "alice" }, [4, 5]), ["role", "status", "school", "ids", "q"]);
-	const [, , school, ids] = exportFields(DEFAULT_QUERY, [{ id: 3, name: "ISEG" }], [4, 5]);
-	assert.deepEqual(school.kind === "select" && school.options.at(-1), { value: "3", label: "ISEG" });
+	const keys = (query = DEFAULT_QUERY, selected: number[] = []) => exportFields(query, selected).map(({ key }) => key);
+	assert.deepEqual(keys(), ["role", "status"]);
+	assert.deepEqual(keys({ ...DEFAULT_QUERY, q: "alice" }, [4, 5]), ["role", "status", "ids", "q"]);
+	const [, , ids] = exportFields(DEFAULT_QUERY, [4, 5]);
 	assert.deepEqual(ids, { kind: "toggle", key: "ids", label: "Seulement les 2 comptes sélectionnés", value: "4,5" });
-	// The list of schools failed to load: only "Toutes les écoles" remains
-	assert.equal((exportFields(DEFAULT_QUERY, "error", [])[2] as { options: unknown[] }).options.length, 1);
 });
 
-test("export admin : part des comptes étudiants, comme le tableau, avec ses filtres", () => {
-	const query = { ...DEFAULT_QUERY, status: "suspended" as const, school: "3" };
-	assert.deepEqual(exportDefaults(query), { role: "student", status: "suspended", school: "3" });
-	const form = renderToStaticMarkup(<ExportForm url="/api/administration/users/export" fields={exportFields(query, [{ id: 3, name: "ISEG" }], [])} defaults={exportDefaults(query)} />);
+test("export admin : part du type de compte et du statut du tableau", () => {
+	// The export calls the managers "school"
+	assert.deepEqual(exportDefaults(DEFAULT_QUERY), { role: "", status: "" });
+	assert.deepEqual(exportDefaults({ ...DEFAULT_QUERY, role: "manager" }), { role: "school", status: "" });
+	const query = { ...DEFAULT_QUERY, status: "suspended" as const, role: "student" as const };
+	assert.deepEqual(exportDefaults(query), { role: "student", status: "suspended" });
+	const form = renderToStaticMarkup(<ExportForm url="/api/administration/users/export" fields={exportFields(query, [])} defaults={exportDefaults(query)} />);
 	assert.match(form, /<option value="student" selected="">Étudiants/);
 	assert.match(form, /<option value="suspended" selected="">Suspendus/);
-	assert.match(form, /<option value="3" selected="">ISEG/);
-	// Every role stays available, chosen on purpose
-	assert.match(form, /<option value="">Tous les rôles/);
+	// Every type stays available, chosen on purpose
+	assert.match(form, /<option value="">Tous les types/);
 });
 
 test("téléchargement : le lien est cliqué dans la page, et l'adresse du fichier libérée plus tard", async () => {

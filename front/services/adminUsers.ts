@@ -1,4 +1,4 @@
-// Calls to the administration API (JOB-063, ADM-01): the table of the student accounts, the
+// Calls to the administration API (JOB-063, ADM-01): the table of the accounts of every role, the
 // profile of one of them (JOB-064) and its suspension (ADM-03, ADM-04). Contract: docs/api/admin-users.md
 
 import { getCsrfToken } from "./auth";
@@ -9,8 +9,6 @@ export type AdminUser = {
 	last_name: string;
 	email: string;
 	role: number;
-	/** School of the profile, null when none is given */
-	school: string | null;
 	date_joined: string;
 	is_active: boolean;
 	suspended_at: string | null;
@@ -20,16 +18,19 @@ export type AdminUsersResult =
 	| { ok: true; count: number; page: number; page_size: number; total_pages: number; results: AdminUser[] }
 	| { ok: false; reason: "forbidden" | "notFound" | "server" | "network" };
 
-/** A value of the "École" filter */
-export type AdminSchool = { id: number; name: string };
-export type AdminUserFiltersResult = { ok: true; schools: AdminSchool[] } | { ok: false };
-
 export type AdminUserDetail = Omit<AdminUser, "detail_url"> & {
+	/** School of a student or of a manager, null when none is given */
+	school: string | null;
+	/** Company of a recruiter, null when none is given */
+	company: string | null;
 	/** Photo of the profile, null when none was imported */
 	photo_url: string | null;
 	phone: string | null;
-	applications_sent: number;
+	/** Null for the accounts that cannot apply: only students send applications */
+	applications_sent: number | null;
 	cv_url: string | null;
+	/** False for an administrator account */
+	can_suspend: boolean;
 };
 export type AdminUserDetailResult = { ok: true; user: AdminUserDetail } | Extract<AdminUsersResult, { ok: false }>;
 
@@ -44,7 +45,7 @@ export async function getAdminUser(id: string): Promise<AdminUserDetailResult> {
 	catch { return { ok: false, reason: "server" }; }
 }
 
-// Suspends (ADM-03) or gives back (ADM-04) a student account; answers the updated profile
+// Suspends (ADM-03) or gives back (ADM-04) an account; answers the updated profile
 export async function setSuspension(id: number, suspended: boolean): Promise<AdminUserDetailResult> {
 	let response: Response;
 	try {
@@ -74,15 +75,4 @@ export async function getAdminUsers(search: string, signal?: AbortSignal): Promi
 	if (!response.ok) return { ok: false, reason: "server" };
 	try { return { ...await response.json(), ok: true }; }
 	catch { return { ok: false, reason: "server" }; }
-}
-
-export async function getAdminUserFilters(signal?: AbortSignal): Promise<AdminUserFiltersResult> {
-	try {
-		const response = await fetch("/api/administration/users/filters", { credentials: "same-origin", signal });
-		if (!response.ok) return { ok: false };
-		const { schools } = await response.json();
-		return Array.isArray(schools) ? { ok: true, schools } : { ok: false };
-	} catch {
-		return { ok: false };
-	}
 }
