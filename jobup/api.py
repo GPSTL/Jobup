@@ -10,7 +10,6 @@ from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from .email_confirmation import is_enabled, send_confirmation_email
 from .models import (
     FINAL_STATUSES,
     DraftSerializer,
@@ -20,6 +19,8 @@ from .models import (
     Student,
     User,
 )
+
+# from .models import token_generator
 
 
 def getStudent(_id: int) -> Student | None:
@@ -63,9 +64,6 @@ def api_login(request: Request) -> Response:
         if suspended is not None and suspended.check_password(creds.password):
             return Response({"error": "Account suspended"}, status=403)
         return Response({"error": "Invalid credentials"}, status=401)
-    # Right password, but the address was never confirmed (jobup/email_confirmation.py)
-    if is_enabled() and not user.email_confirmed:
-        return Response({"error": "Email not confirmed"}, status=403)
     login(request._request, user)
     return Response(user.to_dict())
 
@@ -188,12 +186,17 @@ def signup(request: Request):
     serializer.is_valid(raise_exception=True)
     serializer.save()
     user = serializer.instance
-    if is_enabled():
-        # Pas de connexion directe : le lien envoyé par e-mail confirme l'adresse d'abord
-        send_confirmation_email(user)
-        return Response(
-            {**user.to_dict(), "email_confirmation_required": True}, status=201
-        )
     # Connexion directe après l'inscription : la session est ouverte comme après /api/login
     login(request._request, user)
     return Response(user.to_dict(), status=201)
+
+
+# @api_view(["POST"])
+# @permission_classes([AllowAny])
+# def confirm_email(request: Request):
+#     user = getUser(request.uid)
+#     if user is None or not token_generator.check_token(user, request.token):
+#         return Response({"error": "Invalid request"}, status=400)
+#     user.email_confirmed = True
+#     user.is_active = True
+#     return Response({"message": "User email successfully confirmed"}, status=201)

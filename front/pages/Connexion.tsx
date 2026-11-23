@@ -7,7 +7,6 @@ import { loginSchema, type LoginForm } from "../utils/login";
 import Logo from "../components/Logo";
 import Field from "../components/Field";
 import Button from "../components/Button";
-import ResendConfirmation from "../components/ResendConfirmation";
 import { login } from "../services/auth";
 import { MESSAGES } from "../utils/validation";
 import { accountHome } from "../utils/accountHome";
@@ -15,7 +14,6 @@ import { accountHome } from "../utils/accountHome";
 const FORM_ERRORS = {
 	invalidCredentials: MESSAGES.invalidCredentials,
 	suspended: MESSAGES.accountSuspended,
-	emailNotConfirmed: MESSAGES.emailNotConfirmed,
 	server: MESSAGES.serverError,
 	network: MESSAGES.networkError,
 };
@@ -28,19 +26,15 @@ export default function Connexion() {
 		defaultValues: { email: "", password: "" },
 	});
 	const [formError, setFormError] = useState("");
-	// E-mail of the account whose address is not confirmed yet: offers to send the e-mail again
-	const [unconfirmedEmail, setUnconfirmedEmail] = useState("");
 	const submittingRef = useRef(false);
 	const onSubmit = handleSubmit(async ({ email, password }) => {
 		if (submittingRef.current) return;
 		submittingRef.current = true;
 		setFormError("");
-		setUnconfirmedEmail("");
 		try {
 			const result = await login(email.trim(), password);
 			if (!result.ok) {
 				setFormError(FORM_ERRORS[result.reason]);
-				if (result.reason === "emailNotConfirmed") setUnconfirmedEmail(email.trim());
 				if (result.reason === "invalidCredentials") setFocus("password");
 				return;
 			}
@@ -127,7 +121,6 @@ export default function Connexion() {
 								{formError}
 							</p>
 						)}
-						{unconfirmedEmail && <ResendConfirmation email={unconfirmedEmail} />}
 						<div className="flex justify-end">
 							<a href="#" className="text-sm font-medium text-primary hover:underline">
 								Mot de passe oublié ?

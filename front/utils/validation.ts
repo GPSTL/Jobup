@@ -15,9 +15,6 @@ export const MESSAGES = {
 	invalidCredentials: "Adresse e-mail ou mot de passe incorrect.",
 	// Account suspended by an administrator (ADM-03)
 	accountSuspended: "Votre compte est suspendu.",
-	// Account created but its e-mail address is not confirmed yet (jobup/email_confirmation.py)
-	emailNotConfirmed: "Votre adresse e-mail n’est pas encore confirmée. Consultez le message de confirmation que nous vous avons envoyé.",
-	tooManyRequests: "Trop de demandes, veuillez réessayer dans quelques minutes.",
 	emailTaken: "Cette adresse e-mail est déjà utilisée.",
 	serverError: "Une erreur est survenue, veuillez réessayer plus tard.",
 	networkError: "Impossible de joindre le serveur. Vérifiez votre connexion internet et réessayez.",

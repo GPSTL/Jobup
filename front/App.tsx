@@ -7,7 +7,6 @@ import ComingSoonPage from "./pages/ComingSoonPage";
 import PricingPage from "./pages/PricingPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import Connexion from "./pages/Connexion";
-import ConfirmEmailPage from "./pages/ConfirmEmailPage";
 import StudentPage from "./pages/StudentPage";
 import MonEspace from "./pages/MonEspace";
 import RequireStudent from "./components/RequireStudent";
@@ -55,7 +54,6 @@ function App() {
 				<Route path="/schools" element={<SchoolPage />} />
 				<Route path="/signup" element={<Inscription />} />
 				<Route path="/login" element={<Connexion />} />
-				<Route path="/confirm-email" element={<ConfirmEmailPage />} />
 				<Route path="/student" element={<RequireStudent>{(user) => <MonEspace user={user} />}</RequireStudent>} />
 				<Route path="/student/saved-offers" element={<RequireStudent>{() => <SavedOffersPage />}</RequireStudent>} />
 				<Route path="/offers" element={<OffersPage />} />

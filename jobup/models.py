@@ -751,6 +751,14 @@ def getUser(_id: int) -> User | None:
         return None
 
 
+# class TokenGenerator(PasswordResetTokenGenerator):
+#     def _make_hash_value(self, user, timestamp):
+#         return f"{user['password']}{timestamp}{user['email']}"
+
+
+# token_generator = TokenGenerator()
+
+
 class SignupSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -770,9 +778,6 @@ class SignupSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         password = validated_data.pop("password")
-        # With the e-mail confirmation on (jobup/email_confirmation.py), the account starts
-        # unconfirmed and cannot log in until the link of the e-mail is followed
-        validated_data["email_confirmed"] = not settings.EMAIL_CONFIRMATION_REQUIRED
         with transaction.atomic():
             user = super().create(validated_data)
             user.set_password(password)
@@ -785,6 +790,21 @@ class SignupSerializer(serializers.ModelSerializer):
                 case Role.MANAGER:
                     SchoolManager.objects.create(user=user)
         return user
+
+    def save(self, **kwargs):
+        # token = token_generator.make_token(self.validated_data)
+        # link = f"http://localhost:8000/api/confirm_email/{token}"
+        # send_mail(
+        #     "Confirmez votre adresse mail",
+        #     (
+        #         f"Lien de vérification: {link}\n\n"
+        #         + "Si vous n'avez pas créé de compte Jobup, "
+        #         + "veuillez ignorer ce message."
+        #     ),
+        #     "xx.yy@gmail.com",
+        #     [self.validated_data["email"]],
+        # )
+        super().save()
 
 
 class DraftSerializer(serializers.Serializer):

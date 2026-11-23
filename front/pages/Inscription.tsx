@@ -1,11 +1,10 @@
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Logo from "../components/Logo";
 import Field from "../components/Field";
 import Button from "../components/Button";
-import ResendConfirmation from "../components/ResendConfirmation";
 import { signup } from "../services/auth";
 import { signupSchema, toSignupPayload, type SignupForm } from "../utils/signup";
 import { MESSAGES } from "../utils/validation";
@@ -14,20 +13,7 @@ import { ROLES, getRole, type Role, getRoleApiName, type RoleApiName } from "../
 
 export { toSignupPayload } from "../utils/signup";
 
-// Shown instead of the form when the server asks for the address to be confirmed first
-function CheckYourMail({ email }: { email: string }) {
-	return (
-		<div role="status" className="mt-8 flex w-full max-w-73 flex-col items-center self-center text-center">
-			<h2 className="text-xl font-semibold">Vérifiez votre boîte mail</h2>
-			<p className="mt-3 text-sm leading-5">
-				Un e-mail de confirmation a été envoyé à <strong className="break-words">{email}</strong>. Cliquez sur le lien qu’il contient pour activer votre compte, puis connectez-vous.
-			</p>
-			<ResendConfirmation email={email} />
-		</div>
-	);
-}
-
-function GenericSignupForm({ role, onConfirmationRequired }: { role: RoleApiName; onConfirmationRequired: (email: string) => void }) {
+function GenericSignupForm({ role }: { role: RoleApiName }) {
 	const { register, handleSubmit, setError, formState: { errors, isSubmitting } } = useForm<SignupForm>({
 		resolver: zodResolver(signupSchema),
 		defaultValues: { first_name: "", last_name: "", email: "", password: "" },
@@ -39,10 +25,7 @@ function GenericSignupForm({ role, onConfirmationRequired }: { role: RoleApiName
 		pending.current = true;
 		try {
 			const result = await signup(toSignupPayload(form, role));
-			if (result.ok && result.emailConfirmationRequired) {
-				// EMAIL_CONFIRMATION_REQUIRED: no session yet, the e-mail link comes first
-				onConfirmationRequired(form.email.trim());
-			} else if (result.ok) {
+			if (result.ok) {
 				// Compte créé et session ouverte par l'API : même destination qu'après la connexion
 				navigate(accountHome(result.user.role), { replace: true });
 			} else if (result.reason === "validation") {
@@ -90,7 +73,6 @@ function GenericSignupForm({ role, onConfirmationRequired }: { role: RoleApiName
 export default function Inscription() {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const role = getRole(searchParams.get("role"));
-	const [confirmationEmail, setConfirmationEmail] = useState<string | null>(null);
 	const selectRole = (value: Role) => {
 		setSearchParams((previous) => {
 			const next = new URLSearchParams(previous);
@@ -136,38 +118,32 @@ export default function Inscription() {
 				<div className="flex w-full max-w-md flex-col rounded-3xl border border-[#e5e7eb] bg-surface p-6 shadow-sm sm:p-9">
 					<div>
 						<h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Inscription</h1>
-						{confirmationEmail === null && (
-							<p className="mt-1.5 text-sm text-[#6b7280]">Sélectionnez votre profil et créez votre compte en quelques secondes.</p>
-						)}
+						<p className="mt-1.5 text-sm text-[#6b7280]">Sélectionnez votre profil et créez votre compte en quelques secondes.</p>
 					</div>
 
-					{confirmationEmail === null && (
-						<div
-							role="radiogroup"
-							aria-label="Type de compte"
-							className="mt-5 grid h-11 w-full grid-cols-3 gap-1 rounded-xl border border-[#e5e7eb] bg-[#f9fafb] p-1"
-						>
-							{ROLES.map(({ label, value }) => (
-								<label key={value} className="relative flex cursor-pointer items-center justify-center">
-									<input
-										type="radio"
-										name="account-role"
-										value={value}
-										checked={role === value}
-										onChange={() => selectRole(value)}
-										className="peer sr-only"
-									/>
-									<span className="flex h-full w-full items-center justify-center rounded-lg text-sm font-medium text-[#6b7280] transition-colors peer-checked:bg-primary peer-checked:font-semibold peer-checked:text-on-primary peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary">
-										{label}
-									</span>
-								</label>
-							))}
-						</div>
-					)}
+					<div
+						role="radiogroup"
+						aria-label="Type de compte"
+						className="mt-5 grid h-11 w-full grid-cols-3 gap-1 rounded-xl border border-[#e5e7eb] bg-[#f9fafb] p-1"
+					>
+						{ROLES.map(({ label, value }) => (
+							<label key={value} className="relative flex cursor-pointer items-center justify-center">
+								<input
+									type="radio"
+									name="account-role"
+									value={value}
+									checked={role === value}
+									onChange={() => selectRole(value)}
+									className="peer sr-only"
+								/>
+								<span className="flex h-full w-full items-center justify-center rounded-lg text-sm font-medium text-[#6b7280] transition-colors peer-checked:bg-primary peer-checked:font-semibold peer-checked:text-on-primary peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary">
+									{label}
+								</span>
+							</label>
+						))}
+					</div>
 
-					{confirmationEmail === null
-						? <GenericSignupForm role={getRoleApiName(role)} onConfirmationRequired={setConfirmationEmail} />
-						: <CheckYourMail email={confirmationEmail} />}
+					<GenericSignupForm role={getRoleApiName(role)} />
 
 					<div className="mt-6 flex items-center justify-between border-t border-[#e5e7eb] pt-4 text-sm">
 						<Link to="/" className="text-xs font-medium text-[#6b7280] hover:text-primary hover:underline">
