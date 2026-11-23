@@ -139,6 +139,15 @@ The recruiter's message page (JOB-041) does not exist yet: the files sent by the
 | School manager | `manager2@demo.fr` | pending school |
 | School manager | `manager3@demo.fr` | refused school |
 
+## E-mail confirmation at signup
+
+Disabled by default. Set `EMAIL_CONFIRMATION_REQUIRED=true` in the environment or in a `.env`
+file and restart the server to require new users to confirm their address: signup then sends a
+link instead of opening a session, and login is refused until the link is followed. Set it back
+to `false` (or remove it) to return to the direct login. Without SMTP credentials
+(`THE_EMAIL_ADDRESS`, `THE_PASSWORD`), the e-mail is printed in the server console. Details,
+endpoints and the other settings: [docs/api/email-confirmation.md](docs/api/email-confirmation.md).
+
 ## Signup and login forms (JOB-027)
 
 Activate `.venv` with `source .venv/bin/activate`. The student form at

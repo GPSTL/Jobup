@@ -1,10 +1,11 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import AuthLayout from "../components/AuthLayout";
 import Field from "../components/Field";
 import Button from "../components/Button";
+import ResendConfirmation from "../components/ResendConfirmation";
 import { signup } from "../services/auth";
 import { signupSchema, toSignupPayload, type SignupForm } from "../utils/signup";
 import { MESSAGES } from "../utils/validation";
@@ -13,7 +14,21 @@ import { ROLES, getRole, type Role, getRoleApiName, type RoleApiName } from "../
 
 export { toSignupPayload } from "../utils/signup";
 
-function GenericSignupForm({ role }: { role: RoleApiName }) {
+// Shown instead of the form when the server asks for the address to be confirmed first
+function CheckYourMail({ email }: { email: string }) {
+	return (
+		<div role="status">
+			<p className="text-xs font-bold tracking-[0.16em] text-primary uppercase">Dernière étape</p>
+			<h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Vérifiez votre boîte mail.</h1>
+			<p className="mt-3 text-sm leading-relaxed text-[#6b7280]">
+				Un e-mail de confirmation a été envoyé à <strong className="font-semibold break-words text-ink">{email}</strong>. Cliquez sur le lien qu’il contient pour activer votre compte, puis connectez-vous.
+			</p>
+			<ResendConfirmation email={email} />
+		</div>
+	);
+}
+
+function GenericSignupForm({ role, onConfirmationRequired }: { role: RoleApiName; onConfirmationRequired: (email: string) => void }) {
 	const { register, handleSubmit, setError, formState: { errors, isSubmitting } } = useForm<SignupForm>({
 		resolver: zodResolver(signupSchema),
 		defaultValues: { first_name: "", last_name: "", email: "", password: "" },
@@ -25,7 +40,10 @@ function GenericSignupForm({ role }: { role: RoleApiName }) {
 		pending.current = true;
 		try {
 			const result = await signup(toSignupPayload(form, role));
-			if (result.ok) {
+			if (result.ok && result.emailConfirmationRequired) {
+				// EMAIL_CONFIRMATION_REQUIRED: no session yet, the e-mail link comes first
+				onConfirmationRequired(form.email.trim());
+			} else if (result.ok) {
 				// Compte créé et session ouverte par l'API : même destination qu'après la connexion
 				navigate(accountHome(result.user.role), { replace: true });
 			} else if (result.reason === "validation") {
@@ -73,6 +91,7 @@ function GenericSignupForm({ role }: { role: RoleApiName }) {
 export default function Inscription() {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const role = getRole(searchParams.get("role"));
+	const [confirmationEmail, setConfirmationEmail] = useState<string | null>(null);
 	const selectRole = (value: Role) => {
 		setSearchParams((previous) => {
 			const next = new URLSearchParams(previous);
@@ -83,9 +102,11 @@ export default function Inscription() {
 
 	return (
 		<AuthLayout mode="signup">
-			<p className="text-xs font-bold tracking-[0.16em] text-primary uppercase">Bienvenue sur JobUp</p>
-			<h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Créez votre compte.</h1>
-			<p className="mt-3 text-sm leading-relaxed text-[#6b7280]">Choisissez votre profil pour commencer votre parcours.</p>
+			{confirmationEmail === null ? (
+				<>
+					<p className="text-xs font-bold tracking-[0.16em] text-primary uppercase">Bienvenue sur JobUp</p>
+					<h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Créez votre compte.</h1>
+					<p className="mt-3 text-sm leading-relaxed text-[#6b7280]">Choisissez votre profil pour commencer votre parcours.</p>
 					<div
 						role="radiogroup"
 						aria-label="Type de compte"
@@ -108,7 +129,11 @@ export default function Inscription() {
 						))}
 					</div>
 
-					<GenericSignupForm role={getRoleApiName(role)} />
+					<GenericSignupForm role={getRoleApiName(role)} onConfirmationRequired={setConfirmationEmail} />
+				</>
+			) : (
+				<CheckYourMail email={confirmationEmail} />
+			)}
 			<p className="mt-8 border-t border-[#e5e7eb] pt-6 text-sm text-[#6b7280]">Déjà inscrit ? <Link to="/login" className="font-semibold text-primary hover:underline">Se connecter →</Link></p>
 		</AuthLayout>
 	);
