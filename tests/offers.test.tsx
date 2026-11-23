@@ -93,6 +93,7 @@ test("recherche publique : poste, entreprise, ville et secteur filtrent les offr
 test("étudiant : offres en cartes swipe avec filtres, détail, passer et sauvegarder", () => {
 	const html = render(<StudentOfferSwipe offers={[offer]} />);
 	assert.match(html, /aria-label="Filtres des offres"/);
+	assert.match(html, /src="\/static\/img\/recruiter-offers\/offer\.webp"/);
 	assert.match(html, /Développeur Java/);
 	assert.match(html, /Entreprise réelle • Nantes/);
 	assert.match(html, /Plus d’informations/);

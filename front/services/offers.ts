@@ -42,4 +42,6 @@ async function read<T>(url: string): Promise<PublicOfferResult<T>> {
 }
 
 export const getOffers = () => read<PublicOffer[]>("/api/offers");
+export type RecommendedOffer = PublicOffer & { reasons: string[]; match_percentage: number };
+export const getRecommendations = () => read<RecommendedOffer[]>("/api/student/recommendations");
 export const getOffer = (id: string) => read<PublicOffer>(`/api/offers/${encodeURIComponent(id)}`);

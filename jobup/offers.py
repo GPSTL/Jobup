@@ -6,7 +6,8 @@ from rest_framework.renderers import JSONRenderer
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from .models import Offer, Role, SavedOffer, Student
+from .cv_matching import match_offer, offer_keywords, student_terms
+from .models import ApplicationStatus, JobApplication, Offer, Role, SavedOffer, Student
 
 
 def publishedOffers():
@@ -53,6 +54,64 @@ def studentFor(request: Request) -> Student | None:
     if request.user.role != Role.STUDENT:
         return None
     return Student.objects.filter(user=request.user).first()
+
+
+@api_view(["GET"])
+@renderer_classes([JSONRenderer])
+def recommendations(request: Request) -> Response:
+    student = studentFor(request)
+    if student is None:
+        return Response({"error": "Forbidden"}, status=403)
+
+    saved_entries = list(
+        SavedOffer.objects.filter(student=student).values_list(
+            "offer_id", "offer__category"
+        )
+    )
+    app_entries = list(
+        JobApplication.objects.filter(student=student).values_list(
+            "offer_id", "offer__category", "status"
+        )
+    )
+    interest_categories = {category for _, category in saved_entries} | {
+        category
+        for _, category, status in app_entries
+        if status != ApplicationStatus.DRAFT
+    }
+    excluded = {offer_id for offer_id, _ in saved_entries} | {
+        offer_id for offer_id, _, _ in app_entries
+    }
+    candidate_terms = student_terms(student)
+    ranked = []
+    for item in (
+        publishedOffers().exclude(pk__in=excluded).order_by("-created_at", "-id")
+    ):
+        match = match_offer(student, item, candidate_terms, offer_keywords(item))
+        if not match.percentage:
+            continue
+        has_interest = item.category in interest_categories
+        reasons = []
+        if match.category:
+            reasons.append("Correspond à votre domaine")
+        if match.position:
+            reasons.append("Correspond au poste recherché")
+        if has_interest:
+            reasons.append(
+                "Dans un domaine lié à vos offres enregistrées ou candidatures"
+            )
+        if match.keywords:
+            reasons.append(
+                "Mots communs à votre CV ou profil et à l’offre : "
+                + ", ".join(match.keywords[:3])
+            )
+        ranked.append((match.percentage, has_interest, item, reasons))
+    ranked.sort(key=lambda entry: (entry[0], entry[1]), reverse=True)
+    return Response(
+        [
+            {**publicOffer(item), "reasons": reasons, "match_percentage": percentage}
+            for percentage, _, item, reasons in ranked
+        ]
+    )
 
 
 @api_view(["GET", "POST", "DELETE"])

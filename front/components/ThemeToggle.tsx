@@ -8,8 +8,8 @@ function initialTheme(): Theme {
 	try {
 		const saved = localStorage.getItem(STORAGE_KEY);
 		if (saved === "light" || saved === "dark") return saved;
-	} catch { /* The system preference still works when storage is unavailable. */ }
-	return typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+	} catch { /* Fall back to light when storage is unavailable. */ }
+	return "light";
 }
 
 export default function ThemeToggle() {
@@ -18,7 +18,6 @@ export default function ThemeToggle() {
 		document.documentElement.dataset.theme = theme;
 		document.documentElement.style.colorScheme = theme;
 		window.dispatchEvent(new CustomEvent("jobup-theme-change", { detail: theme }));
-		try { localStorage.setItem(STORAGE_KEY, theme); } catch { /* Storage is optional. */ }
 	}, [theme]);
 
 	const isLight = theme === "light";
@@ -26,7 +25,11 @@ export default function ThemeToggle() {
 		<button
 			type="button"
 			className="theme-toggle !static !z-auto !inline-flex !h-10 !w-auto shrink-0 items-center gap-2 !rounded-full !px-3.5 !text-sm !shadow-none"
-			onClick={() => setTheme(isLight ? "dark" : "light")}
+			onClick={() => {
+				const nextTheme = isLight ? "dark" : "light";
+				setTheme(nextTheme);
+				try { localStorage.setItem(STORAGE_KEY, nextTheme); } catch { /* Storage is optional. */ }
+			}}
 			aria-label={isLight ? "Activer le mode sombre" : "Activer le mode clair"}
 			title={isLight ? "Passer en mode sombre" : "Passer en mode clair"}
 		>

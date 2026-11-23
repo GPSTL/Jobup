@@ -14,7 +14,8 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from .conversations import normalize
-from .models import JobApplication, Message, Role, Student, User
+from .cv_matching import match_offer, offer_keywords, student_terms
+from .models import JobApplication, Message, Offer, Recruiter, Role, Student, User
 
 # Levels of the "Expérience" list, in months of Student.experience_level:
 # value sent by the front end -> (label, first month, last month or None)
@@ -184,6 +185,53 @@ def distinct(values: Iterable[str]) -> list[str]:
             key = comparable(value)
             found[key] = min(found.get(key, value), value)
     return [found[key] for key in sorted(found)]
+
+
+@api_view(["GET"])
+def candidate_recommendations(request: Request) -> Response:
+    user: User = request.user
+    if not isRecruiter(user) or not Recruiter.objects.filter(user=user).exists():
+        return Response({"error": "Forbidden"}, status=403)
+    offers = [
+        (offer, offer_keywords(offer))
+        for offer in Offer.objects.filter(recruiter__user=user, is_active=True)
+    ]
+    if not offers:
+        return Response([])
+    ranked = []
+    for student in recruiterDeck(user):
+        candidate_terms = student_terms(student)
+        offer, match = max(
+            (
+                (offer, match_offer(student, offer, candidate_terms, keywords))
+                for offer, keywords in offers
+            ),
+            key=lambda entry: entry[1].percentage,
+        )
+        if not match.percentage:
+            continue
+        reasons = []
+        if match.category:
+            reasons.append(f"Domaine correspondant à l’offre « {offer.title} »")
+        if match.position:
+            reasons.append(f"Poste recherché correspondant à l’offre « {offer.title} »")
+        if match.keywords:
+            reasons.append(
+                f"Mots du CV ou du profil présents dans l’offre « {offer.title} » : "
+                + ", ".join(match.keywords[:3])
+            )
+        ranked.append((match.percentage, student, reasons))
+    ranked.sort(key=lambda item: item[0], reverse=True)
+    return Response(
+        [
+            {
+                **candidateCard(student),
+                "reasons": reasons,
+                "match_percentage": percentage,
+            }
+            for percentage, student, reasons in ranked
+        ]
+    )
 
 
 @api_view(["GET"])

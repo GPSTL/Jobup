@@ -9,6 +9,7 @@ import { getSchoolContracts, type ContractPeriod, type SchoolContract } from "..
 import { fullName } from "../utils/candidates";
 import { formatDay } from "../utils/contracts";
 import type { ExportField } from "../utils/exports";
+import { highlightText } from "../utils/highlight";
 import { CONTRACT_ACTIONS, CONTRACT_PERIOD, CONTRACT_STAGE, nextContractSort, sortContracts, STAGE_KEYS, STAGE_LABELS, type ContractSort, type ContractSortColumn } from "../utils/school";
 import { focus } from "../utils/searchPageStyles";
 import { SortArrows } from "./AdminUsersPage";
@@ -52,10 +53,11 @@ type ContractsTableProps = {
 	/** Contrat en cours d'enregistrement, et l'erreur de l'action sur un contrat */
 	saving: number | null;
 	error: { id: number; message: string } | null;
+	highlightQuery?: string;
 };
 
 // Tableau des contrats (JOB-048, ECO-06) : étudiant, entreprise, dates, statut, PDF et action de l'école
-export function SchoolContractsTable({ contracts, sort, onSort, onAdvance, saving, error }: ContractsTableProps) {
+export function SchoolContractsTable({ contracts, sort, onSort, onAdvance, saving, error, highlightQuery }: ContractsTableProps) {
 	return (
 		<div role="region" aria-label="Contrats des étudiants" tabIndex={0} className={`overflow-x-auto rounded-2xl border border-[#e5e7eb] ${focus}`}>
 			<table className="w-full min-w-[960px] border-collapse text-left text-sm text-ink">
@@ -86,12 +88,12 @@ export function SchoolContractsTable({ contracts, sort, onSort, onAdvance, savin
 								<th scope="row" className={`${cell} font-medium`}>
 									<Link to={`/school/students/${contract.student.id}`} className={`flex items-center gap-3 rounded-sm hover:underline ${focus}`}>
 										<CandidateAvatar candidate={contract.student} className="size-9 text-sm" />
-										<span className="break-words">{fullName(contract.student)}</span>
+										<span className="break-words">{highlightText(fullName(contract.student), highlightQuery)}</span>
 									</Link>
 								</th>
 								<td className={cell}>
-									<p className="font-medium">{contract.offer_title}</p>
-									<p className="text-xs text-[#6b7280]">{contract.company}</p>
+									<p className="font-medium">{highlightText(contract.offer_title, highlightQuery)}</p>
+									<p className="text-xs text-[#6b7280]">{highlightText(contract.company, highlightQuery)}</p>
 								</td>
 								<td className={`${cell} whitespace-nowrap`}>{contract.start_date ? formatDay(contract.start_date) : <span className="text-[#9ca3af]">—</span>}</td>
 								<td className={`${cell} whitespace-nowrap`}>{contract.end_date ? formatDay(contract.end_date) : <span className="text-[#9ca3af]">—</span>}</td>
@@ -128,14 +130,17 @@ export default function SchoolContractsPage() {
 	const { result, retry, setData } = useSchoolData(getSchoolContracts);
 	const [selected, setSelected] = useState("all");
 	const [period, setPeriod] = useState<"all" | ContractPeriod>("all");
+	const [query, setQuery] = useState("");
 	const [sort, setSort] = useState<ContractSort>("student");
 	const { advance, saving, error } = useAdvanceContract((updated) => {
 		if (result?.ok) setData(result.data.map((contract) => (contract.id === updated.id ? updated : contract)));
 	});
 
 	const contracts = result?.ok ? result.data : [];
+	const search = query.trim().toLocaleLowerCase("fr");
+	const matching = contracts.filter((contract) => !search || `${fullName(contract.student)} ${contract.offer_title} ${contract.company}`.toLocaleLowerCase("fr").includes(search));
 	const stage = filters.find((filter) => filter.key === selected)?.stage ?? 0;
-	const inPeriod = contracts.filter((contract) => period === "all" || contract.period === period);
+	const inPeriod = matching.filter((contract) => period === "all" || contract.period === period);
 	const visible = inPeriod.filter((contract) => stage === 0 || contract.stage === stage);
 
 	return (
@@ -148,6 +153,12 @@ export default function SchoolContractsPage() {
 				<SchoolRequestState result={result} retry={retry} />
 				{result?.ok && (
 					<>
+						{contracts.length > 0 && (
+							<div className="flex flex-col gap-1.5">
+								<label htmlFor="contract-search" className="text-sm font-medium">Rechercher un contrat</label>
+								<input id="contract-search" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Étudiant, offre ou entreprise…" className="min-h-11 w-full max-w-md rounded-xl border border-[#d1d5db] bg-surface px-3.5 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+							</div>
+						)}
 						{contracts.length > 0 && (
 							<ExportPanel
 								url="/api/school/contracts/export"
@@ -163,14 +174,14 @@ export default function SchoolContractsPage() {
 						/>
 						<FilterChips
 							label="Filtrer les contrats par période"
-							filters={periods.map(({ key, label }) => ({ key, label, count: contracts.filter((contract) => key === "all" || contract.period === key).length }))}
+							filters={periods.map(({ key, label }) => ({ key, label, count: matching.filter((contract) => key === "all" || contract.period === key).length }))}
 							selected={period}
 							onSelect={setPeriod}
 						/>
 						{visible.length === 0 ? (
 							<p role="status" className="rounded-2xl border border-[#e5e7eb] bg-[#f9fafb] p-5 text-sm text-[#6b7280]">{contracts.length === 0 ? "Aucun contrat déposé pour le moment." : "Aucun contrat ne correspond à ces filtres."}</p>
 						) : (
-							<SchoolContractsTable contracts={visible} sort={sort} onSort={setSort} onAdvance={advance} saving={saving} error={error} />
+							<SchoolContractsTable contracts={visible} sort={sort} onSort={setSort} onAdvance={advance} saving={saving} error={error} highlightQuery={query} />
 						)}
 					</>
 				)}

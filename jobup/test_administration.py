@@ -10,10 +10,19 @@ from django.test import override_settings
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
-from .models import JobApplication, Offer, Recruiter, Role, School, Student, User
+from .models import (
+    Company,
+    JobApplication,
+    Offer,
+    Recruiter,
+    Role,
+    School,
+    SchoolManager,
+    Student,
+    User,
+)
 
 URL = "/api/administration/users"
-FILTERS = f"{URL}/filters"
 PAGE = "/administration/users"
 LOGIN = "/api/administration/login"
 
@@ -48,8 +57,7 @@ class AdminUsersTests(APITestCase):
 
     def test_access(self):
         self.client.logout()
-        for path in (URL, FILTERS):
-            self.assertEqual(self.client.get(path).status_code, 403)
+        self.assertEqual(self.client.get(URL).status_code, 403)
         # The admin login, then back to the page
         self.assertRedirects(
             self.client.get(PAGE),
@@ -66,8 +74,7 @@ class AdminUsersTests(APITestCase):
                 is_superuser=True,
             )
             self.client.force_login(user)
-            for path in (URL, FILTERS):
-                self.assertEqual(self.client.get(path).status_code, 403)
+            self.assertEqual(self.client.get(URL).status_code, 403)
             # ADM-13: an account of another role goes back to the home page
             self.assertRedirects(
                 self.client.get(PAGE), "/", fetch_redirect_response=False
@@ -78,7 +85,7 @@ class AdminUsersTests(APITestCase):
         self.assertEqual(response.status_code, 200)
         response.close()
 
-    def test_stable_pagination_students_only_and_inactive(self):
+    def test_stable_pagination_every_role_and_inactive(self):
         now = timezone.now()
         for i in range(12):
             account(
@@ -90,28 +97,30 @@ class AdminUsersTests(APITestCase):
             account(f"other{role}@example.fr", "Autre", "Compte", role=role)
         # Same date for everyone: the id decides
         User.objects.update(date_joined=now)
-        expected = list(
-            User.objects.filter(role=Role.STUDENT)
-            .order_by("-pk")
-            .values_list("pk", flat=True)
-        )
+        # Every account is listed: the three roles, the suspended one and the administrator
+        expected = list(User.objects.order_by("-pk").values_list("pk", flat=True))
         first = self.client.get(URL).json()
         second = self.client.get(URL, {"page": 2}).json()
-        self.assertEqual(first["count"], 12)
+        self.assertEqual(first["count"], 15)
         self.assertEqual(first["total_pages"], 2)
         self.assertEqual(first["page_size"], 10)
         self.assertEqual(len(first["results"]), 10)
         self.assertEqual(second["page"], 2)
         rows = first["results"] + second["results"]
         self.assertEqual([row["id"] for row in rows], expected)
-        self.assertEqual(rows[0]["email"], "user11@example.fr")
-        self.assertFalse(rows[0]["is_active"])
-        self.assertIsNotNone(rows[0]["suspended_at"])
-        self.assertEqual(rows[0]["detail_url"], f"{PAGE}/{rows[0]['id']}")
-        # A student account without a profile has no school
-        self.assertIsNone(rows[0]["school"])
-        self.assertNotIn("password", rows[0])
-        self.assertIsNone(rows[-1]["suspended_at"])
+        self.assertEqual(
+            {row["role"] for row in rows},
+            {Role.STUDENT, Role.MANAGER, Role.RECRUITER, Role.ADMIN},
+        )
+        by_email = {row["email"]: row for row in rows}
+        suspended = by_email["user11@example.fr"]
+        self.assertFalse(suspended["is_active"])
+        self.assertIsNotNone(suspended["suspended_at"])
+        self.assertEqual(suspended["detail_url"], f"{PAGE}/{suspended['id']}")
+        self.assertNotIn("password", suspended)
+        self.assertNotIn("school", suspended)
+        self.assertIsNone(by_email["user0@example.fr"]["suspended_at"])
+        self.assertEqual(by_email[self.admin.email]["role"], Role.ADMIN)
         self.assertEqual(self.ids(page_size=25), expected)
 
     def test_search(self):
@@ -120,7 +129,17 @@ class AdminUsersTests(APITestCase):
         bruno = student("bruno.durand@example.fr", "Bruno", "Durand")
         # Found by its name, although it has no profile
         chloe = account("c.petit@example.fr", "Chloé", "Petit")
+        lyon = School.objects.create(name="Lyon 2")
+        manager = account("m@example.fr", "Marie", "Lopez", role=Role.MANAGER)
+        SchoolManager.objects.create(user=manager, school=lyon)
+        recruiter = account("r@example.fr", "Rémi", "Roux", role=Role.RECRUITER)
+        Recruiter.objects.create(
+            user=recruiter,
+            company=Company.objects.create(name="Acme Corp", siret="12345678901234"),
+        )
         for query, expected in [
+            ("lyon", [manager]),
+            ("acme", [recruiter]),
             ("alice", [alice]),
             ("DURAND", [bruno]),
             ("c.petit@", [chloe]),
@@ -137,55 +156,58 @@ class AdminUsersTests(APITestCase):
             with self.subTest(query=query):
                 self.assertEqual(self.ids(q=query), [user.pk for user in expected])
 
-    def test_status_and_school_filters(self):
-        paris = School.objects.create(name="Université Paris")
-        lyon = School.objects.create(name="Lyon 2")
-        active = student("a@example.fr", school=paris)
+    def test_status_and_role_filters(self):
+        active = student("a@example.fr")
         suspended = student(
-            "s@example.fr", school=paris, is_active=False, suspended_at=timezone.now()
+            "s@example.fr", is_active=False, suspended_at=timezone.now()
         )
-        student("o@example.fr", school=lyon)
-        self.assertEqual(self.ids(status="active", school=paris.pk), [active.pk])
-        self.assertEqual(self.ids(status="suspended"), [suspended.pk])
-        self.assertCountEqual(self.ids(school=paris.pk), [active.pk, suspended.pk])
-        self.assertEqual(self.ids(school=lyon.pk, status="suspended"), [])
+        manager = account("m@example.fr", role=Role.MANAGER)
+        recruiter = account("r@example.fr", role=Role.RECRUITER)
+        self.assertEqual(self.ids(role="student", status="active"), [active.pk])
+        self.assertEqual(self.ids(role="student", status="suspended"), [suspended.pk])
+        self.assertCountEqual(self.ids(role="student"), [active.pk, suspended.pk])
+        self.assertEqual(self.ids(role="manager"), [manager.pk])
+        self.assertEqual(self.ids(role="recruiter"), [recruiter.pk])
+        self.assertEqual(self.ids(role="admin"), [self.admin.pk])
+        self.assertEqual(self.ids(role="recruiter", status="suspended"), [])
         self.assertEqual(
-            self.ids(q="alice", school=paris.pk, status="active"), [active.pk]
+            self.ids(q="alice", role="student", status="active"), [active.pk]
         )
         # An empty criterion is not applied
-        self.assertEqual(len(self.ids(q="", status="", school="")), 3)
+        self.assertEqual(len(self.ids(q="", status="", role="")), 5)
 
     def test_sort(self):
         now = timezone.now()
-        zoe = student(
-            "zoe@example.fr", "Zoé", "Adam", School.objects.create(name="Alpha")
-        )
-        marc = student(
-            "Marc@example.fr", "marc", "durand", School.objects.create(name="beta")
-        )
+        zoe = account("zoe@example.fr", "Zoé", "Adam", role=Role.RECRUITER)
+        marc = account("Marc@example.fr", "marc", "durand", role=Role.MANAGER)
         lea = student("lea@example.fr", "Léa", "Durand")
+        # The administrator is the oldest account
+        User.objects.filter(pk=self.admin.pk).update(
+            date_joined=now - timedelta(days=9)
+        )
         for days, user in enumerate((lea, marc, zoe)):
             User.objects.filter(pk=user.pk).update(
                 date_joined=now - timedelta(days=days)
             )
+        admin = self.admin
         for sort, expected in [
             # Case ignored; the first name separates the two Durand
-            ("last_name", [zoe, lea, marc]),
-            ("-last_name", [marc, lea, zoe]),
-            ("first_name", [lea, marc, zoe]),
-            ("-first_name", [zoe, marc, lea]),
-            ("email", [lea, marc, zoe]),
-            ("-email", [zoe, marc, lea]),
-            # Accounts without a school come last, in both directions
-            ("school", [zoe, marc, lea]),
-            ("-school", [marc, zoe, lea]),
-            ("date_joined", [zoe, marc, lea]),
-            ("-date_joined", [lea, marc, zoe]),
+            ("last_name", [zoe, lea, marc, admin]),
+            ("-last_name", [admin, marc, lea, zoe]),
+            ("first_name", [admin, lea, marc, zoe]),
+            ("-first_name", [zoe, marc, lea, admin]),
+            ("email", [admin, lea, marc, zoe]),
+            ("-email", [zoe, marc, lea, admin]),
+            # Student, manager, recruiter, then administrator; the id breaks ties
+            ("role", [lea, marc, zoe, admin]),
+            ("-role", [admin, zoe, marc, lea]),
+            ("date_joined", [admin, zoe, marc, lea]),
+            ("-date_joined", [lea, marc, zoe, admin]),
         ]:
             with self.subTest(sort=sort):
                 self.assertEqual(self.ids(sort=sort), [user.pk for user in expected])
         # Newest first by default
-        self.assertEqual(self.ids(), [lea.pk, marc.pk, zoe.pk])
+        self.assertEqual(self.ids(), [lea.pk, marc.pk, zoe.pk, admin.pk])
 
     def test_invalid_filters(self):
         for params in (
@@ -196,10 +218,9 @@ class AdminUsersTests(APITestCase):
             {"page_size": "11"},
             {"page_size": "all"},
             {"status": "deleted"},
-            {"school": "abc"},
-            {"school": "0"},
+            {"role": "teacher"},
             {"sort": "password"},
-            {"sort": "-role"},
+            {"sort": "-school"},
             {"q": "x" * 101},
         ):
             with self.subTest(params=params):
@@ -208,37 +229,16 @@ class AdminUsersTests(APITestCase):
         for page in ("2", "9999999999999999999999"):
             self.assertEqual(self.client.get(URL, {"page": page}).status_code, 404)
 
-    def test_empty_list(self):
-        # The administrator is not included in the list of student accounts.
+    def test_only_the_administrator(self):
         response = self.client.get(URL)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["results"], [])
-        self.assertEqual(response.json()["count"], 0)
+        self.assertEqual(response.json()["count"], 1)
         self.assertEqual(response.json()["total_pages"], 1)
-
-    def test_filter_values(self):
-        paris = School.objects.create(name="Université Paris")
-        lyon = School.objects.create(name="lyon 2")
-        School.objects.create(name="Sans étudiant")
-        student("a@example.fr", school=paris)
-        student("b@example.fr", school=paris)
-        student("c@example.fr", school=lyon)
-        response = self.client.get(FILTERS)
-        self.assertEqual(response.status_code, 200)
-        # Each school once, in alphabetical order whatever the case
-        self.assertEqual(
-            response.json(),
-            {
-                "schools": [
-                    {"id": lyon.pk, "name": "lyon 2"},
-                    {"id": paris.pk, "name": "Université Paris"},
-                ]
-            },
-        )
+        self.assertEqual(self.ids(status="suspended"), [])
+        self.assertEqual(self.ids(role="student"), [])
 
     def test_read_only(self):
         self.assertEqual(self.client.post(URL, {}).status_code, 405)
-        self.assertEqual(self.client.post(FILTERS, {}).status_code, 405)
 
 
 class AdminStudentDetailTests(APITestCase):
@@ -291,6 +291,7 @@ class AdminStudentDetailTests(APITestCase):
         self.assertEqual(data["email"], self.user.email)
         self.assertIsNone(data["phone"])
         self.assertEqual(data["applications_sent"], 1)
+        self.assertTrue(data["can_suspend"])
         self.assertEqual(data["cv_url"], f"{self.path}/cv")
         self.assertIsNone(data["photo_url"])
         self.assertTrue(data["is_active"])
@@ -323,10 +324,41 @@ class AdminStudentDetailTests(APITestCase):
         self.assertEqual(response.status_code, 200)
         response.close()
 
-    def test_unknown_or_non_student(self):
-        for id in (999999, self.admin.pk):
-            self.assertEqual(self.client.get(f"{URL}/{id}").status_code, 404)
-            self.assertEqual(self.client.get(f"{URL}/{id}/cv").status_code, 404)
+    def test_unknown_account(self):
+        self.assertEqual(self.client.get(f"{URL}/999999").status_code, 404)
+        self.assertEqual(self.client.get(f"{URL}/999999/cv").status_code, 404)
+
+    def test_other_roles_have_a_profile_without_student_fields(self):
+        lyon = School.objects.create(name="Lyon 2")
+        manager = account("m@example.fr", "Marie", "Lopez", role=Role.MANAGER)
+        SchoolManager.objects.create(user=manager, school=lyon)
+        recruiter = account("r@example.fr", "Rémi", "Roux", role=Role.RECRUITER)
+        Recruiter.objects.create(
+            user=recruiter,
+            company=Company.objects.create(name="Acme", siret="12345678901234"),
+        )
+        data = self.client.get(f"{URL}/{manager.pk}").json()
+        self.assertEqual(data["role"], Role.MANAGER)
+        self.assertEqual(data["school"], "Lyon 2")
+        self.assertIsNone(data["company"])
+        self.assertIsNone(data["applications_sent"])
+        self.assertIsNone(data["cv_url"])
+        self.assertTrue(data["can_suspend"])
+        data = self.client.get(f"{URL}/{recruiter.pk}").json()
+        self.assertEqual(data["company"], "Acme")
+        self.assertIsNone(data["school"])
+        self.assertIsNone(data["applications_sent"])
+        # Without a profile: nothing to show, and no error
+        for role in (Role.MANAGER, Role.RECRUITER):
+            bare = account(f"bare{role}@example.fr", role=role)
+            data = self.client.get(f"{URL}/{bare.pk}").json()
+            self.assertIsNone(data["school"])
+            self.assertIsNone(data["company"])
+        # The administrator can be read, never suspended
+        data = self.client.get(f"{URL}/{self.admin.pk}").json()
+        self.assertEqual(data["role"], Role.ADMIN)
+        self.assertFalse(data["can_suspend"])
+        self.assertEqual(self.client.get(f"{URL}/{self.admin.pk}/cv").status_code, 404)
 
     def test_inactive_and_missing_profile(self):
         self.user.is_active = False
@@ -439,14 +471,32 @@ class SuspensionTests(APITestCase):
             for method in (self.client.post, self.client.delete):
                 self.assertEqual(method(self.path).status_code, 403)
         self.client.force_login(self.admin)
-        recruiter = account("rh@example.fr", role=Role.RECRUITER)
-        for id in (999999, self.admin.pk, recruiter.pk):
-            self.assertEqual(
-                self.client.post(f"{URL}/{id}/suspension").status_code, 404
-            )
+        self.assertEqual(self.client.post(f"{URL}/999999/suspension").status_code, 404)
         self.assertEqual(self.client.get(self.path).status_code, 405)
         self.alice.refresh_from_db()
         self.assertTrue(self.alice.is_active)
+
+    def test_recruiters_and_managers_can_be_suspended(self):
+        self.client.force_login(self.admin)
+        for role in (Role.RECRUITER, Role.MANAGER):
+            user = account(f"u{role}@example.fr", role=role)
+            path = f"{URL}/{user.pk}/suspension"
+            self.assertFalse(self.client.post(path).json()["is_active"])
+            user.refresh_from_db()
+            self.assertFalse(user.is_active)
+            self.assertTrue(self.client.delete(path).json()["is_active"])
+
+    def test_an_administrator_cannot_be_suspended(self):
+        self.client.force_login(self.admin)
+        other = account("admin2@example.fr", role=Role.ADMIN)
+        # Neither another administrator nor oneself
+        for user in (other, self.admin):
+            path = f"{URL}/{user.pk}/suspension"
+            for method in (self.client.post, self.client.delete):
+                self.assertEqual(method(path).status_code, 403)
+            user.refresh_from_db()
+            self.assertTrue(user.is_active)
+            self.assertIsNone(user.suspended_at)
 
 
 class AdminLoginTests(APITestCase):

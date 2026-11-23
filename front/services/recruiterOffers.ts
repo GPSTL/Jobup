@@ -34,6 +34,7 @@ async function read<T>(url: string): Promise<OfferResult<T>> {
 	}
 }
 
+export const getRecruiterOffer = (id: string) => read<PublishedOffer>(`/api/recruiter/offers/${encodeURIComponent(id)}`);
 export const getRecruiterOffers = () => read<OfferSummary[]>("/api/recruiter/offers");
 export const getOfferApplicants = (id: string) => read<OfferApplicants>(`/api/recruiter/offers/${encodeURIComponent(id)}/applicants`);
 

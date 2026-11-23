@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { AdminUsersResults, AdminUsersTable, AdminUsersToolbar } from "../front/pages/AdminUsersPage";
-import { getAdminUser, getAdminUserFilters, getAdminUsers, setSuspension, type AdminUser, type AdminUserDetail, type AdminUsersResult } from "../front/services/adminUsers";
-import { AdminStudentProfile } from "../front/pages/AdminUserDetailPage";
+import { getAdminUser, getAdminUsers, setSuspension, type AdminUser, type AdminUserDetail, type AdminUsersResult } from "../front/services/adminUsers";
+import { AdminUserProfile } from "../front/pages/AdminUserDetailPage";
 import AdminNavbar from "../front/components/AdminNavbar";
 import { AdminLoginView } from "../front/pages/AdminLoginPage";
 import { adminLogin, login } from "../front/services/auth";
@@ -23,19 +23,22 @@ import {
 	withChanges,
 } from "../front/utils/adminUsers";
 
-const user: AdminUser = { id: 1, first_name: "Alice", last_name: "Martin", email: "alice@example.fr", role: 1, school: "Université Paris", date_joined: "2026-10-09T12:00:00Z", is_active: true, suspended_at: null, detail_url: "/administration/users/1" };
+const user: AdminUser = { id: 1, first_name: "Alice", last_name: "Martin", email: "alice@example.fr", role: 1, date_joined: "2026-10-09T12:00:00Z", is_active: true, suspended_at: null, detail_url: "/administration/users/1" };
 const render = (element: React.ReactNode) => renderToStaticMarkup(<MemoryRouter>{element}</MemoryRouter>);
 const noop = () => {};
 const realFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = realFetch; });
 
-test("navigation partagée : menu mobile, page active, rubriques indisponibles et déconnexion", () => {
+test("navigation partagée : rubriques renommées, menu mobile, page active et déconnexion", () => {
 	const html = renderToStaticMarkup(<MemoryRouter initialEntries={["/administration/users"]}><AdminNavbar /></MemoryRouter>);
 	assert.match(html, /aria-expanded="false"/);
 	assert.match(html, /aria-current="page"/);
-	assert.match(html, /aria-disabled="true" title="Bientôt disponible"/);
 	assert.match(html, /Se déconnecter/);
-	assert.doesNotMatch(html, /href="\/administration\/(account|companies|schools)"/);
+	// Every section has its page, under a short name
+	for (const [path, label] of [["account", "Mon espace"], ["users", "Utilisateurs"], ["companies", "Entreprises"], ["schools", "Écoles"], ["reports", "Signalements"], ["claims", "Réclamations"]]) {
+		assert.match(html, new RegExp(`href="/administration/${path}"[^>]*>${label}<`), label);
+	}
+	assert.doesNotMatch(html, /aria-disabled="true"|Liste d/);
 	const student = render(<StudentNavbar />);
 	assert.match(student, /href="\/student"/);
 	assert.match(student, /href="\/applications"/);
@@ -44,13 +47,14 @@ test("navigation partagée : menu mobile, page active, rubriques indisponibles e
 	assert.match(student, /Se déconnecter/);
 });
 
-test("tableau : colonnes, identité, école, date française et flèche vers la fiche", () => {
+test("tableau : colonnes, identité, type de compte, date française et flèche vers la fiche", () => {
 	const html = renderToStaticMarkup(
 		<MemoryRouter initialEntries={["/administration/users?q=ali&page=2"]}>
-			<AdminUsersTable users={[user, { ...user, id: 2, school: null }]} sort="-date_joined" onSort={noop} />
+			<AdminUsersTable users={[user, { ...user, id: 2, role: 3 }, { ...user, id: 3, role: 2 }, { ...user, id: 4, role: 127 }]} sort="-date_joined" onSort={noop} />
 		</MemoryRouter>,
 	);
-	for (const text of ["Prénom", "Nom", "E-mail", "École", "Inscription", "Statut", "Alice", "Martin", "alice@example.fr", "Université Paris", "09/10/2026", "Actif", "Non renseignée"]) assert.ok(html.includes(text), text);
+	for (const text of ["Prénom", "Nom", "E-mail", "Type de compte", "Inscription", "Statut", "Alice", "Martin", "alice@example.fr", "Étudiant", "Recruteur", "Manager", "Administrateur", "09/10/2026", "Actif"]) assert.ok(html.includes(text), text);
+	assert.doesNotMatch(html, /École/);
 	assert.match(html, /href="\/administration\/users\/1"/);
 	assert.match(html, /aria-label="Voir la fiche de Alice Martin"/);
 	assert.doesNotMatch(html, /disabled=""/);
@@ -77,19 +81,20 @@ test("tableau : fiche indisponible sans lien cassé", () => {
 	assert.doesNotMatch(html, /href="\/administration\/users\/1"/);
 });
 
-test("filtres : statuts, écoles chargées, indisponibles, et réinitialisation seulement avec des critères", () => {
-	const toolbar = (schools: Parameters<typeof AdminUsersToolbar>[0]["schools"], query = DEFAULT_QUERY) =>
-		render(<AdminUsersToolbar query={query} schools={schools} onSearch={noop} onChange={noop} onReset={noop} />);
-	const html = toolbar([{ id: 3, name: "Université Paris" }]);
-	for (const text of ["Rechercher un étudiant par nom, e-mail ou école", "Tous les statuts", "Actifs", "Suspendus", "Toutes les écoles", "Université Paris"]) assert.ok(html.includes(text), text);
-	assert.match(html, /<option value="3">Université Paris<\/option>/);
+test("filtres : type de compte, statuts, et réinitialisation seulement avec des critères", () => {
+	const toolbar = (query = DEFAULT_QUERY) => render(<AdminUsersToolbar query={query} onSearch={noop} onChange={noop} onReset={noop} />);
+	const html = toolbar();
+	for (const text of ["Rechercher un utilisateur par nom, e-mail, école ou entreprise", "Type de compte", "Tous les types", "Étudiants", "Managers", "Recruteurs", "Tous les statuts", "Actifs", "Suspendus"]) assert.ok(html.includes(text), text);
+	assert.match(html, /<option value="manager">Managers<\/option>/);
+	// The school is too specific for a list of every account
+	assert.doesNotMatch(html, /Toutes les écoles|<option value="admin">/);
 	assert.doesNotMatch(html, /Réinitialiser/);
-	assert.match(toolbar(null), /<select disabled=""/);
-	assert.match(toolbar("error"), /Écoles indisponibles/);
-	const filtered = toolbar([], { ...DEFAULT_QUERY, q: "alice", school: "9" });
+	const filtered = toolbar({ ...DEFAULT_QUERY, q: "alice", role: "recruiter" });
 	assert.match(filtered, /value="alice"/);
-	assert.match(filtered, /École sélectionnée/);
+	assert.match(filtered, /<option value="recruiter" selected="">Recruteurs/);
 	assert.match(filtered, /Réinitialiser/);
+	// An administrator filter of the URL stays shown
+	assert.match(toolbar({ ...DEFAULT_QUERY, role: "admin" }), /<option value="admin" selected="">Administrateurs/);
 });
 
 test("résultats : chargement, erreurs, liste vide, aucun résultat et pagination", () => {
@@ -100,12 +105,12 @@ test("résultats : chargement, erreurs, liste vide, aucun résultat et paginatio
 	assert.match(view({ ok: false, reason: "notFound" }), /Revenir à la première page/);
 	assert.match(view({ ok: false, reason: "forbidden" }), /href="\/administration\?next=%2Fadministration%2Fusers"/);
 	const empty: AdminUsersResult = { ok: true, results: [], count: 0, page: 1, page_size: 10, total_pages: 1 };
-	assert.match(view(empty), /Aucun étudiant inscrit/);
+	assert.match(view(empty), /Aucun utilisateur inscrit/);
 	const noMatch = view(empty, { ...DEFAULT_QUERY, status: "suspended" });
-	assert.match(noMatch, /Aucun étudiant ne correspond à votre recherche/);
+	assert.match(noMatch, /Aucun utilisateur ne correspond à votre recherche/);
 	assert.match(noMatch, /Réinitialiser les filtres/);
 	const html = view({ ok: true, results: [user], count: 11, page: 2, page_size: 10, total_pages: 2 });
-	assert.match(html, /11–11 sur 11 étudiants/);
+	assert.match(html, /11–11 sur 11 comptes/);
 	assert.match(html, /aria-label="Page 1"/);
 	assert.match(html, /aria-current="page"/);
 	assert.match(html, /Lignes par page/);
@@ -114,16 +119,16 @@ test("résultats : chargement, erreurs, liste vide, aucun résultat et paginatio
 
 test("URL : valeurs par défaut, valeurs invalides ignorées et aller-retour", () => {
 	assert.deepEqual(queryFromParams(new URLSearchParams()), DEFAULT_QUERY);
-	const invalid = queryFromParams(new URLSearchParams("status=deleted&school=abc&sort=password&page=0&page_size=11"));
+	const invalid = queryFromParams(new URLSearchParams("status=deleted&role=teacher&sort=school&page=0&page_size=11"));
 	assert.deepEqual(invalid, DEFAULT_QUERY);
-	const query = queryFromParams(new URLSearchParams("q=+alice+&status=suspended&school=3&sort=last_name&page=2&page_size=25"));
-	assert.deepEqual(query, { q: "alice", status: "suspended", school: "3", sort: "last_name", page: 2, page_size: 25 });
-	assert.equal(searchFromQuery(query), "q=alice&status=suspended&school=3&sort=last_name&page_size=25&page=2");
+	const query = queryFromParams(new URLSearchParams("q=+alice+&status=suspended&role=recruiter&sort=role&page=2&page_size=25"));
+	assert.deepEqual(query, { q: "alice", status: "suspended", role: "recruiter", sort: "role", page: 2, page_size: 25 });
+	assert.equal(searchFromQuery(query), "q=alice&status=suspended&role=recruiter&sort=role&page_size=25&page=2");
 	assert.deepEqual(queryFromParams(new URLSearchParams(searchFromQuery(query))), query);
 	// Default values stay out of the URL
 	assert.equal(searchFromQuery(DEFAULT_QUERY), "");
 	assert.equal(hasCriteria(DEFAULT_QUERY), false);
-	assert.equal(hasCriteria({ ...DEFAULT_QUERY, school: "3" }), true);
+	assert.equal(hasCriteria({ ...DEFAULT_QUERY, role: "manager" }), true);
 });
 
 test("URL : un nouveau critère revient à la première page, pas un changement de page", () => {
@@ -142,13 +147,13 @@ test("tri : croissant puis décroissant, les plus récents d'abord pour la date"
 	assert.equal(nextSort("-date_joined", "date_joined"), "date_joined");
 	assert.equal(sortDirection("-email", "email"), "descending");
 	assert.equal(sortDirection("email", "email"), "ascending");
-	assert.equal(sortDirection("email", "school"), undefined);
+	assert.equal(sortDirection("email", "role"), undefined);
 });
 
 test("libellés : plage affichée et retour vers la liste", () => {
-	assert.equal(rangeLabel(42, 1, 10, 10), "1–10 sur 42 étudiants");
-	assert.equal(rangeLabel(42, 5, 10, 2), "41–42 sur 42 étudiants");
-	assert.equal(rangeLabel(1, 1, 10, 1), "1–1 sur 1 étudiant");
+	assert.equal(rangeLabel(42, 1, 10, 10), "1–10 sur 42 comptes");
+	assert.equal(rangeLabel(42, 5, 10, 2), "41–42 sur 42 comptes");
+	assert.equal(rangeLabel(1, 1, 10, 1), "1–1 sur 1 compte");
 	assert.equal(adminUsersLink("/administration/users?q=alice&page=2"), "/administration/users?q=alice&page=2");
 	assert.equal(adminUsersLink("/administration/users"), "/administration/users");
 	for (const other of ["/administration/users/5", "/administration/usersx", "https://example.com", "//example.com", 3, undefined]) {
@@ -156,34 +161,34 @@ test("libellés : plage affichée et retour vers la liste", () => {
 	}
 });
 
-const profile: AdminUserDetail = { ...user, school: "Université Paris", photo_url: null, phone: null, applications_sent: 7, cv_url: "/api/administration/users/1/cv" };
+const profile: AdminUserDetail = { ...user, school: "Université Paris", company: null, photo_url: null, phone: null, applications_sent: 7, cv_url: "/api/administration/users/1/cv", can_suspend: true };
 
 test("fiche (ADM-02) : école, téléphone, e-mail, candidatures envoyées et date d'inscription", () => {
-	const html = render(<AdminStudentProfile user={profile} />);
-	for (const text of ["Alice Martin", "Université Paris", "Téléphone non renseigné", "alice@example.fr", "7 candidatures envoyées", "Inscription le", "09/10/2026"]) assert.ok(html.includes(text), text);
+	const html = render(<AdminUserProfile user={profile} />);
+	for (const text of ["Alice Martin", "Étudiant", "Université Paris", "Téléphone non renseigné", "alice@example.fr", "7 candidatures envoyées", "Inscription le", "09/10/2026"]) assert.ok(html.includes(text), text);
 	// Labels of the icons, for screen readers
-	for (const label of ["École", "Téléphone", "E-mail", "Candidatures", "Inscription"]) assert.match(html, new RegExp(`<span class="sr-only">${label}</span>`));
-	assert.match(render(<AdminStudentProfile user={{ ...profile, applications_sent: 1 }} />), /1 candidature envoyée</);
-	assert.match(render(<AdminStudentProfile user={{ ...profile, applications_sent: 0 }} />), /Aucune candidature envoyée/);
+	for (const label of ["Type de compte", "École", "Téléphone", "E-mail", "Candidatures", "Inscription"]) assert.match(html, new RegExp(`<span class="sr-only">${label}</span>`));
+	assert.match(render(<AdminUserProfile user={{ ...profile, applications_sent: 1 }} />), /1 candidature envoyée</);
+	assert.match(render(<AdminUserProfile user={{ ...profile, applications_sent: 0 }} />), /Aucune candidature envoyée/);
 });
 
 test("fiche : photo du profil, ou initiales sans photo", () => {
-	assert.match(render(<AdminStudentProfile user={{ ...profile, photo_url: "/media/photos/alice.png" }} />), /<img src="\/media\/photos\/alice.png"/);
-	const noPhoto = render(<AdminStudentProfile user={profile} />);
+	assert.match(render(<AdminUserProfile user={{ ...profile, photo_url: "/media/photos/alice.png" }} />), /<img src="\/media\/photos\/alice.png"/);
+	const noPhoto = render(<AdminUserProfile user={profile} />);
 	assert.doesNotMatch(noPhoto, /<img/);
 	assert.match(noPhoto, />AM</);
 });
 
 test("fiche : « Télécharger le CV » est un lien de téléchargement, « CV non déposé » sans CV", () => {
-	const html = render(<AdminStudentProfile user={profile} />);
+	const html = render(<AdminUserProfile user={profile} />);
 	assert.match(html, /<a href="\/api\/administration\/users\/1\/cv" download=""[^>]*>.*Télécharger le CV<\/a>/);
-	const noCv = render(<AdminStudentProfile user={{ ...profile, cv_url: null }} />);
+	const noCv = render(<AdminUserProfile user={{ ...profile, cv_url: null }} />);
 	assert.match(noCv, /CV non déposé/);
 	assert.doesNotMatch(noCv, /Télécharger le CV|download=""/);
 });
 
 test("fiche (ADM-03) : « Suspendre le compte » pour un compte actif, avec une fenêtre de confirmation", () => {
-	const active = render(<AdminStudentProfile user={profile} />);
+	const active = render(<AdminUserProfile user={profile} />);
 	assert.match(active, /<button type="button" class="[^"]*bg-\[#e00000\][^"]*">Suspendre le compte<\/button>/);
 	// The confirmation window, closed until the click
 	assert.match(active, /<dialog [^>]*>/);
@@ -193,12 +198,33 @@ test("fiche (ADM-03) : « Suspendre le compte » pour un compte actif, avec une 
 });
 
 test("fiche (ADM-04) : compte suspendu, date en rouge et « Rétablir le compte » à la place", () => {
-	const suspended = render(<AdminStudentProfile user={{ ...profile, is_active: false, suspended_at: "2026-10-15T12:00:00Z", school: null }} />);
+	const suspended = render(<AdminUserProfile user={{ ...profile, is_active: false, suspended_at: "2026-10-15T12:00:00Z", school: null }} />);
 	assert.match(suspended, /text-\[#e00000\]">Suspendu le <time dateTime="2026-10-15T12:00:00Z">15\/10\/2026<\/time>/);
 	assert.match(suspended, />Rétablir le compte<\/button>/);
 	assert.doesNotMatch(suspended, /Suspendre le compte|<dialog/);
 	assert.match(suspended, /École non renseignée/);
-	assert.match(render(<AdminStudentProfile user={{ ...profile, is_active: false }} />), /Compte suspendu, date non renseignée/);
+	assert.match(render(<AdminUserProfile user={{ ...profile, is_active: false }} />), /Compte suspendu, date non renseignée/);
+});
+
+test("fiche : un manager montre son école, un recruteur son entreprise, sans candidatures ni CV", () => {
+	const manager = render(<AdminUserProfile user={{ ...profile, role: 2, applications_sent: null, cv_url: null }} />);
+	assert.match(manager, />Manager</);
+	assert.match(manager, /Université Paris/);
+	assert.doesNotMatch(manager, /Candidatures|CV non déposé|Télécharger le CV/);
+	assert.match(manager, />Suspendre le compte<\/button>/);
+	const recruiter = render(<AdminUserProfile user={{ ...profile, role: 3, school: null, company: "Acme", applications_sent: null, cv_url: null }} />);
+	assert.match(recruiter, />Recruteur</);
+	assert.match(recruiter, /<span class="sr-only">Entreprise<\/span>/);
+	assert.match(recruiter, /Acme/);
+	assert.doesNotMatch(recruiter, /École|Candidatures|CV non déposé/);
+	assert.match(render(<AdminUserProfile user={{ ...profile, role: 3, school: null, applications_sent: null, cv_url: null }} />), /Entreprise non renseignée/);
+});
+
+test("fiche : un compte administrateur ne peut pas être suspendu", () => {
+	const admin = render(<AdminUserProfile user={{ ...profile, role: 127, school: null, applications_sent: null, cv_url: null, can_suspend: false }} />);
+	assert.match(admin, />Administrateur</);
+	assert.match(admin, /Un compte administrateur ne peut pas être suspendu/);
+	assert.doesNotMatch(admin, /Suspendre le compte|Rétablir le compte|<dialog/);
 });
 
 test("fiche : session expirée, retour à la connexion admin puis à la fiche", () => {
@@ -246,22 +272,6 @@ test("API liste : critères de l'URL, cookie, annulation, accès interdit, rése
 	assert.deepEqual(await getAdminUsers(""), { ok: false, reason: "network" });
 	globalThis.fetch = async () => new Response("not json");
 	assert.deepEqual(await getAdminUsers(""), { ok: false, reason: "server" });
-});
-
-test("API filtres : écoles proposées, erreur et réponse invalide", async () => {
-	const schools = [{ id: 3, name: "Université Paris" }];
-	globalThis.fetch = (async (url, init) => {
-		assert.equal(url, "/api/administration/users/filters");
-		assert.equal(init?.credentials, "same-origin");
-		return Response.json({ schools });
-	}) as typeof fetch;
-	assert.deepEqual(await getAdminUserFilters(), { ok: true, schools });
-	globalThis.fetch = async () => new Response("", { status: 403 });
-	assert.deepEqual(await getAdminUserFilters(), { ok: false });
-	globalThis.fetch = async () => Response.json({ schools: "none" });
-	assert.deepEqual(await getAdminUserFilters(), { ok: false });
-	globalThis.fetch = async () => { throw new TypeError("offline"); };
-	assert.deepEqual(await getAdminUserFilters(), { ok: false });
 });
 
 test("connexion admin : formulaire sans lien d'inscription ni mot de passe oublié", () => {

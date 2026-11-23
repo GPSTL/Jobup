@@ -111,20 +111,20 @@ test("carte : sans photo, école ni CV, les initiales et des mentions adaptées,
 	assert.doesNotMatch(html, /download|Télécharger le CV/);
 });
 
-test("cartes : position annoncée, flèches inactives aux extrémités, carte suivante visible sous la carte", () => {
-	const deck = (index: number) => render(<CandidateDeck candidates={[candidate, incomplete]} index={index} onSelect={() => {}} />);
+test("cartes : position annoncée, sans flèches, carte suivante visible sous la carte", () => {
+	const deck = (index: number) => render(<CandidateDeck candidates={[candidate, incomplete]} index={index} />);
 	const nextCard = /<div aria-hidden="true" class="absolute/;
 
 	const first = deck(0);
 	assert.match(first, /Candidat 1 sur 2/);
-	assert.match(first, /aria-label="Candidat précédent" aria-disabled="true"/);
-	assert.match(first, /aria-label="Candidat suivant" aria-disabled="false"/);
+	assert.doesNotMatch(first, /aria-label="Candidat précédent"|aria-label="Candidat suivant"/);
+	assert.doesNotMatch(first, /aria-label="Candidat précédent"|aria-label="Candidat suivant"/);
 	assert.match(first, nextCard);
 
 	const last = deck(1);
 	assert.match(last, /Candidat 2 sur 2/);
-	assert.match(last, /aria-label="Candidat précédent" aria-disabled="false"/);
-	assert.match(last, /aria-label="Candidat suivant" aria-disabled="true"/);
+	assert.doesNotMatch(last, /aria-label="Candidat précédent"|aria-label="Candidat suivant"/);
+	assert.doesNotMatch(last, /aria-label="Candidat précédent"|aria-label="Candidat suivant"/);
 	assert.doesNotMatch(last, nextCard);
 });
 
@@ -206,4 +206,10 @@ test("API : session expirée, profil introuvable, erreurs du serveur et du rése
 	});
 	assert.deepEqual(await getCandidates(), { ok: false, reason: "network" });
 	assert.deepEqual(await getCandidate(7), { ok: false, reason: "network" });
+});
+
+test("candidate card displays the compatibility percentage when available", () => {
+	assert.match(render(<CandidateCard candidate={candidate} matchPercentage={78} />), /<header[^>]*>.*78%<\/strong>.*de compatibilité.*<\/header>.*<h2[^>]*>Lucas Martin/);
+	assert.match(render(<CandidateCard candidate={candidate} matchPercentage={0} />), /0%<\/strong>.*de compatibilité/);
+	assert.doesNotMatch(render(<CandidateCard candidate={candidate} />), /de compatibilité/);
 });

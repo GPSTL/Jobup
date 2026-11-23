@@ -6,6 +6,7 @@ import {
 	startRecruiterConversation,
 	type ConversationRecipient,
 } from "../services/recruiterConversations";
+import { highlightText } from "../utils/highlight";
 
 type Props = {
 	onClose: () => void;
@@ -120,7 +121,7 @@ export default function NewConversationDialog({ onClose, onConversationCreated }
 								<button type="button" disabled={startingId !== null} onClick={() => void selectRecipient(recipient)} className="flex w-full items-center gap-3 rounded-lg px-2 py-3 text-left hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-60">
 									<span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-blue-100 font-semibold text-blue-800">{`${recipient.first_name[0] ?? ""}${recipient.last_name[0] ?? ""}`.toUpperCase()}</span>
 									<span className="min-w-0 flex-1">
-										<span className="block truncate font-medium">{recipient.first_name} {recipient.last_name}</span>
+										<span className="block truncate font-medium">{highlightText(`${recipient.first_name} ${recipient.last_name}`, query)}</span>
 										<span className="block text-xs text-gray-500">{recipient.has_conversation ? "Conversation existante · Reprendre" : "Démarrer une conversation"}</span>
 									</span>
 									<span aria-hidden="true" className="text-sm text-primary">{startingId === recipient.id ? "Ouverture…" : "Ouvrir"}</span>

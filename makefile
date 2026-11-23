@@ -3,11 +3,23 @@ FRONT_DST = jobup/static/dist/app.js
 CSS_SRC = front/app.css
 CSS_DST = jobup/static/dist/app.css
 
-.PHONY: init migrate seed all debug run_only run run_debug dev watch_js watch_css test
+.PHONY: init migrate seed seed_bulk all debug run_only run run_debug dev watch_js watch_css test
 
 all:
 	npx esbuild $(FRONT_SRC) --bundle --outfile=$(FRONT_DST) --minify --loader:.tsx=tsx
 	npx @tailwindcss/cli -i $(CSS_SRC) -o $(CSS_DST) --minify
+
+deploy:
+	git checkout main
+	git pull --ff-only origin main
+	.venv/bin/pip install -r requirements.txt
+	npm ci
+	$(MAKE) all
+	cp db.sqlite3 backups/db-$$(date +%F-%H%M).sqlite3
+	.venv/bin/python manage.py makemigrations jobup
+	.venv/bin/python manage.py migrate --noinput
+	.venv/bin/python manage.py collectstatic --noinput
+	sudo systemctl restart jobup
 
 debug:
 	npx esbuild $(FRONT_SRC) --bundle --outfile=$(FRONT_DST) --loader:.tsx=tsx
@@ -32,6 +44,9 @@ dev:
 migrate:
 	python manage.py makemigrations jobup
 	python manage.py migrate
+
+seed_bulk:
+	python manage.py seed_bulk
 
 seed:
 	python manage.py seed_demo
