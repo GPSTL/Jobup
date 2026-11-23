@@ -5,6 +5,7 @@ import { CandidateAvatar, EducationLine } from "../components/CandidateIdentity"
 import ApplicationStatusChip from "../components/ApplicationStatusChip";
 import ContractDocument from "../components/ContractDocument";
 import ContractUploadForm from "../components/ContractUploadForm";
+import RecruiterInterviewSection from "../components/RecruiterInterviewSection";
 import { decideApplication, getRecruiterApplication, type RecruiterApplication, type OfferResult } from "../services/recruiterOffers";
 import { formatDate, STATUS } from "../utils/applications";
 import { canReplaceContract } from "../utils/contracts";
@@ -12,11 +13,13 @@ import { fullName } from "../utils/candidates";
 import { focus } from "../utils/searchPageStyles";
 import { offerPanel, OfferRequestState, RecruiterOffersLayout } from "./RecruiterOffersPage";
 
-export function RecruiterApplicationContent({ application, onDecision, onContract, saving, error }: {
+export function RecruiterApplicationContent({ application, onDecision, onContract, onInterview = () => {}, saving, error }: {
 	application: RecruiterApplication;
 	onDecision: (status: typeof STATUS.ACCEPTED | typeof STATUS.REFUSED, message: string) => void;
 	/** Candidature à jour après le dépôt ou le remplacement du contrat (JOB-045) */
 	onContract: (application: RecruiterApplication) => void;
+	/** Candidature à jour après la proposition ou l'annulation d'un entretien */
+	onInterview?: (application: RecruiterApplication) => void;
 	saving: boolean;
 	error: string;
 }) {
@@ -40,6 +43,7 @@ export function RecruiterApplicationContent({ application, onDecision, onContrac
 			</div>
 			<Link className={`w-fit text-sm font-semibold text-primary hover:underline ${focus}`} to={`/recruiter/candidates/${candidate.id}?offer=${offer.id}`}>Voir le profil du candidat</Link>
 			{application.message && <section className="flex flex-col gap-2"><h2 className="text-lg font-semibold">Présentation du candidat</h2><p className="text-sm sm:text-base whitespace-pre-line text-[#6b7280]">{application.message}</p></section>}
+			<RecruiterInterviewSection application={application} onChange={onInterview} />
 			{pending ? (
 				<section className="flex flex-col gap-4 border-t border-[#e5e7eb] pt-5" aria-label="Décision de recrutement">
 					<label className="flex flex-col gap-2 text-sm font-semibold" htmlFor="decision-message">Message au candidat (facultatif)</label>
@@ -115,7 +119,7 @@ export default function RecruiterApplicationPage() {
 	return (
 		<RecruiterOffersLayout>
 			<section className={offerPanel}>
-				{response?.ok ? <RecruiterApplicationContent key={response.data.id} application={response.data} onDecision={decide} onContract={(data) => setResult({ id, response: { ok: true, data } })} saving={saving} error={error} /> : <OfferRequestState result={response} retry={() => { setResult(null); setAttempt((value) => value + 1); }} />}
+				{response?.ok ? <RecruiterApplicationContent key={response.data.id} application={response.data} onDecision={decide} onContract={(data) => setResult({ id, response: { ok: true, data } })} onInterview={(data) => setResult({ id, response: { ok: true, data } })} saving={saving} error={error} /> : <OfferRequestState result={response} retry={() => { setResult(null); setAttempt((value) => value + 1); }} />}
 			</section>
 		</RecruiterOffersLayout>
 	);

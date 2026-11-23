@@ -1,4 +1,5 @@
 import type { CandidateSummary } from "./candidates";
+import type { Interview, InterviewState, UpcomingInterview } from "./interviews";
 import type { ContractProgress } from "./school";
 import { STATUS } from "../utils/applications";
 
@@ -13,7 +14,14 @@ export type RecruiterOffer = {
 };
 
 export type OfferSummary = RecruiterOffer & { applicant_count: number };
-export type OfferApplicant = { id: number; candidate: CandidateSummary; status: number; submitted_at: string };
+export type OfferApplicant = {
+	id: number;
+	candidate: CandidateSummary;
+	status: number;
+	submitted_at: string;
+	/** Entretien proposé, ou confirmé avec son créneau ; null sans entretien */
+	interview?: InterviewState | null;
+};
 export type OfferApplicants = { offer: RecruiterOffer; applications: OfferApplicant[] };
 export type OfferResult<T> = { ok: true; data: T } | { ok: false; reason: "unauthenticated" | "notFound" | "server" | "network" };
 
@@ -102,6 +110,10 @@ export type RecruiterApplication = {
     decision_message: string;
     conversation_id: number | null;
     contract: ContractProgress | null;
+    /** Entretien proposé au candidat, null sans entretien */
+    interview?: Interview | null;
+    /** Autres entretiens confirmés du recruteur, à ne pas chevaucher */
+    upcoming_interviews?: UpcomingInterview[];
 };
 
 export const getRecruiterApplication = (id: string) => read<RecruiterApplication>(`/api/recruiter/applications/${encodeURIComponent(id)}`);

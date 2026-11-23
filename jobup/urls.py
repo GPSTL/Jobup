@@ -46,6 +46,7 @@ from jobup.recruiter_offers import (
     application_contract,
     offer_applicants,
     recruiter_application,
+    recruiter_interview,
     recruiter_offers,
     recruiter_offer,
 )
@@ -107,6 +108,7 @@ urlpatterns = [
     path("api/applications/draft", api.application_draft),
     path("api/applications/<int:id>", api.application),
     path("api/applications/<int:id>/submit", api.application_submit),
+    path("api/applications/<int:id>/interview", api.application_interview),
     path("api/applications/<int:id>/documents/<slug:kind>", api.application_document),
     path("api/conversations/<int:id>/messages", conversation_messages),
     path(
@@ -126,6 +128,7 @@ urlpatterns = [
     path("api/recruiter/offers/<int:id>", recruiter_offer),
     path("api/recruiter/applications/<int:id>", recruiter_application),
     path("api/recruiter/applications/<int:id>/contract", application_contract),
+    path("api/recruiter/applications/<int:id>/interview", recruiter_interview),
     path("api/contracts/<int:id>/file", contract_file),
     path("api/student/contracts", student_contracts),
     path("api/recruiter/candidates/<int:id>/shortlist", shortlist.shortlist_candidate),

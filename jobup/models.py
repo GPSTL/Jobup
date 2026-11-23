@@ -330,6 +330,9 @@ class Offer(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    if TYPE_CHECKING:
+        recruiter_id: int
+
 
 class SavedOffer(models.Model):
     student = models.ForeignKey(Student, models.CASCADE, related_name="saved_offers")
@@ -357,6 +360,10 @@ class JobApplication(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     submitted_at = models.DateTimeField(null=True, blank=True)
+
+    if TYPE_CHECKING:
+        student_id: int
+        offer_id: int
 
     class Meta:
         constraints: ClassVar = [
@@ -391,6 +398,8 @@ class JobApplication(models.Model):
         }
 
     def to_detail_dict(self) -> dict[str, Any]:
+        from .interviews import studentInterview
+
         base = f"/api/applications/{self.pk}/documents"
         contract = Contract.objects.filter(application=self).first()
         return {
@@ -401,6 +410,8 @@ class JobApplication(models.Model):
             # dire quand il lui manque pour que le contrat soit suivi
             "contract": contract.to_dict() if contract else None,
             "school": self.student.school.name if self.student.school else None,
+            # Entretien proposé par le recruteur, avec les créneaux que l'étudiant peut choisir
+            "interview": studentInterview(self),
             "documents": {
                 "resume": f"{base}/resume" if self.sent_resume else None,
                 "cover_letter": f"{base}/cover_letter" if self.cover_letter else None,
@@ -546,6 +557,53 @@ class SchoolRequest(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
 
+# ----- ENTRETIENS ----- #
+
+
+# Entretien proposé par le recruteur pour une candidature en cours d'étude : un ou plusieurs
+# créneaux, parmi lesquels l'étudiant en retient un. Proposer de nouveaux créneaux remplace
+# l'entretien encore en attente ; l'annuler le supprime. Contrat : docs/api/interviews.md
+class Interview(models.Model):
+    application = models.OneToOneField(
+        JobApplication, models.CASCADE, related_name="interview"
+    )
+    # Adresse ou lien de la visio, et un mot pour le candidat ; facultatifs
+    location = models.CharField(max_length=200, blank=True)
+    message = models.CharField(max_length=1024, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    if TYPE_CHECKING:
+        from django.db.models.fields.related_descriptors import RelatedManager
+
+        application_id: int
+        slots: RelatedManager[InterviewSlot]
+
+
+class InterviewSlot(models.Model):
+    interview = models.ForeignKey(Interview, models.CASCADE, related_name="slots")
+    starts_at = models.DateTimeField()
+    ends_at = models.DateTimeField()
+    # Choix de l'étudiant : un seul créneau retenu par entretien, None pour les autres
+    chosen_at = models.DateTimeField(null=True, blank=True)
+
+    if TYPE_CHECKING:
+        interview_id: int
+
+    class Meta:
+        ordering: ClassVar = ["starts_at", "pk"]
+        constraints: ClassVar = [
+            models.CheckConstraint(
+                condition=models.Q(ends_at__gt=models.F("starts_at")),
+                name="interview_slot_ends_after_start",
+            ),
+            models.UniqueConstraint(
+                fields=["interview"],
+                condition=models.Q(chosen_at__isnull=False),
+                name="one_chosen_slot_per_interview",
+            ),
+        ]
+
+
 # ----- MESSAGING ----- #
 
 
@@ -675,6 +733,9 @@ class NotificationKind(models.TextChoices):
     # contrat (déposé pour l'école, puis suivi par l'étudiant)
     SCHOOL_REQUEST = "school_request", "School request"
     CONTRACT_UPDATE = "contract_update", "Contract updated"
+    # Entretien : proposé ou annulé par le recruteur (pour l'étudiant), créneau choisi par
+    # l'étudiant (pour le recruteur)
+    INTERVIEW = "interview", "Interview"
 
 
 class Notification(models.Model):

@@ -39,7 +39,10 @@ const trigger = `inline-flex cursor-pointer items-center gap-2 rounded-xl bg-sur
 
 export function ExportForm(props: ExportPanelProps) {
 	const { fields, defaults } = props;
-	const [values, setValues] = useState(() => initialValues(fields, defaults));
+	const [chosen, setValues] = useState(() => initialValues(fields, defaults));
+	// Un filtre apparu une fois le panneau ouvert (des éléments cochés ensuite) part de sa valeur
+	// de départ : la case de la sélection est alors cochée
+	const values = { ...initialValues(fields, defaults), ...chosen };
 	const { saving, error, download } = useDownload(props);
 
 	return (

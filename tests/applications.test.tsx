@@ -106,7 +106,7 @@ test("frise de suivi : étapes franchies et dates connues", () => {
 
 test("liste : réponses de l'API", async () => {
 	mockFetch(() => Response.json({ in_progress: [application], completed: [] }));
-	assert.deepEqual(await getApplications(), { ok: true, inProgress: [application], completed: [] });
+	assert.deepEqual(await getApplications(), { ok: true, inProgress: [application], completed: [], interviews: [] });
 
 	for (const status of [401, 403]) {
 		mockFetch(() => new Response(null, { status }));

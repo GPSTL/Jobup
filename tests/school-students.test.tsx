@@ -66,3 +66,18 @@ test("tableau : colonnes triables, dernière candidature et lien vers le suivi",
 	const names = [...html.matchAll(/<th scope="row"[^>]*>.*?<span class="break-words">([^<]+)<\/span>/g)].map((match) => match[1]);
 	assert.deepEqual(names, ["Alex Durand", "Alex Martin", "Alex Benali"]);
 });
+
+test("tableau : étudiants cochés un à un pour l'export, case « tout cocher » à moitié", () => {
+	const html = renderToStaticMarkup(
+		<MemoryRouter>
+			<SchoolStudentsTable students={students} sort="name" onSort={() => {}} selection={{ ids: [2], onChange: () => {} }} />
+		</MemoryRouter>,
+	);
+	assert.equal(html.match(/type="checkbox"/g)?.length, 4);
+	assert.match(html, /aria-label="Sélectionner tous les étudiants affichés pour l’export"/);
+	assert.match(html, /aria-label="Sélectionner [^"]*Benali pour l’export"[^>]*checked=""|checked=""[^>]*aria-label="Sélectionner [^"]*Benali pour l’export"/);
+	assert.doesNotMatch(html, /Durand pour l’export"[^>]*checked=""/);
+	// Sans sélection, le tableau reste sans case
+	const plain = renderToStaticMarkup(<MemoryRouter><SchoolStudentsTable students={students} sort="name" onSort={() => {}} /></MemoryRouter>);
+	assert.doesNotMatch(plain, /type="checkbox"/);
+});
