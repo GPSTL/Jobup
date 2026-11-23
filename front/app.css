@@ -319,8 +319,10 @@ button, a {
   display: none;
 }
 
-[data-theme="dark"] img[src$="JobUp_logo.svg"] {
-  filter: brightness(0) invert(1);
+/* Logo : une image par thème (components/Logo.tsx), la flèche bleue reste bleue en sombre */
+[data-theme="dark"] .jobup-logo-light,
+:root:not([data-theme="dark"]) .jobup-logo-dark {
+  display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

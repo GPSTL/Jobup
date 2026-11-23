@@ -27,7 +27,7 @@ export const ROLE_NOTIFICATIONS: Record<NotificationRole, RoleNotifications> = {
 	student: {
 		page: "/notifications",
 		preferences: `/student#${PREFERENCES_ANCHOR}`,
-		description: "Les nouveaux messages, les changements de vos candidatures et le suivi de votre contrat.",
+		description: "Les nouveaux messages, les changements de vos candidatures, les entretiens proposés et le suivi de votre contrat.",
 		settings: [
 			{ key: "messages", label: "Nouveaux messages" },
 			{ key: "application_status", label: "Changement de statut de candidature" },
@@ -39,7 +39,7 @@ export const ROLE_NOTIFICATIONS: Record<NotificationRole, RoleNotifications> = {
 	recruiter: {
 		page: "/recruiter/notifications",
 		preferences: `/recruiter/account#${PREFERENCES_ANCHOR}`,
-		description: "Les nouvelles candidatures à vos offres et les nouveaux messages des candidats.",
+		description: "Les nouvelles candidatures à vos offres, les entretiens choisis par les candidats et leurs messages.",
 		settings: [
 			{ key: "new_applications", label: "Nouvelles candidatures" },
 			{ key: "messages", label: "Nouveaux messages" },
@@ -99,6 +99,8 @@ export const KIND_ICONS: Record<NotificationKind, KindIcon> = {
 	new_application: { src: "/static/img/notifications/user-plus.svg", background: "bg-[#dbeafe]" },
 	school_request: { src: "/static/img/notifications/user-plus.svg", background: "bg-[#dbeafe]" },
 	contract_update: { src: "/static/img/notifications/check.svg", background: "bg-[#dcfce7]" },
+	// Entretien proposé, confirmé ou annulé
+	interview: { src: "/static/img/notifications/calendar.svg", background: "bg-[#dbeafe]" },
 };
 
 // Maquette « Notifications recruteur » : le bleu y est réservé aux candidatures, les messages sont en violet

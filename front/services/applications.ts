@@ -1,5 +1,6 @@
 // Appels à l'API de suivi des candidatures (JOB-033, ETU-14).
 
+import type { Interview } from "./interviews";
 import type { ContractProgress } from "./school";
 
 export type ApplicationSummary = {
@@ -23,10 +24,16 @@ export type ApplicationDetail = ApplicationSummary & {
 	school: string | null;
 	/** URL de téléchargement, null quand le document n'existe pas */
 	documents: { resume: string | null; cover_letter: string | null };
+	/** Entretien proposé par le recruteur, null sans entretien */
+	interview?: Interview | null;
 };
 
+/** Candidature en cours d'étude pour laquelle le recruteur propose un entretien */
+export type ApplicationWithInterview = ApplicationSummary & { interview: Interview };
+
 export type ApplicationsResult =
-	| { ok: true; inProgress: ApplicationSummary[]; completed: ApplicationSummary[] }
+	/** `interviews` : candidatures qui sont aussi dans inProgress, avec leur entretien */
+	| { ok: true; inProgress: ApplicationSummary[]; completed: ApplicationSummary[]; interviews: ApplicationWithInterview[] }
 	| { ok: false; reason: "noSession" | "server" | "network" };
 
 export type ApplicationResult =
@@ -61,8 +68,8 @@ export async function getApplications(): Promise<ApplicationsResult> {
 	if (response.status === 401 || response.status === 403) return { ok: false, reason: "noSession" };
 	if (!response.ok) return { ok: false, reason: "server" };
 	try {
-		const { in_progress, completed } = await response.json();
-		return { ok: true, inProgress: in_progress, completed };
+		const { in_progress, completed, interviews = [] } = await response.json();
+		return { ok: true, inProgress: in_progress, completed, interviews };
 	} catch {
 		return { ok: false, reason: "server" };
 	}

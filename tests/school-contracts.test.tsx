@@ -70,3 +70,14 @@ test("tableau : dates, statut, étape, PDF et action de l'école", () => {
 	assert.doesNotMatch(html, /Marquer comme signé/);
 	assert.match(html, /role="alert"[^>]*>Échec/);
 });
+
+test("tableau : contrats cochés un à un pour l'export", () => {
+	const html = renderToStaticMarkup(
+		<MemoryRouter>
+			<SchoolContractsTable contracts={contracts} sort="student" onSort={() => {}} onAdvance={() => {}} saving={null} error={null} selection={{ ids: [1, 2, 3], onChange: () => {} }} />
+		</MemoryRouter>,
+	);
+	assert.equal(html.match(/type="checkbox"/g)?.length, 4);
+	assert.equal(html.match(/checked=""/g)?.length, 4);
+	assert.match(html, /aria-label="Sélectionner tous les contrats affichés pour l’export"/);
+});

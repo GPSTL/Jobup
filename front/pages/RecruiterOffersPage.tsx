@@ -3,10 +3,11 @@ import { Link, Navigate, useLocation } from "react-router-dom";
 
 import Button from "../components/Button";
 import ExportPanel from "../components/ExportPanel";
+import { SelectCheckbox, SelectionSummary, type Selection } from "../components/ExportSelection";
 import RecruiterNavbar from "../components/RecruiterNavbar";
 import { getRecruiterOffers, type OfferResult, type OfferSummary } from "../services/recruiterOffers";
 import { formatDate } from "../utils/applications";
-import { APPLICATION_STATUS_OPTIONS, type ExportField } from "../utils/exports";
+import { APPLICATION_STATUS_OPTIONS, selectionFields, type ExportField } from "../utils/exports";
 import { highlightText } from "../utils/highlight";
 import { focus } from "../utils/searchPageStyles";
 import { REQUEST_ERRORS } from "../utils/validation";
@@ -30,13 +31,14 @@ export function OfferRequestState({ result, retry }: { result: OfferResult<unkno
 	return <div role="alert" className="flex flex-col items-start gap-4"><p className="text-sm">{REQUEST_ERRORS[result.reason]}</p><Button onClick={retry}>Réessayer</Button></div>;
 }
 
-export function RecruiterOfferList({ offers, highlightQuery }: { offers: OfferSummary[]; highlightQuery?: string }) {
+/** `selection` : offres cochées pour l'export ; sans elle, les cartes n'ont pas de case */
+export function RecruiterOfferList({ offers, highlightQuery, selection }: { offers: OfferSummary[]; highlightQuery?: string; selection?: Selection }) {
 	if (offers.length === 0) return <p className={offerPanel}>Vous n’avez aucune offre pour le moment.</p>;
 	return (
 		<ul className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
 			{offers.map((offer) => (
 				<li key={offer.id} className="group flex flex-col overflow-hidden rounded-2xl border border-[#e5e7eb] bg-surface shadow-xs transition-shadow hover:shadow-lg">
-					<div className="relative overflow-hidden"><img src={offer.image_url || "/static/img/recruiter-offers/offer.webp"} alt="" loading="lazy" className="h-44 w-full object-cover transition-transform duration-300 motion-safe:group-hover:scale-105" /><span className={`absolute top-4 right-4 rounded-full px-3 py-1.5 text-xs font-semibold shadow-sm ${offer.is_active ? "bg-[#dcfce7] text-[#15803d]" : "bg-[#f3f4f6] text-[#6b7280]"}`}>{offer.is_active ? "Publiée" : "Clôturée"}</span></div>
+					<div className="relative overflow-hidden"><img src={offer.image_url || "/static/img/recruiter-offers/offer.webp"} alt="" loading="lazy" className="h-44 w-full object-cover transition-transform duration-300 motion-safe:group-hover:scale-105" /><span className={`absolute top-4 right-4 rounded-full px-3 py-1.5 text-xs font-semibold shadow-sm ${offer.is_active ? "bg-[#dcfce7] text-[#15803d]" : "bg-[#f3f4f6] text-[#6b7280]"}`}>{offer.is_active ? "Publiée" : "Clôturée"}</span>{selection && <label className="absolute top-4 left-4 flex cursor-pointer items-center gap-2 rounded-full bg-surface/90 px-3 py-1.5 text-xs font-semibold text-ink shadow-sm"><SelectCheckbox id={offer.id} selection={selection} label={`Sélectionner l’offre ${offer.title} pour l’export`} />Sélectionner</label>}</div>
 					<div className="flex flex-1 flex-col p-5 sm:p-6">
 						<p className="text-xs font-medium text-[#6b7280]">Créée le {formatDate(offer.created_at)}</p>
 						<h2 className="mt-2 text-lg leading-snug font-bold text-ink">{highlightText(offer.title, highlightQuery)}</h2>
@@ -66,6 +68,9 @@ export default function RecruiterOffersPage() {
 	const [attempt, setAttempt] = useState(0);
 	const [status, setStatus] = useState<"all" | "active" | "closed">("all");
 	const [query, setQuery] = useState("");
+	// Offres cochées, pour l'export
+	const [picked, setPicked] = useState<number[]>([]);
+	const selection = { ids: picked, onChange: setPicked };
 	useEffect(() => {
 		let ignore = false;
 		getRecruiterOffers().then((response) => { if (!ignore) setResult(response); });
@@ -92,9 +97,10 @@ export default function RecruiterOffersPage() {
 			</p>
 			{result?.ok && result.data.length > 0 && <>
 				<div className="mb-7 grid grid-cols-3 gap-3"><div className="rounded-2xl border border-[#e5e7eb] bg-surface p-4"><p className="text-xs font-medium text-[#6b7280]">Toutes les offres</p><p className="mt-1 text-2xl font-bold">{result.data.length}</p></div><div className="rounded-2xl border border-[#e5e7eb] bg-surface p-4"><p className="text-xs font-medium text-[#6b7280]">Publiées</p><p className="mt-1 text-2xl font-bold">{result.data.filter((offer) => offer.is_active).length}</p></div><div className="rounded-2xl border border-[#e5e7eb] bg-surface p-4"><p className="text-xs font-medium text-[#6b7280]">Candidatures</p><p className="mt-1 text-2xl font-bold">{result.data.reduce((total, offer) => total + offer.applicant_count, 0)}</p></div></div>
-				<div className="mb-4 flex flex-wrap items-center justify-between gap-4"><div><h2 className="text-lg font-bold">Vos annonces</h2><p className="text-sm text-[#6b7280]">Suivez vos offres et leurs candidatures.</p></div><div className="flex flex-wrap items-center gap-3"><label className="text-sm"><span className="sr-only">Rechercher une offre</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher une offre…" className="rounded-xl border border-[#d1d5db] bg-surface px-3.5 py-2.5 text-sm outline-none focus:border-primary" /></label><label className="text-sm"><span className="sr-only">Filtrer les offres par statut</span><select value={status} onChange={(event) => setStatus(event.target.value as typeof status)} className="rounded-xl border border-[#d1d5db] bg-surface px-3 py-2.5 font-medium"><option value="all">Toutes les offres</option><option value="active">Publiées</option><option value="closed">Clôturées</option></select></label><ExportPanel url="/api/recruiter/offers/export" fields={exportFields} defaults={{ content: "offers" }} /></div></div>
+				<div className="mb-4 flex flex-wrap items-center justify-between gap-4"><div><h2 className="text-lg font-bold">Vos annonces</h2><p className="text-sm text-[#6b7280]">Suivez vos offres et leurs candidatures.</p></div><div className="flex flex-wrap items-center gap-3"><label className="text-sm"><span className="sr-only">Rechercher une offre</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher une offre…" className="rounded-xl border border-[#d1d5db] bg-surface px-3.5 py-2.5 text-sm outline-none focus:border-primary" /></label><label className="text-sm"><span className="sr-only">Filtrer les offres par statut</span><select value={status} onChange={(event) => setStatus(event.target.value as typeof status)} className="rounded-xl border border-[#d1d5db] bg-surface px-3 py-2.5 font-medium"><option value="all">Toutes les offres</option><option value="active">Publiées</option><option value="closed">Clôturées</option></select></label><ExportPanel url="/api/recruiter/offers/export" fields={[...exportFields, ...selectionFields("offer", picked, ["offre", "offres"])]} defaults={{ content: "offers" }} /></div></div>
+				{picked.length > 0 && <div className="mb-4"><SelectionSummary selection={selection} noun={["offre", "offres"]} /></div>}
 			</>}
-			{result?.ok ? result.data.length > 0 && filteredOffers.length === 0 ? <p className={offerPanel}>{search ? "Aucune offre ne correspond à votre recherche." : "Aucune offre ne correspond à ce statut."}</p> : <RecruiterOfferList offers={filteredOffers} highlightQuery={query} /> : <div className={offerPanel}><OfferRequestState result={result} retry={() => { setResult(null); setAttempt(attempt + 1); }} /></div>}
+			{result?.ok ? result.data.length > 0 && filteredOffers.length === 0 ? <p className={offerPanel}>{search ? "Aucune offre ne correspond à votre recherche." : "Aucune offre ne correspond à ce statut."}</p> : <RecruiterOfferList offers={filteredOffers} highlightQuery={query} selection={selection} /> : <div className={offerPanel}><OfferRequestState result={result} retry={() => { setResult(null); setAttempt(attempt + 1); }} /></div>}
 		</RecruiterOffersLayout>
 	);
 }

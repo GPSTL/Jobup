@@ -1,5 +1,7 @@
 // Filtres d'un export CSV (jobup/exports.py) : leurs valeurs deviennent la query string de l'API.
 
+import { countLabel } from "./selection";
+
 export type ExportOption = { value: string; label: string };
 
 export type ExportField =
@@ -38,3 +40,10 @@ export const APPLICATION_STATUS_OPTIONS: ExportOption[] = [
 	{ value: "accepted", label: "Acceptée" },
 	{ value: "refused", label: "Refusée" },
 ];
+
+// Case « Seulement la sélection (3 candidatures) » : les éléments cochés dans la page, en plus des
+// autres filtres de l'export. `key` : `ids`, ou `offer` pour les offres du recruteur.
+export function selectionFields(key: string, ids: number[], noun: [string, string]): ExportField[] {
+	if (ids.length === 0) return [];
+	return [{ kind: "toggle", key, label: `Seulement la sélection (${countLabel(ids.length, noun)})`, value: ids.join(",") }];
+}

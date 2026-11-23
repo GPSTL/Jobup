@@ -99,9 +99,26 @@ class StudentExportTests(ExportTestCase):
         self.assertEqual(statuses("?status=draft,refused"), ["Brouillon", "Refusée"])
         self.assertEqual(len(statuses("?status=")), 4)
 
+    def test_exports_only_the_selected_applications(self):
+        read = self.apply(self.alice, ApplicationStatus.READ)
+        refused = self.apply(self.alice, ApplicationStatus.REFUSED)
+        self.apply(self.alice, ApplicationStatus.SUBMITTED)
+        foreign = self.apply(self.bob)
+        self.login(self.alice.user)
+
+        def statuses(query):
+            return sorted(self.column(STUDENT_EXPORT, query, 2))
+
+        selected = f"?ids={read.pk},{refused.pk}"
+        self.assertEqual(statuses(selected), ["En cours d’étude", "Refusée"])
+        # La sélection respecte aussi les statuts cochés
+        self.assertEqual(statuses(f"{selected}&status=refused"), ["Refusée"])
+        # Une candidature d'un autre étudiant n'est jamais exportée
+        self.assertEqual(statuses(f"?ids={foreign.pk}"), [])
+
     def test_invalid_filters_are_refused(self):
         self.login(self.alice.user)
-        for query in ("?status=done", "?status=review,done", "?other=1"):
+        for query in ("?status=done", "?status=review,done", "?other=1", "?ids=a"):
             self.assertEqual(
                 self.client.get(f"{STUDENT_EXPORT}{query}").status_code, 400, query
             )
@@ -186,6 +203,27 @@ class SchoolExportTests(ExportTestCase):
         self.assertEqual(
             self.client.get(f"{SCHOOL_EXPORT}?status=lost").status_code, 400
         )
+        self.assertEqual(self.client.get(f"{SCHOOL_EXPORT}?ids=1,x").status_code, 400)
+
+    def test_exports_only_the_selected_students(self):
+        dan = Student.objects.create(
+            user=self.user(
+                USERS[1], email="dan@mail.fr", first_name="Dan", last_name="Durand"
+            ),
+            school=self.school,
+        )
+        self.login(self.manager.user)
+
+        def names(query):
+            return self.column(SCHOOL_EXPORT, query, 0)
+
+        self.assertEqual(names(f"?ids={dan.user.pk}"), ["Dan"])
+        self.assertCountEqual(
+            names(f"?ids={dan.user.pk},{self.alice.user.pk}"), ["Alice", "Dan"]
+        )
+        self.assertEqual(names(f"?ids={dan.user.pk}&q=alice"), [])
+        # Un étudiant d'une autre école n'est jamais exporté
+        self.assertEqual(names(f"?ids={self.carol.user.pk}"), [])
 
 
 class RecruiterExportTests(ExportTestCase):
@@ -282,12 +320,25 @@ class RecruiterExportTests(ExportTestCase):
         self.assertEqual(names("?content=candidates&status=refused"), [])
         self.assertEqual(names(f"?content=candidates&offer={self.second.pk}"), [])
 
+    def test_exports_only_the_selected_candidates(self):
+        bob = JobApplication.objects.get(student=self.bob)
+
+        def names(query):
+            return [row[1] for row in table(self.get(query))[1:]]
+
+        self.assertEqual(names(f"?content=candidates&ids={bob.pk}"), ["Bob"])
+        self.assertEqual(names(f"?content=candidates&ids={bob.pk}&status=accepted"), [])
+        # Résumé de l'offre : seules les candidatures cochées sont comptées
+        rows = {row[0]: row for row in table(self.get(f"?ids={bob.pk}"))[1:]}
+        self.assertEqual(rows["Développeur Java"][5:], ["1", "1", "0", "0", "0"])
+
     def test_invalid_filters_are_refused(self):
         for query in (
             "?content=all",
             "?status=draft",
             "?offer=a",
             "?offer_status=none",
+            "?ids=a",
         ):
             self.assertEqual(self.get(query).status_code, 400, query)
 
@@ -509,6 +560,23 @@ class SchoolContractExportTests(ExportTestCase):
         )
         self.assertEqual(periods("?stage=signed"), ["Terminé"])
         self.assertEqual(periods("?period=upcoming&stage=signed"), [])
-        for query in ("?period=bientot", "?stage=3", "?autre=1"):
+        for query in ("?period=bientot", "?stage=3", "?autre=1", "?ids=a"):
             response = self.client.get(f"{self.URL}{query}")
             self.assertEqual(response.status_code, 400)
+
+    def test_exports_only_the_selected_contracts(self):
+        today = timezone.localdate()
+        upcoming = self.dated(
+            self.alice, today + timedelta(days=5), today + timedelta(days=50)
+        )
+        self.contract(self.alice, ContractStage.SIGNED)
+        foreign = self.contract(self.carol)
+        self.login(self.manager.user)
+
+        def periods(query):
+            return self.column(self.URL, query, 6)
+
+        self.assertEqual(periods(f"?ids={upcoming.pk}"), ["À venir"])
+        self.assertEqual(periods(f"?ids={upcoming.pk}&stage=signed"), [])
+        # Le contrat d'une autre école n'est jamais exporté
+        self.assertEqual(periods(f"?ids={foreign.pk}"), [])

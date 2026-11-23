@@ -144,6 +144,8 @@ class Filters(BaseModel):
 
 class StudentApplicationFilters(Filters):
     status: list[Group] = []
+    # Candidatures cochées dans la page, en plus des autres filtres
+    ids: list[int] = Field(default=[], max_length=MAX_IDS)
 
 
 class SchoolStudentFilters(Filters):
@@ -151,12 +153,16 @@ class SchoolStudentFilters(Filters):
         Literal["searching", "applying", "accepted", "contract", "signed"]
     ] = []
     q: str = Field(default="", max_length=100)
+    # Comptes des étudiants cochés dans le tableau
+    ids: list[int] = Field(default=[], max_length=MAX_IDS)
 
 
 class SchoolContractFilters(Filters):
     # JOB-048 : période de l'alternance et étape du contrat
     period: list[Literal["upcoming", "ongoing", "finished"]] = []
     stage: list[Literal["deposited", "validated", "signed"]] = []
+    # Contrats cochés dans le tableau
+    ids: list[int] = Field(default=[], max_length=MAX_IDS)
 
 
 class RecruiterFilters(Filters):
@@ -167,6 +173,9 @@ class RecruiterFilters(Filters):
     offer_status: Literal["", "active", "closed"] = ""
     # Statuts des candidatures ; les brouillons ne sont jamais exportés
     status: list[Literal["submitted", "review", "accepted", "refused"]] = []
+    # Candidatures cochées dans la liste des candidats d'une offre : seules elles sont
+    # listées (content=candidates) ou comptées (content=offers)
+    ids: list[int] = Field(default=[], max_length=MAX_IDS)
 
 
 class UserExportFilters(Filters):
@@ -242,6 +251,8 @@ def applications_export(request: Request) -> Response | HttpResponse:
     )
     if filters.status:
         applications = applications.filter(status__in=statuses(filters.status))
+    if filters.ids:
+        applications = applications.filter(pk__in=filters.ids)
     contracts = {
         contract.application_id: contract
         for contract in Contract.objects.filter(application__student=student)
@@ -313,10 +324,11 @@ def school_students_export(request: Request) -> Response | HttpResponse:
     if filters is None:
         return Response({"error": "Invalid filters"}, status=400)
 
+    attached = schoolStudents(school)
+    if filters.ids:
+        attached = attached.filter(user__in=filters.ids)
     students = list(
-        schoolStudents(school).order_by(
-            Lower("user__last_name"), Lower("user__first_name"), "pk"
-        )
+        attached.order_by(Lower("user__last_name"), Lower("user__first_name"), "pk")
     )
     for word in filters.q.split():
         students = [
@@ -396,8 +408,11 @@ def school_contracts_export(request: Request) -> Response | HttpResponse:
     filters = parse(SchoolContractFilters, request)
     if filters is None:
         return Response({"error": "Invalid filters"}, status=400)
+    contracts = schoolContracts(school)
+    if filters.ids:
+        contracts = contracts.filter(pk__in=filters.ids)
     rows = []
-    for contract in schoolContracts(school).order_by("-deposited_at", "-pk"):
+    for contract in contracts.order_by("-deposited_at", "-pk"):
         period = contractPeriod(contract)
         if filters.period and period not in filters.period:
             continue
@@ -452,17 +467,17 @@ def recruiter_offers_export(request: Request) -> Response | HttpResponse:
     groups = filters.status or ["submitted", "review", "accepted", "refused"]
 
     if filters.content == "offers":
-        # Les candidatures comptées respectent le filtre de statut
-        wanted = Q(applications__status__in=statuses(groups)) & Q(
-            applications__submitted_at__isnull=False
-        )
+        # Les candidatures comptées respectent le filtre de statut et la sélection
+        sent = Q(applications__submitted_at__isnull=False)
+        if filters.ids:
+            sent &= Q(applications__pk__in=filters.ids)
+        wanted = Q(applications__status__in=statuses(groups)) & sent
         counts = {
             "total": Count("applications", filter=wanted),
             **{
                 group: Count(
                     "applications",
-                    filter=Q(applications__status__in=statuses([group]))
-                    & Q(applications__submitted_at__isnull=False),
+                    filter=Q(applications__status__in=statuses([group])) & sent,
                 )
                 for group in ("submitted", "review", "accepted", "refused")
             },
@@ -499,9 +514,11 @@ def recruiter_offers_export(request: Request) -> Response | HttpResponse:
             rows,
         )
 
+    received = sentApplications().filter(offer__in=offers)
+    if filters.ids:
+        received = received.filter(pk__in=filters.ids)
     received = (
-        sentApplications()
-        .filter(offer__in=offers, status__in=statuses(groups))
+        received.filter(status__in=statuses(groups))
         .select_related("offer", "student__user", "student__school")
         .order_by("offer__created_at", "offer_id", "-submitted_at", "-pk")
     )

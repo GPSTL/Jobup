@@ -6,6 +6,7 @@ from urllib.parse import urlsplit
 
 from django.db import transaction
 from django.db.models import Count, Q
+from pydantic import ValidationError
 from rest_framework import serializers
 from rest_framework.decorators import api_view
 from rest_framework.request import Request
@@ -13,6 +14,16 @@ from rest_framework.response import Response
 
 from .candidates import candidateCard, isRecruiter
 from .contracts import ContractUpload, storeContract
+from .interviews import (
+    PENDING,
+    Proposal,
+    cancel,
+    interviewOf,
+    interviewStates,
+    propose,
+    recruiterInterview,
+    upcomingInterviews,
+)
 from .models import (
     ApplicationStatus,
     Contract,
@@ -197,12 +208,13 @@ def offer_applicants(request: Request, id: int) -> Response:
     offer = Offer.objects.filter(pk=id, recruiter__user=request.user).first()
     if offer is None:
         return Response({"error": "Offer not found"}, status=404)
-    applications = (
+    applications = list(
         submittedApplications()
         .filter(offer=offer)
         .select_related("student__user", "student__school")
         .order_by("-submitted_at", "-pk")
     )
+    interviews = interviewStates(applications)
     return Response(
         {
             "offer": offerSummary(offer),
@@ -212,6 +224,8 @@ def offer_applicants(request: Request, id: int) -> Response:
                     "candidate": candidateCard(application.student),
                     "status": application.status,
                     "submitted_at": application.submitted_at,
+                    # Entretien proposé, ou confirmé avec son créneau ; None sans entretien
+                    "interview": interviews.get(application.pk),
                 }
                 for application in applications
             ],
@@ -246,6 +260,12 @@ def applicationDetail(application: JobApplication) -> dict:
         "conversation_id": conversation.pk if conversation else None,
         # Contrat déposé pour cette candidature acceptée, suivi ensuite par l'école et l'étudiant
         "contract": contract.to_dict() if contract else None,
+        # Entretien proposé au candidat, et les autres entretiens confirmés du recruteur que
+        # de nouveaux créneaux ne doivent pas chevaucher
+        "interview": recruiterInterview(application),
+        "upcoming_interviews": upcomingInterviews(
+            application.offer.recruiter_id, application
+        ),
     }
 
 
@@ -341,3 +361,49 @@ def application_contract(request: Request, id: int) -> Response:
         robust=True,
     )
     return Response(applicationDetail(application), status=201 if created else 200)
+
+
+# Erreurs d'une proposition qui tiennent à l'état de la candidature plutôt qu'aux créneaux
+PROPOSAL_CONFLICTS = {"Recruiter busy"}
+
+
+@api_view(["POST", "DELETE"])
+def recruiter_interview(request: Request, id: int) -> Response:
+    # Proposer un ou plusieurs créneaux d'entretien (POST, remplace une proposition encore
+    # sans réponse) ou annuler l'entretien (DELETE). Seul l'auteur de l'offre y a accès.
+    if not isRecruiter(request.user):
+        return Response({"error": "Forbidden"}, status=403)
+    with transaction.atomic():
+        application = (
+            submittedApplications()
+            .select_for_update()
+            .select_related("offer__recruiter", "student__user", "student__school")
+            .filter(pk=id, offer__recruiter__user=request.user)
+            .first()
+        )
+        if application is None:
+            return Response({"error": "Application not found"}, status=404)
+        if request.method == "DELETE":
+            if not cancel(application):
+                return Response({"error": "Interview not found"}, status=404)
+            return Response(applicationDetail(application))
+        if application.status not in PENDING:
+            return Response({"error": "Application not in review"}, status=409)
+        current = interviewOf(application)
+        if (
+            current is not None
+            and current.slots.filter(chosen_at__isnull=False).exists()
+        ):
+            return Response({"error": "Interview already confirmed"}, status=409)
+        try:
+            proposal = Proposal.model_validate(request.data)
+        except ValidationError:
+            return Response({"error": "Invalid payload"}, status=400)
+        error = propose(application, proposal)
+        if error is not None:
+            code, index = error
+            return Response(
+                {"error": code, "slot": index},
+                status=409 if code in PROPOSAL_CONFLICTS else 400,
+            )
+        return Response(applicationDetail(application), status=201)

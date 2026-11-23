@@ -2,6 +2,8 @@
 // URL of the page, with the names of the API: a reload, the browser arrows and « Retour à la liste »
 // of a profile give back the same view.
 
+import { MAX_SELECTION } from "./selection";
+
 export type AdminUserStatus = "" | "active" | "suspended";
 /** Type of account: the "Type de compte" filter, same values as the API */
 export type AdminUserRole = "" | "student" | "manager" | "recruiter" | "admin";
@@ -108,14 +110,8 @@ export const adminLoginLink = (path: string) => `/administration?${new URLSearch
 // « 09/10/2026 », in the time zone of the platform
 export const formatDate = (iso: string) => new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris" }).format(new Date(iso));
 
-// Same limit as the export of the API (MAX_IDS in jobup/exports.py)
-export const MAX_SELECTION = 500;
-
-// Accounts ticked in the table, kept from one page to the next; never more than the export accepts
-export function toggleIds(selected: number[], ids: number[], checked: boolean): number[] {
-	if (!checked) return selected.filter((id) => !ids.includes(id));
-	return [...selected, ...ids.filter((id) => !selected.includes(id))].slice(0, MAX_SELECTION);
-}
+// Accounts ticked in the table, kept from one page to the next (shared with the other exports)
+export { MAX_SELECTION, toggleIds } from "./selection";
 
 const SELECTION_KEY = "adminUsersSelection";
 

@@ -18,7 +18,7 @@ La candidature réelle (`JobApplication.status`) est **l'unique source du statut
 
 Les deux méthodes sont réservées au recruteur **propriétaire de l'offre** (pas à un collègue de la même entreprise). Les autres rôles reçoivent `403`, et un ID inexistant ou hors périmètre retourne `404`.
 
-- `GET /api/recruiter/applications/<id>` : ouvre la candidature ; passe `Postulée` à `En cours d'étude` une seule fois ; retourne `{ id, offer, candidate, status, submitted_at, message, decision_message, conversation_id, contract }`. `message` reste la présentation envoyée par le candidat ; `decision_message` est la réponse facultative du recruteur.
+- `GET /api/recruiter/applications/<id>` : ouvre la candidature ; passe `Postulée` à `En cours d'étude` une seule fois ; retourne `{ id, offer, candidate, status, submitted_at, message, decision_message, conversation_id, contract, interview, upcoming_interviews }` (entretien : voir `interviews.md`). `message` reste la présentation envoyée par le candidat ; `decision_message` est la réponse facultative du recruteur.
 - `PATCH /api/recruiter/applications/<id>` : corps JSON `{ "status": 4 | 5, "message": "..." }`, `message` facultatif, 1024 caractères maximum ; `200` et le même format de réponse. `400` si le corps est invalide, `409` si l'on décide avant ouverture ou tente de remplacer une décision. `PATCH` requiert un jeton CSRF Django `X-CSRFToken` (via `/api/csrf`).
 
 Renvoyer **la même décision** retourne `200` avec la décision initiale et n'émet pas de nouvel événement, même si le message de la seconde requête diffère. Le changement de statut, le message et la création éventuelle de conversation sont regroupés dans une transaction.

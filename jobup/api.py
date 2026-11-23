@@ -1,6 +1,7 @@
 import os
 
 from django.contrib.auth import authenticate, login, logout
+from django.db import transaction
 from django.http import FileResponse
 from django.middleware.csrf import get_token
 from pydantic import BaseModel, ValidationError
@@ -11,6 +12,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from .email_confirmation import is_enabled, send_confirmation_email
+from .interviews import PENDING, Choice, choose, studentInterview
 from .models import (
     FINAL_STATUSES,
     DraftSerializer,
@@ -95,10 +97,18 @@ def applications(request: Request) -> Response:
         status__in=FINAL_STATUSES
     )  # Front ordering .order_by("-updated_at")
     completed = own.filter(status__in=FINAL_STATUSES)
+    # Candidatures en cours d'étude pour lesquelles le recruteur propose un entretien : elles
+    # restent aussi dans in_progress, la page « Candidatures » les range à part
+    interviews = []
+    for application in own.filter(status__in=PENDING, interview__isnull=False):
+        interviews.append(
+            {**application.to_dict(), "interview": studentInterview(application)}
+        )
     return Response(
         {
             "in_progress": [a.to_dict() for a in in_progress],
             "completed": [a.to_dict() for a in completed],
+            "interviews": interviews,
         }
     )
 
@@ -131,6 +141,40 @@ def application(request: Request, id: int) -> Response:
     target = getApplication(student, id)
     if target is None:
         return Response({"error": "Application not found"}, status=404)
+    return Response(target.to_detail_dict())
+
+
+# Erreurs du choix d'un créneau : la candidature ou le créneau n'existe pas (404), ou le
+# créneau ne peut plus être choisi (409)
+CHOICE_NOT_FOUND = {"Interview not found", "Slot not found"}
+
+
+@api_view(["POST"])
+def application_interview(request: Request, id: int) -> Response:
+    # L'étudiant retient un des créneaux d'entretien proposés par le recruteur
+    student = getOwnStudent(request.user)
+    if student is None:
+        return Response({"error": "Forbidden"}, status=403)
+    try:
+        choice = Choice.model_validate(request.data)
+    except ValidationError:
+        return Response({"error": "Invalid payload"}, status=400)
+    with transaction.atomic():
+        target = (
+            JobApplication.objects.select_for_update()
+            .filter(pk=id, student=student)
+            .select_related("student__school", "offer__recruiter__company")
+            .first()
+        )
+        if target is None:
+            return Response({"error": "Application not found"}, status=404)
+        if target.status not in PENDING:
+            return Response({"error": "Application closed"}, status=409)
+        error = choose(target, choice.slot)
+        if error is not None:
+            return Response(
+                {"error": error}, status=404 if error in CHOICE_NOT_FOUND else 409
+            )
     return Response(target.to_detail_dict())
 
 

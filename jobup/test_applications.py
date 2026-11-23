@@ -82,7 +82,9 @@ class ApplicationListTests(ApplicationTestCase):
         USERS[0].login(self)
         response = self.client.get("/api/applications")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"in_progress": [], "completed": []})
+        self.assertEqual(
+            response.json(), {"in_progress": [], "completed": [], "interviews": []}
+        )
 
     def test_only_own_applications(self):
         mine = self.create_application(self.alice, self.offers[0])
