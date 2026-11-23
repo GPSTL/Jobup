@@ -78,7 +78,7 @@ export function CandidateDeck({ candidates, index, onKeep, keeping, onExclude, e
 	};
 
 	return (
-		<div className="mx-auto flex max-w-[460px] flex-col gap-4">
+		<div className="mx-auto flex max-w-[480px] flex-col gap-4">
 			<p role="status" className="sr-only">
 				Candidat {index + 1} sur {candidates.length}
 				<span> : {fullName(candidate)}</span>
@@ -109,7 +109,7 @@ export function CandidateDeck({ candidates, index, onKeep, keeping, onExclude, e
 							{drag > 0 ? "♥ Retenir" : "Écarter"}
 						</span>
 					)}
-					<CandidateCard recommended={currentRecommendation !== undefined} reasons={currentRecommendation?.reasons} highlightTerms={highlightTerms} candidate={candidate} onKeep={onKeep} keeping={keeping} onExclude={onExclude} excluding={excluding} />
+					<CandidateCard matchPercentage={currentRecommendation?.match_percentage} reasons={currentRecommendation?.reasons} highlightTerms={highlightTerms} candidate={candidate} onKeep={onKeep} keeping={keeping} onExclude={onExclude} excluding={excluding} />
 				</div>
 			</div>
 			{(onKeep || onExclude) && (
@@ -262,8 +262,9 @@ export default function CandidatesPage() {
 						count={result?.ok ? visibleCandidates.length : null}
 						className="lg:w-[320px] lg:shrink-0"
 					/></div></div>
-					<div className="mx-auto w-full min-w-0 max-w-[460px]">
-						<div className="mx-auto mb-4 flex max-w-[480px] justify-end">
+					<div className="mx-auto w-full min-w-0 max-w-[480px]">
+						<div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+							<h2 className="text-2xl font-extrabold tracking-tight">{onlyRecommended ? "Candidats pour vous" : "Tous les candidats"}</h2>
 							<Link to="/recruiter/shortlist" className={`flex items-center gap-2 rounded-sm text-sm font-semibold text-primary hover:underline ${focus}`}>
 								<HeartIcon width={18} height={18} fill="currentColor" />
 								Candidats retenus

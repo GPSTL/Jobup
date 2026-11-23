@@ -990,3 +990,21 @@ header:has(.jobup-navigation) { position: relative; z-index: 40; }
 [data-theme="dark"] .student-swipe-stack::after { background-color: #1e293b; }
 [data-theme="dark"] .candidate-stack-back { background-color: #1e293b; }
 [data-theme="dark"] .search-highlight { background-color: #fde047; color: #0f172a; }
+
+.match-card-header {
+  background: linear-gradient(110deg, rgb(19 32 59 / 92%), rgb(21 48 61 / 68%));
+  border-bottom: 1px solid rgb(255 255 255 / 16%);
+  color: #dbe5f1;
+}
+
+.match-card-score {
+  color: #83e3d0;
+}
+
+.match-card-description {
+  color: #475569;
+}
+
+[data-theme="dark"] .match-card-description {
+  color: #b8c5d8;
+}

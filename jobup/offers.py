@@ -6,7 +6,7 @@ from rest_framework.renderers import JSONRenderer
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from .cv_matching import position_matches, student_terms, terms
+from .cv_matching import match_offer, offer_keywords, student_terms
 from .models import ApplicationStatus, JobApplication, Offer, Role, SavedOffer, Student
 
 
@@ -86,31 +86,31 @@ def recommendations(request: Request) -> Response:
     for item in (
         publishedOffers().exclude(pk__in=excluded).order_by("-created_at", "-id")
     ):
+        match = match_offer(student, item, candidate_terms, offer_keywords(item))
+        if not match.percentage:
+            continue
+        has_interest = item.category in interest_categories
         reasons = []
-        score = 0
-        if student.category is not None and item.category == student.category:
-            score += 3
+        if match.category:
             reasons.append("Correspond à votre domaine")
-        if position_matches(student.desired_position, item.title):
-            score += 3
+        if match.position:
             reasons.append("Correspond au poste recherché")
-        if item.category in interest_categories:
-            score += 2
+        if has_interest:
             reasons.append(
                 "Dans un domaine lié à vos offres enregistrées ou candidatures"
             )
-        matching_terms = sorted(candidate_terms & terms(item.requirements))
-        if matching_terms:
-            score += min(len(matching_terms), 3)
+        if match.keywords:
             reasons.append(
-                "Mots communs à votre CV et aux critères : "
-                + ", ".join(matching_terms[:3])
+                "Mots communs à votre CV ou profil et à l’offre : "
+                + ", ".join(match.keywords[:3])
             )
-        if score:
-            ranked.append((score, item, reasons))
-    ranked.sort(key=lambda entry: entry[0], reverse=True)
+        ranked.append((match.percentage, has_interest, item, reasons))
+    ranked.sort(key=lambda entry: (entry[0], entry[1]), reverse=True)
     return Response(
-        [{**publicOffer(item), "reasons": reasons} for _, item, reasons in ranked]
+        [
+            {**publicOffer(item), "reasons": reasons, "match_percentage": percentage}
+            for percentage, _, item, reasons in ranked
+        ]
     )
 
 

@@ -16,7 +16,8 @@ class CandidateRecommendationTests(CandidateTestCase):
         self.client.force_authenticate(recruiter.user)
         items = self.client.get(URL).json()
         self.assertEqual([item["id"] for item in items], [self.alice.user_id])
-        self.assertEqual(len(items[0]["reasons"]), 2)
+        self.assertEqual(len(items[0]["reasons"]), 3)
+        self.assertEqual(items[0]["match_percentage"], 75)
         for offer in self.offers:
             offer.is_active = False
             offer.save()
@@ -41,6 +42,7 @@ class CandidateRecommendationTests(CandidateTestCase):
                 "word/document.xml",
                 "<document><p>Python Django secret-personnel</p></document>",
             )
+        self.alice.skills = "Java"
         self.alice.resume.save("candidate.docx", ContentFile(archive.getvalue()))
         offer = self.offers[0]
         offer.requirements = "Python, Django et SQL"
@@ -50,6 +52,14 @@ class CandidateRecommendationTests(CandidateTestCase):
         self.assertEqual(items[0]["id"], self.alice.user_id)
         self.assertIn("django, python", items[0]["reasons"][0])
         self.assertNotIn("secret-personnel", str(items))
+        self.assertEqual(items[0]["match_percentage"], 33)
+
+        self.client.force_authenticate(self.alice.user)
+        student_items = self.client.get("/api/student/recommendations").json()
+        student_match = next(item for item in student_items if item["id"] == offer.pk)
+        self.assertEqual(
+            student_match["match_percentage"], items[0]["match_percentage"]
+        )
 
     def test_unreadable_cv_does_not_break_suggestions(self):
         from django.core.files.base import ContentFile
