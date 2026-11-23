@@ -272,7 +272,7 @@ function OffersIndexPage() {
 			</div>
 
 			{isStudent ? <div className="px-4 md:px-6">{result?.ok ? <StudentOfferSwipe offers={result.data} /> : <main className="mx-auto mt-8 w-full max-w-[1236px] flex-1 pb-16"><PublicOfferRequestState result={result} retry={() => { setResult(null); setAttempt((value) => value + 1); }} /></main>}</div> : <main className="mx-auto mt-8 flex w-full max-w-[1236px] flex-1 flex-col gap-6 px-4 pb-16 md:px-6">
-				{session !== null && !session.ok && <LoginBanner actions>Connecte-toi pour swiper les offres, les sauvegarder et postuler en un clic.</LoginBanner>}
+				{session !== null && !session.ok && <LoginBanner>Connecte-toi pour swiper les offres, les sauvegarder et postuler en un clic.</LoginBanner>}
 				{result?.ok ? <>
 					<p className="sr-only" aria-live="polite">{visibleOffers.length} offres correspondent à votre recherche.</p>
 					<PublicOfferList
