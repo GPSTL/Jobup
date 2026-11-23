@@ -48,3 +48,5 @@ jobs:
       # Migrations are currently generated locally and ignored by Git.
       - run: python manage.py makemigrations jobup
       - run: python -m pytest -v
+        env:
+          DJANGO_SETTINGS_MODULE: jobup.settings_ci
